@@ -559,15 +559,19 @@ if [[ ${1:-} == --build ]]; then
     gateway_validation_container="laggente-gateway-validation-$$"
     gateway_validation_started=false
     gateway_run_log="$validation_tmp/gateway-run.log"
-    # Use an explicit high loopback port so this test exercises the same fixed-host-port
-    # contract as production. A collision is harmless: choose another candidate and retry
-    # without ever widening the bind to 0.0.0.0. A missing mapping is a rootless-network
-    # failure and must not be bypassed.
+    # Bind an explicit high loopback port so the exact mapping can be inspect-enforced.
+    # Mirror the Compose runtime's read-only filesystem and writable nginx tmpfs mounts;
+    # otherwise the non-root nginx process exits before Docker retains a useful mapping.
+    # A collision is harmless: choose another candidate without widening to 0.0.0.0.
     for _attempt in {1..12}; do
         gateway_validation_port=$((49152 + ((RANDOM * 32768 + RANDOM + $$) % 16384)))
         if docker run --detach --rm \
             --name "$gateway_validation_container" \
             --publish "127.0.0.1:${gateway_validation_port}:8080" \
+            --read-only \
+            --cap-drop ALL \
+            --tmpfs /tmp:size=32m,mode=1777 \
+            --tmpfs /var/cache/nginx:size=32m,mode=0755 \
             "$gateway_validation_image" \
             >"$validation_tmp/gateway-container-id" 2>"$gateway_run_log"; then
             gateway_validation_started=true

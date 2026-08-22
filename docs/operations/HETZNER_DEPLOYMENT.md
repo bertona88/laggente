@@ -234,9 +234,10 @@ Validate the encoded topology before using the release script. With Docker avail
 also builds the static gateway and backup images, starts an ephemeral gateway on an explicitly
 selected high `127.0.0.1` port, verifies that Docker published only that loopback mapping, and checks
 SPA history fallback, missing-asset and unknown-API behavior, and query-preserving canonical
-redirects. The explicit mapping deliberately exercises the same fixed-host-port contract as
-production. If Docker starts the container without materializing that mapping, repair the rootless
-network backend and rerun the gate; do not bypass it:
+redirects. The direct image run mirrors the production gateway's read-only filesystem and writable
+nginx tmpfs mounts, while the explicit mapping lets the validator inspect the exact loopback bind.
+If Docker starts a live container without materializing that mapping, repair the rootless network
+backend and rerun the gate; do not bypass it:
 
 ```bash
 ./scripts/validate-infrastructure.sh --build

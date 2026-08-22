@@ -239,7 +239,7 @@ rootless_docker run --detach --rm \
     --name "$rootless_network_check" \
     --publish "127.0.0.1:$loopback_port:8080" \
     alpine:3.21 \
-    sh -c 'mkdir -p /srv && printf ready >/srv/index.html && exec busybox httpd -f -p 8080 -h /srv' \
+    sh -c 'printf "HTTP/1.1 200 OK\r\nContent-Length: 5\r\nConnection: close\r\n\r\nready" >/tmp/response; while :; do nc -l -p 8080 </tmp/response; done' \
     >/dev/null
 rootless_network_published=$(rootless_docker port "$rootless_network_check" 8080/tcp)
 if [[ "$rootless_network_published" != "127.0.0.1:$loopback_port" ]]; then
