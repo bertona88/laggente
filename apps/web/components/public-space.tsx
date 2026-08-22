@@ -11,6 +11,7 @@ import {
 } from "@/components/icons";
 import { ConversationPhoto } from "@/components/conversation-photo";
 import { Logo } from "@/components/logo";
+import { MessageContent } from "@/components/message-markdown";
 import { InlineError, LoadingLine } from "@/components/status";
 import {
   apiRequest,
@@ -90,7 +91,7 @@ export function MessageBubble({ message }: { message: ConversationMessage }) {
       )}
       <div className="chat-message__body">
         <ConversationPhoto attachment={message.attachment} surface="public" />
-        <p>{message.content}</p>
+        <MessageContent authorType={message.author_type} content={message.content} />
         {message.created_at && <time dateTime={message.created_at}>{formatTime(message.created_at)}</time>}
       </div>
     </motion.article>

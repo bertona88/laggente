@@ -11,6 +11,7 @@ import {
   SparkIcon,
 } from "@/components/icons";
 import { ConversationPhoto } from "@/components/conversation-photo";
+import { MessageContent } from "@/components/message-markdown";
 import { InlineError, LoadingLine } from "@/components/status";
 import { apiRequest, normalizeMessages, resolveMessageResponse } from "@/lib/api";
 import { createClientMessageAttemptTracker } from "@/lib/client-message-id";
@@ -48,7 +49,7 @@ export function ThreadMessage({ message }: { message: ConversationMessage }) {
       <div>
         <header><strong>{message.author_name}</strong><time dateTime={message.created_at}>{formatTime(message.created_at)}</time></header>
         <ConversationPhoto attachment={message.attachment} surface="studio" />
-        <p>{message.content}</p>
+        <MessageContent authorType={message.author_type} content={message.content} />
       </div>
     </motion.article>
   );

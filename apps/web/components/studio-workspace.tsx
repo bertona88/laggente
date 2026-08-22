@@ -1,6 +1,7 @@
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { SendIcon, SparkIcon } from "@/components/icons";
+import { MessageContent } from "@/components/message-markdown";
 import { RevisionInspector } from "@/components/revision-inspector";
 import { InlineError, LoadingLine } from "@/components/status";
 import { apiRequest, normalizeMessages } from "@/lib/api";
@@ -22,7 +23,7 @@ function StudioMessage({ message }: { message: ConversationMessage }) {
       {assistant && <span className="speaker-mark speaker-mark--studio" aria-hidden="true"><SparkIcon /></span>}
       <div>
         <header><strong>{assistant ? "Studio LAGGENTE" : message.author_name}</strong><time dateTime={message.created_at}>{formatTime(message.created_at)}</time></header>
-        <p>{message.content}</p>
+        <MessageContent authorType={message.author_type} content={message.content} />
       </div>
     </motion.article>
   );
