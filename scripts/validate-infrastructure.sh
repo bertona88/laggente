@@ -6,6 +6,10 @@ repo_root=$(cd -- "$script_dir/.." && pwd)
 
 bash -n "$repo_root"/scripts/*.sh
 sh -n "$repo_root"/infra/backup/*.sh
+(
+    cd "$repo_root/infra/email-relay"
+    python3 -m unittest -q
+)
 
 bootstrap_script="$repo_root/scripts/bootstrap-server.sh"
 if ! grep -Eq '^[[:space:]]+slirp4netns[[:space:]]*\\$' "$bootstrap_script"; then
@@ -420,6 +424,16 @@ printf '%s\n' \
     'OPENAI_MODEL=gpt-5.6' \
     'RESEND_API_KEY=' \
     'FROM_EMAIL=' \
+    'AGENT_MAIL_ENABLED=false' \
+    'AGENT_MAIL_PROVIDER=capture' \
+    'AGENT_MAIL_FROM_DOMAIN=laggente.com' \
+    'AGENT_MAIL_REPLY_DOMAIN=inbound.laggente.com' \
+    'AGENT_MAIL_AWS_REGION=eu-south-1' \
+    'AGENT_MAIL_INBOUND_SECRET=' \
+    'AGENT_MAIL_MAX_INBOUND_BYTES=5242880' \
+    'AWS_ACCESS_KEY_ID=' \
+    'AWS_SECRET_ACCESS_KEY=' \
+    'AWS_SESSION_TOKEN=' \
     'UPLOAD_DIR=/data/uploads' \
     'MAX_UPLOAD_BYTES=10485760' \
     >"$combined_env"
@@ -460,6 +474,7 @@ for production_line in \
 done
 grep -q '^CONVERSATION_RETENTION_DAYS=365$' "$application_env"
 grep -q '^PRIVACY_NOTICE_VERSION=2026-08-22[.]2$' "$application_env"
+grep -q '^AGENT_MAIL_ENABLED=false$' "$application_env"
 (
     # Exercise the same exact production-origin/host contract used by deploy and audit.
     # shellcheck source=production-lib.sh
@@ -480,7 +495,7 @@ if (
     printf 'production application contract accepted an unsafe APP_ORIGIN\n' >&2
     exit 1
 fi
-if grep -Eq '^(OPENAI_API_KEY|SESSION_SECRET|PILOT_PASSWORD|RESEND_API_KEY)=' "$database_env"; then
+if grep -Eq '^(OPENAI_API_KEY|SESSION_SECRET|PILOT_PASSWORD|RESEND_API_KEY|AGENT_MAIL_INBOUND_SECRET|AWS_ACCESS_KEY_ID|AWS_SECRET_ACCESS_KEY|AWS_SESSION_TOKEN)=' "$database_env"; then
     printf 'generated database env crossed the application-secret boundary\n' >&2
     exit 1
 fi

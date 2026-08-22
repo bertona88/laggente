@@ -13,7 +13,17 @@ from ..config import Settings
 from ..conversations import active_revision, list_memories, list_messages, serialize_messages
 from ..database import get_db
 from ..dependencies import ProfessionalContext, current_professional, professional_space, runtime_settings
-from ..models import ConfigRevision, Conversation, Event, Member, MemoryItem, Message, Space, utcnow
+from ..models import (
+    ConfigRevision,
+    Conversation,
+    Event,
+    Member,
+    MemoryItem,
+    Message,
+    ProfessionalEmail,
+    Space,
+    utcnow,
+)
 from ..retention import delete_conversation_data, purge_expired_conversations
 from ..schemas import (
     MAX_CONFIGURATION_DOCUMENT_BYTES,
@@ -23,6 +33,7 @@ from ..schemas import (
     MemoryOut,
     MemoryUpdate,
     MessageCreate,
+    ProfessionalEmailOut,
     RevisionCreate,
     RevisionOut,
     SpaceDetail,
@@ -84,6 +95,19 @@ def _latest_draft(db: Session, account_id: str, space_id: str) -> ConfigRevision
             ConfigRevision.status == "draft",
         )
         .order_by(ConfigRevision.revision_number.desc())
+        .limit(1)
+    )
+
+
+def _latest_email(db: Session, account_id: str, space_id: str) -> ProfessionalEmail | None:
+    return db.scalar(
+        select(ProfessionalEmail)
+        .where(
+            ProfessionalEmail.account_id == account_id,
+            ProfessionalEmail.space_id == space_id,
+            ProfessionalEmail.direction == "outbound",
+        )
+        .order_by(ProfessionalEmail.created_at.desc())
         .limit(1)
     )
 
@@ -301,6 +325,7 @@ def get_studio_messages(
     space = professional_space(db, context)
     conversation = _studio_conversation(db, context.account_id, space.id)
     messages = list_messages(db, account_id=context.account_id, conversation_id=conversation.id)
+    latest_email = _latest_email(db, context.account_id, space.id)
     return ConversationDetail(
         conversation=ConversationOut.model_validate(conversation),
         messages=serialize_messages(
@@ -311,6 +336,9 @@ def get_studio_messages(
             messages=messages,
         ),
         memories=[],
+        latest_email=(
+            ProfessionalEmailOut.model_validate(latest_email) if latest_email else None
+        ),
     )
 
 
@@ -377,6 +405,16 @@ async def post_studio_message(
                     )
                 )
                 if existing_reply:
+                    existing_email = db.scalar(
+                        select(ProfessionalEmail)
+                        .where(
+                            ProfessionalEmail.account_id == context.account_id,
+                            ProfessionalEmail.space_id == space.id,
+                            ProfessionalEmail.source_message_id == professional_message.id,
+                        )
+                        .order_by(ProfessionalEmail.created_at.desc())
+                        .limit(1)
+                    )
                     return StudioTurnOut(
                         conversation=ConversationOut.model_validate(conversation),
                         messages=serialize_messages(
@@ -385,6 +423,11 @@ async def post_studio_message(
                             account_id=context.account_id,
                             conversation_id=conversation.id,
                             messages=[professional_message, existing_reply],
+                        ),
+                        proposed_email=(
+                            ProfessionalEmailOut.model_validate(existing_email)
+                            if existing_email
+                            else None
                         ),
                     )
         if professional_message is None:
@@ -405,6 +448,7 @@ async def post_studio_message(
         # No synchronous DB connection may remain checked out while the model is running.
         db.commit()
         proposed_revision = None
+        proposed_email = None
         try:
             reply = await request.app.state.assistant_service.studio_turn(
                 db,
@@ -421,6 +465,14 @@ async def post_studio_message(
                         ConfigRevision.id == reply.proposed_revision_id,
                         ConfigRevision.account_id == context.account_id,
                         ConfigRevision.space_id == space.id,
+                    )
+                )
+            if reply.proposed_email_id:
+                proposed_email = db.scalar(
+                    select(ProfessionalEmail).where(
+                        ProfessionalEmail.id == reply.proposed_email_id,
+                        ProfessionalEmail.account_id == context.account_id,
+                        ProfessionalEmail.space_id == space.id,
                     )
                 )
         except Exception as exc:
@@ -464,6 +516,9 @@ async def post_studio_message(
             ),
             proposed_revision=(
                 RevisionOut.model_validate(proposed_revision) if proposed_revision else None
+            ),
+            proposed_email=(
+                ProfessionalEmailOut.model_validate(proposed_email) if proposed_email else None
             ),
         )
 

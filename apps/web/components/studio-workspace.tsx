@@ -2,13 +2,15 @@ import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { SendIcon, SparkIcon } from "@/components/icons";
 import { MessageContent } from "@/components/message-markdown";
+import { ProfessionalEmailProposal } from "@/components/professional-email-proposal";
 import { RevisionInspector } from "@/components/revision-inspector";
 import { InlineError, LoadingLine } from "@/components/status";
 import { apiRequest, normalizeMessages } from "@/lib/api";
 import { createClientMessageAttemptTracker } from "@/lib/client-message-id";
 import { formatTime } from "@/lib/format";
 import { normalizeRevision } from "@/lib/revisions";
-import type { ConfigRevision, ConversationMessage, StudioBootstrap } from "@/lib/types";
+import { normalizeProfessionalEmail } from "@/lib/professional-email";
+import type { ConfigRevision, ConversationMessage, ProfessionalEmail, StudioBootstrap } from "@/lib/types";
 
 function StudioMessage({ message }: { message: ConversationMessage }) {
   if (message.author_type === "system") return <div className="studio-system-event">{message.content}</div>;
@@ -40,12 +42,15 @@ export function StudioWorkspace() {
   const [messages, setMessages] = useState<ConversationMessage[]>([]);
   const [proposed, setProposed] = useState<ConfigRevision | null>(null);
   const [active, setActive] = useState<ConfigRevision | null>(null);
+  const [email, setEmail] = useState<ProfessionalEmail | null>(null);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [authorizingEmail, setAuthorizingEmail] = useState(false);
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
   const attemptTrackerRef = useRef(createClientMessageAttemptTracker());
 
   const load = useCallback(async (background = false) => {
@@ -64,6 +69,7 @@ export function StudioWorkspace() {
       setMessages(loadedMessages.length ? loadedMessages : normalizeMessages(spaceObject.studio_messages));
       setProposed(normalizeRevision(spaceObject.latest_draft || spaceObject.proposed_revision));
       setActive(normalizeRevision(spaceObject.active_revision));
+      setEmail(normalizeProfessionalEmail(messageObject.latest_email));
     } catch (reason) {
       if (!background) {
         setError(reason instanceof Error ? reason.message : "Non è stato possibile aprire lo Studio.");
@@ -74,7 +80,7 @@ export function StudioWorkspace() {
   }, []);
 
   useEffect(() => { void load(); }, [load]);
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth" }); }, [messages, sending, reduceMotion]);
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth" }); }, [messages, email, sending, reduceMotion]);
 
   async function submit(value: string) {
     const content = value.trim();
@@ -100,6 +106,8 @@ export function StudioWorkspace() {
       const object = (value || {}) as Record<string, unknown>;
       const revision = normalizeRevision(object.proposed_revision || object.revision);
       if (revision) setProposed(revision);
+      const proposedEmail = normalizeProfessionalEmail(object.proposed_email);
+      if (proposedEmail) setEmail(proposedEmail);
       await load(true);
       attemptTrackerRef.current.complete(clientMessageId);
     } catch (reason) {
@@ -114,6 +122,31 @@ export function StudioWorkspace() {
   function onSubmit(event: FormEvent) {
     event.preventDefault();
     void submit(input);
+  }
+
+  async function authorizeEmail() {
+    if (!email || email.status !== "draft" || authorizingEmail) return;
+    setAuthorizingEmail(true);
+    setError(null);
+    try {
+      const result = await apiRequest<unknown>(`/studio/email/${email.id}/authorize`, {
+        method: "POST",
+      });
+      const updated = normalizeProfessionalEmail(result);
+      if (updated) setEmail(updated);
+      await load(true);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Non è stato possibile autorizzare l’email.");
+      await load(true);
+    } finally {
+      setAuthorizingEmail(false);
+    }
+  }
+
+  function requestEmailChange() {
+    if (!email) return;
+    setInput(`Vorrei modificare la bozza email per ${email.to_address}: `);
+    requestAnimationFrame(() => composerRef.current?.focus());
   }
 
   return (
@@ -137,6 +170,14 @@ export function StudioWorkspace() {
             </div>
           )}
           {messages.map((message) => <StudioMessage key={message.id} message={message} />)}
+          {email && email.direction === "outbound" && (
+            <ProfessionalEmailProposal
+              email={email}
+              busy={authorizingEmail}
+              onAuthorize={() => void authorizeEmail()}
+              onRequestChange={requestEmailChange}
+            />
+          )}
           {sending && <div className="studio-thinking" role="status"><span /><span /><span /> Lo Studio sta interpretando…</div>}
           <div ref={bottomRef} />
         </div>
@@ -145,6 +186,7 @@ export function StudioWorkspace() {
         )}
         <form className="studio-composer" onSubmit={onSubmit}>
           <textarea
+            ref={composerRef}
             value={input}
             onChange={(event) => {
               attemptTrackerRef.current.invalidate();

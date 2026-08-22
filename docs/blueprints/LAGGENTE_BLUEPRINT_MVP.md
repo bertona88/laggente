@@ -123,6 +123,14 @@ The configuration is not just an opaque prompt written by one model for another.
 
 It cannot change immutable platform identity, tenant isolation, safety, privacy, permissions, or authorship rules. It cannot generate arbitrary tenant code, scripts, or HTML in the MVP.
 
+Within an enabled platform email capability, Mauro may also ask Studio to prepare professional
+correspondence. Studio can seal a new exact draft or inspect tenant-owned correspondence, but it
+cannot send. The product shows the draft as a read-only document inside the Studio conversation;
+only Mauro's explicit authorization can hand those stored bytes to the delivery provider. A
+change request is another Studio message and produces another sealed version rather than editing
+the artifact in place. Incoming email is quoted, untrusted material and never an instruction to
+the assistant or an automatic-reply trigger.
+
 ---
 
 ## 5. The public space
@@ -254,6 +262,7 @@ The application, not the model, determines:
 - which files a participant may access;
 - whether automatic replies are enabled;
 - whether a tool call is authorized;
+- whether an exact email artifact has human authorization to be delivered;
 - retention and deletion execution;
 - immutable disclosure and safety rules.
 
@@ -271,6 +280,8 @@ The accepted MVP topology is:
 - **PostgreSQL** for multi-tenant configuration, conversations, messages, memory, and events;
 - **private filesystem storage** on the Hetzner server for MVP uploads;
 - optional **email delivery** for signed Studio magic links when that authentication mode is configured;
+- optional **Amazon SES transport** for human-authorized professional email, with raw incoming
+  messages relayed into the application through a signed server-to-server endpoint;
 - **Docker Compose** on the existing Hetzner server;
 - **wildcard DNS and TLS** for `*.laggente.com`.
 
@@ -307,6 +318,7 @@ The MVP begins with a compact persistent model:
 | Conversation | Persistent private Studio or public thread |
 | Message | Immutable authored conversational item |
 | Attachment | Private supported media and metadata |
+| Professional email | Sealed inbound or outbound correspondence plus delivery state |
 | Memory item | Correctable interpretation linked to source messages |
 | Event | Auditable configuration, tool, consent, speaker-control, and deletion action |
 
@@ -314,7 +326,8 @@ Do not create a table for every possible interpretation. Summaries, signals, and
 
 In the implemented pilot, participant identity and visible authorship are carried by conversation
 state and immutable message fields rather than a separate participant table. The schema also has
-a `magic_links` support record for the optional email authentication mode. These storage choices
+a `magic_links` support record for the optional email authentication mode and a
+`professional_emails` record for immutable correspondence artifacts. These storage choices
 do not change the conceptual roles above.
 
 Every tenant-owned record contains `account_id`. Public records also bind to the resolved professional space. The hostname selects context but never substitutes for server-side authorization.

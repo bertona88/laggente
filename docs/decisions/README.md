@@ -15,6 +15,7 @@ Architecture Decision Records capture choices that materially constrain implemen
 | --- | --- | --- |
 | [0001](0001-single-hetzner-server.md) | Accepted | Run the MVP on the existing Hetzner server |
 | [0002](0002-wildcard-subdomain-tenancy.md) | Accepted | Use wildcard hostname-based tenancy with one deployment |
+| [0003](0003-agent-native-professional-email.md) | Accepted | Use sealed email artifacts and a replaceable SES transport |
 
 ## Creating a new ADR
 

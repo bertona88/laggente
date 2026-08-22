@@ -3,7 +3,7 @@
 FastAPI service for LAGGENTE's application-owned coordination layer and exactly two OpenAI
 Agents SDK roles: the private Studio assistant and the public assistant. PostgreSQL stores
 tenant-scoped spaces, active/draft configuration revisions, conversations, immutable messages,
-correctable derived memory, attachments, and audit events.
+correctable derived memory, attachments, sealed professional email artifacts, and audit events.
 
 ## Local run
 
@@ -30,6 +30,12 @@ set it to `false` and run Alembic before starting the service.
 - `AUTO_CREATE_SCHEMA=false`
 - `BASE_DOMAIN`, `APP_ORIGIN`, `CORS_ORIGINS`, and `TRUSTED_HOSTS`
 - `UPLOAD_DIR=/data/uploads`
+- Agent-native email is disabled by default. Activation requires `AGENT_MAIL_ENABLED=true`,
+  `AGENT_MAIL_PROVIDER=ses`, sender/reply domains, `AGENT_MAIL_AWS_REGION`, and a random
+  `AGENT_MAIL_INBOUND_SECRET` of at least 32 characters. AWS credentials use the standard boto3
+  credential chain and are never accepted from the browser. On Hetzner, use a dedicated IAM key
+  limited to SES sending through `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` in the API-only
+  application secret file.
 
 The OpenAI key stays server-side. Model responses use the Responses API through the Agents SDK
 with provider storage and SDK tracing disabled. No model reasoning is persisted. For an authorized
@@ -46,7 +52,11 @@ All product routes use `/api/v1`. The main groups are:
 - `/public/{slug}` and `/public/conversations/*` — active public presentation and anonymous
   continuation-token conversations;
 - `/studio/*` — private Studio conversation, configuration proposal/activation, public
-  conversations, professional join, AI pause/resume, and memory correction;
+  conversations, professional join, AI pause/resume, memory correction, and explicit human
+  authorization of sealed email drafts;
+- `/integrations/professional-email/inbound` — HMAC-authenticated relay ingestion for raw incoming
+  email; its content is stored and exposed to Studio as untrusted data and never causes an
+  automatic reply;
 - `/public/conversations/{id}/attachments` and `/attachments/*` — limited private image/audio
   media with cookie-authorized same-origin content and server-side transcription;
 - `/healthz`, `/readyz`, `/version` — operations endpoints (also exposed under `/api/v1`).
@@ -70,6 +80,7 @@ controls, not tenant-configurable assistant behavior, lead stages, or a real-est
 | New public conversations per space | 60 in a rolling hour |
 | Unengaged public conversations per space | 60; an item with no visitor/professional message, professional participation, or bound attachment expires after one hour and is pruned when another conversation is opened |
 | Studio public-conversation inbox | Offset pages of 1–100 conversations; older pages remain reachable |
+| Professional email authorization | 10 human-authorized attempts per member in a rolling hour |
 
 The Studio inbox page size bounds one request; it does not delete or hide older reachable pages.
 The API enforces `CONVERSATION_RETENTION_DAYS` automatically after a five-minute startup grace and

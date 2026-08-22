@@ -47,6 +47,7 @@ class FakeAssistantService:
             text="Ho capito. Posso preparare una bozza quando mi dici di procedere.",
             response_id="resp_test_studio",
             proposed_revision_id=None,
+            proposed_email_id=None,
         )
 
 

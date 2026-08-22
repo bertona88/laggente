@@ -45,6 +45,25 @@ class Settings(BaseSettings):
     openai_max_turns: int = Field(default=6, alias="OPENAI_MAX_TURNS")
     resend_api_key: str | None = Field(default=None, alias="RESEND_API_KEY")
     from_email: str | None = Field(default=None, alias="FROM_EMAIL")
+    agent_mail_enabled: bool = Field(default=False, alias="AGENT_MAIL_ENABLED")
+    agent_mail_provider: str = Field(default="capture", alias="AGENT_MAIL_PROVIDER")
+    agent_mail_from_domain: str = Field(default="laggente.com", alias="AGENT_MAIL_FROM_DOMAIN")
+    agent_mail_reply_domain: str = Field(
+        default="inbound.laggente.com", alias="AGENT_MAIL_REPLY_DOMAIN"
+    )
+    agent_mail_aws_region: str = Field(default="eu-south-1", alias="AGENT_MAIL_AWS_REGION")
+    agent_mail_inbound_secret: str | None = Field(
+        default=None, alias="AGENT_MAIL_INBOUND_SECRET"
+    )
+    agent_mail_max_inbound_bytes: int = Field(
+        default=5 * 1024 * 1024,
+        ge=1024,
+        le=25 * 1024 * 1024,
+        alias="AGENT_MAIL_MAX_INBOUND_BYTES",
+    )
+    aws_access_key_id: str | None = Field(default=None, alias="AWS_ACCESS_KEY_ID")
+    aws_secret_access_key: str | None = Field(default=None, alias="AWS_SECRET_ACCESS_KEY")
+    aws_session_token: str | None = Field(default=None, alias="AWS_SESSION_TOKEN")
     upload_dir: Path = Field(default=Path("./data/uploads"), alias="UPLOAD_DIR")
     max_upload_bytes: int = Field(default=10 * 1024 * 1024, alias="MAX_UPLOAD_BYTES")
     conversation_retention_days: int = Field(
@@ -56,10 +75,30 @@ class Settings(BaseSettings):
     version: str = Field(default="0.1.0", alias="APP_VERSION")
     git_sha: str = Field(default="unknown", alias="GIT_SHA")
 
-    @field_validator("app_env", "auth_mode")
+    @field_validator("app_env", "auth_mode", "agent_mail_provider")
     @classmethod
     def normalize_env(cls, value: str) -> str:
         return value.strip().lower()
+
+    @field_validator("agent_mail_from_domain", "agent_mail_reply_domain")
+    @classmethod
+    def normalize_mail_domain(cls, value: str) -> str:
+        domain = value.strip().lower().rstrip(".")
+        labels = domain.split(".")
+        if (
+            len(domain) > 253
+            or len(labels) < 2
+            or any(
+                not label
+                or len(label) > 63
+                or label.startswith("-")
+                or label.endswith("-")
+                or any(not (character.isalnum() or character == "-") for character in label)
+                for label in labels
+            )
+        ):
+            raise ValueError("Agent mail domain is invalid")
+        return domain
 
     @property
     def is_production(self) -> bool:
@@ -90,6 +129,16 @@ class Settings(BaseSettings):
         return "__Host-laggente_visitor" if self.cookie_secure else "laggente_visitor"
 
     def validate_runtime(self) -> None:
+        if self.agent_mail_enabled:
+            if self.agent_mail_provider not in {"capture", "ses"}:
+                raise RuntimeError("AGENT_MAIL_PROVIDER must be capture or ses")
+            if not self.agent_mail_from_domain or not self.agent_mail_reply_domain:
+                raise RuntimeError("Agent mail sender and reply domains are required")
+            if not self.agent_mail_inbound_secret or len(self.agent_mail_inbound_secret) < 32:
+                raise RuntimeError(
+                    "AGENT_MAIL_INBOUND_SECRET must contain at least 32 characters "
+                    "when agent mail is enabled"
+                )
         if self.is_production:
             if self.session_secret == "development-only-change-me" or len(self.session_secret) < 32:
                 raise RuntimeError("SESSION_SECRET must be a strong, project-specific value in production")
@@ -109,6 +158,15 @@ class Settings(BaseSettings):
                     )
             else:
                 raise RuntimeError("AUTH_MODE must be magic_link or pilot_password")
+            if self.agent_mail_enabled and self.agent_mail_provider != "ses":
+                raise RuntimeError("Production agent mail requires AGENT_MAIL_PROVIDER=ses")
+            if self.agent_mail_enabled and (
+                not self.aws_access_key_id or not self.aws_secret_access_key
+            ):
+                raise RuntimeError(
+                    "Dedicated AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY are required "
+                    "for agent mail"
+                )
 
 
 @lru_cache
