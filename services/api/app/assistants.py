@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import asyncio
+import base64
+import hashlib
 import json
 from dataclasses import dataclass
 from typing import Protocol
@@ -20,6 +23,7 @@ from sqlalchemy.orm import Session
 
 from . import database
 from .config import Settings
+from .media import ALLOWED_MEDIA_TYPES, media_magic_matches
 from .models import ConfigRevision, Conversation, Event, MemoryItem, Message, Space
 from .schemas import MAX_CONFIGURATION_DOCUMENT_BYTES, PublicAgentOutput, SpaceConfigEnvelope
 
@@ -42,6 +46,15 @@ class PublicRunContext:
     space_id: str
     professional_name: str
     configuration: dict
+
+
+@dataclass(frozen=True)
+class PublicImageInput:
+    message_id: str
+    media_type: str
+    storage_key: str
+    size_bytes: int
+    sha256: str
 
 
 @dataclass
@@ -76,6 +89,7 @@ class AssistantService(Protocol):
         professional_name: str,
         configuration: dict,
         messages: list[Message],
+        image_inputs: list[PublicImageInput],
     ) -> PublicReply: ...
 
 
@@ -365,13 +379,52 @@ class AgentsAssistantService:
                 result.append({"role": "user", "content": f"[Evento LAGGENTE] {item.content}"})
         return result
 
-    @staticmethod
-    def _public_input(messages: list[Message]) -> list[dict]:
+    def _private_image_data_url(self, image: PublicImageInput) -> str:
+        media = ALLOWED_MEDIA_TYPES.get(image.media_type)
+        if not media or media[0] != "image":
+            raise AssistantUnavailable("Unsupported public image input")
+        base = self.settings.upload_dir.resolve()
+        target = (self.settings.upload_dir / image.storage_key).resolve()
+        if not target.is_relative_to(base) or not target.is_file():
+            raise AssistantUnavailable("Public image input is unavailable")
+        try:
+            data = target.read_bytes()
+        except OSError as exc:
+            raise AssistantUnavailable("Public image input could not be read") from exc
+        if (
+            len(data) != image.size_bytes
+            or hashlib.sha256(data).hexdigest() != image.sha256
+            or not media_magic_matches(data, image.media_type)
+        ):
+            raise AssistantUnavailable("Public image input failed its integrity check")
+        encoded = base64.b64encode(data).decode("ascii")
+        return f"data:{image.media_type};base64,{encoded}"
+
+    def _public_input(
+        self, messages: list[Message], image_inputs: list[PublicImageInput]
+    ) -> list[dict]:
+        images_by_message: dict[str, PublicImageInput] = {}
+        for image in image_inputs:
+            images_by_message.setdefault(image.message_id, image)
         result: list[dict] = []
         for item in messages[-40:]:
             if item.author_type == "visitor":
+                text = f"[Messaggio {item.id} — visitatore] {item.content}"
+                image = images_by_message.get(item.id)
+                content: str | list[dict]
+                if image:
+                    content = [
+                        {"type": "input_text", "text": text},
+                        {
+                            "type": "input_image",
+                            "image_url": self._private_image_data_url(image),
+                            "detail": "high",
+                        },
+                    ]
+                else:
+                    content = text
                 result.append(
-                    {"role": "user", "content": f"[Messaggio {item.id} — visitatore] {item.content}"}
+                    {"role": "user", "content": content}
                 )
             elif item.author_type == "professional":
                 result.append(
@@ -420,6 +473,7 @@ class AgentsAssistantService:
         professional_name: str,
         configuration: dict,
         messages: list[Message],
+        image_inputs: list[PublicImageInput],
     ) -> PublicReply:
         self._ensure_available()
         context = PublicRunContext(
@@ -428,9 +482,10 @@ class AgentsAssistantService:
             professional_name=professional_name,
             configuration=configuration,
         )
+        model_input = await asyncio.to_thread(self._public_input, messages, image_inputs)
         result = await Runner.run(
             self.public_assistant,
-            self._public_input(messages),
+            model_input,
             context=context,
             max_turns=3,
             run_config=self.run_config,

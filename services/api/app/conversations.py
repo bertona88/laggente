@@ -3,7 +3,7 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from .assistants import AssistantService, AssistantUnavailable
+from .assistants import AssistantService, AssistantUnavailable, PublicImageInput
 from .config import Settings
 from .media import ALLOWED_MEDIA_TYPES, attachment_content_url
 from .models import Attachment, ConfigRevision, Conversation, Event, MemoryItem, Message, Space, utcnow
@@ -21,6 +21,55 @@ def list_messages(db: Session, *, account_id: str, conversation_id: str) -> list
             .order_by(Message.created_at, Message.id)
         ).all()
     )
+
+
+def list_public_image_inputs(
+    db: Session,
+    *,
+    account_id: str,
+    space_id: str,
+    conversation_id: str,
+    messages: list[Message],
+) -> list[PublicImageInput]:
+    visitor_message_ids = [
+        message.id for message in messages[-40:] if message.author_type == "visitor"
+    ]
+    if not visitor_message_ids:
+        return []
+    image_media_types = [
+        media_type
+        for media_type, (kind, _) in ALLOWED_MEDIA_TYPES.items()
+        if kind == "image"
+    ]
+    attachments = db.scalars(
+        select(Attachment)
+        .where(
+            Attachment.account_id == account_id,
+            Attachment.space_id == space_id,
+            Attachment.conversation_id == conversation_id,
+            Attachment.message_id.in_(visitor_message_ids),
+            Attachment.uploader_type == "visitor",
+            Attachment.status == "available",
+            Attachment.media_type.in_(image_media_types),
+        )
+        .order_by(Attachment.created_at, Attachment.id)
+    ).all()
+    result: list[PublicImageInput] = []
+    seen_message_ids: set[str] = set()
+    for attachment in attachments:
+        if not attachment.message_id or attachment.message_id in seen_message_ids:
+            continue
+        seen_message_ids.add(attachment.message_id)
+        result.append(
+            PublicImageInput(
+                message_id=attachment.message_id,
+                media_type=attachment.media_type,
+                storage_key=attachment.storage_key,
+                size_bytes=attachment.size_bytes,
+                sha256=attachment.sha256,
+            )
+        )
+    return result
 
 
 def serialize_messages(
@@ -154,6 +203,13 @@ async def generate_public_reply(
     if not revision:
         raise AssistantUnavailable("No active configuration")
     history = list_messages(db, account_id=conversation.account_id, conversation_id=conversation.id)
+    image_inputs = list_public_image_inputs(
+        db,
+        account_id=conversation.account_id,
+        space_id=conversation.space_id,
+        conversation_id=conversation.id,
+        messages=history,
+    )
     # Release the synchronous SQLAlchemy connection before the external model await. The
     # detached inputs remain usable because SessionLocal uses expire_on_commit=False.
     db.commit()
@@ -164,6 +220,7 @@ async def generate_public_reply(
             professional_name=space.professional_name,
             configuration=revision.document,
             messages=history,
+            image_inputs=image_inputs,
         )
         answer = result.output.answer
         response_id = result.response_id

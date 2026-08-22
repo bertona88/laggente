@@ -71,6 +71,14 @@ def test_private_image_upload_authorized_content_and_message_binding(client, pub
         "url": data["download_url"],
     }
     assert "storage_key" not in bound.text
+    model_call = client.app.state.assistant_service.public_calls[-1]
+    assert len(model_call["image_inputs"]) == 1
+    image_input = model_call["image_inputs"][0]
+    assert image_input.message_id == bound_body["messages"][0]["id"]
+    assert image_input.media_type == "image/png"
+    assert image_input.size_bytes == len(PNG)
+    assert image_input.storage_key
+    assert image_input.sha256
 
     reloaded = client.get(
         f"/api/v1/public/conversations/{conversation_id}",

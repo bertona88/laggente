@@ -32,7 +32,10 @@ set it to `false` and run Alembic before starting the service.
 - `UPLOAD_DIR=/data/uploads`
 
 The OpenAI key stays server-side. Model responses use the Responses API through the Agents SDK
-with provider storage and SDK tracing disabled. No model reasoning is persisted.
+with provider storage and SDK tracing disabled. No model reasoning is persisted. For an authorized
+visitor photograph in recent conversation history, FastAPI verifies the private file's path, type,
+size, and digest, then includes its bytes as a Base64 `input_image` with `detail: high`; the private
+same-origin attachment URL is never exposed to the model provider.
 
 ## HTTP contract
 
