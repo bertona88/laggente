@@ -83,7 +83,7 @@ for search_asset in robots.txt sitemap.xml; do
         exit 1
     }
 done
-if ! grep -Fq 'map "$host:$uri" $laggente_robots_header {' \
+if ! grep -Fq 'map "$host:$request_uri" $laggente_robots_header {' \
     "$repo_root/infra/gateway/nginx.conf" || \
     ! grep -Fq 'add_header X-Robots-Tag $laggente_robots_header always;' \
     "$repo_root/infra/gateway/nginx.conf"; then
@@ -741,6 +741,7 @@ if [[ ${1:-} == --build ]]; then
     require_gateway_status laggente.com /robots.txt 200
     require_gateway_status laggente.com /sitemap.xml 200
     require_gateway_header laggente.com / X-Robots-Tag ''
+    require_gateway_header laggente.com '/?source=validation' X-Robots-Tag ''
     require_gateway_header laggente.com /not-an-index-route X-Robots-Tag 'noindex, nofollow'
     require_gateway_header app.laggente.com /studio X-Robots-Tag 'noindex, nofollow'
     require_gateway_header mauro.laggente.com / X-Robots-Tag 'noindex, nofollow'
