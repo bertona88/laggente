@@ -5,13 +5,13 @@
 
 ## Context
 
-Every professional needs a personal public branch office such as `mauro.laggente.com`. Publishing a professional must not require a new application deployment or dedicated infrastructure.
+Every professional needs a personal public space such as `mauro.laggente.com`. Activating that space must not require a new application deployment or dedicated infrastructure.
 
 ## Decision
 
 Point wildcard DNS for `*.laggente.com` to the shared Hetzner server and route all professional hosts through the same application deployment.
 
-The application extracts a normalized slug from the hostname, resolves it to an active public profile and `account_id`, and loads the active published configuration.
+The application extracts a normalized slug from the hostname, resolves it to an active professional space and `account_id`, and loads that space's active configuration revision.
 
 The hostname is not a security boundary. Every tenant-owned query, tool call, file path, conversation, and audit event must independently enforce `account_id` server-side.
 
@@ -19,7 +19,7 @@ The hostname is not a security boundary. Every tenant-owned query, tool call, fi
 
 ### Positive
 
-- personal URLs are created by publishing database configuration;
+- personal URLs are created by activating database-backed professional spaces;
 - no DNS record or code deployment is required per professional;
 - the user experience reinforces the digital branch office concept;
 - the topology can later support many professionals without separate services.
@@ -34,4 +34,3 @@ The hostname is not a security boundary. Every tenant-owned query, tool call, fi
 ## Local and preview behavior
 
 Maintain `laggente.com/<slug>` as a development and preview fallback. Test production hostname resolution separately using controlled host headers or a loopback wildcard domain.
-

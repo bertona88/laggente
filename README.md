@@ -1,27 +1,52 @@
 # LAGGENTE
 
-> The agentic operating system for real estate.
+> La gente incontra l'agente.
 
-LAGGENTE gives every real-estate professional a living digital branch office: a public AI presence that understands how the professional works, receives homeowners immediately, qualifies opportunities, and brings the human into the conversation when judgment or responsibility is required.
+LAGGENTE gives every real-estate professional a personal digital space with two conversational assistants:
 
-The first product loop is deliberately narrow and commercially complete:
+- a private Studio assistant that helps the professional shape the space by talking;
+- a public assistant that receives people, remembers conversations, and represents the professional without impersonating them.
 
-> conversation → qualification → valuation request → dossier → human takeover
+Between the two assistants is not a third autonomous agent. It is the LAGGENTE application: persistent configuration, conversations, messages, files, memory, permissions, and human participation.
 
-This repository currently contains the project direction and operating documentation. It intentionally contains **no application scaffold yet**. Product code and infrastructure will be introduced only through explicit implementation milestones.
+```text
+real-estate professional
+          ↕
+private Studio assistant
+          ↕
+shared persistent space
+          ↕
+public assistant
+          ↕
+visitor
+```
+
+The product experience is agentic. The control boundaries are deterministic.
 
 ## The first product
 
-The pilot begins with Mauro and expands to five real-estate agents. Each professional has two surfaces:
+The pilot begins with Mauro and expands to five real-estate professionals. Each professional has two surfaces:
 
-- `app.laggente.com` — the private LAGGENTE Studio, where the professional configures the public agent by talking;
-- `<slug>.laggente.com` — the public digital branch office, beginning with `mauro.laggente.com`.
+- `app.laggente.com` — the private Studio;
+- `<slug>.laggente.com` — the public personal space, beginning with `mauro.laggente.com`.
 
-The professional can change tone, required questions, approved knowledge, and handoff rules through conversation. The change follows:
+Mauro starts from a useful template for conversations with people who may want to sell a property. The template is not a questionnaire, sales pipeline, or universal real-estate ontology. Through the Studio, Mauro can change how his space introduces him, what it knows, how it speaks, what it notices, what it can do, and when it should invite him into a conversation.
 
-> Draft → Preview → Approve → Publish
+The Studio prepares a proposed change and shows Mauro its effect. Mauro decides when that change becomes active. Previous revisions remain recoverable.
 
-Publishing activates a versioned configuration in the database. It does not deploy new code or create new infrastructure for each professional.
+The public assistant holds natural, persistent conversations in Italian. It can work with text, voice notes, and photographs; maintain useful memory; surface corrections; and help Mauro understand where his attention may be valuable. Mauro can enter the same conversation without forcing the person through a separate handoff flow.
+
+## What LAGGENTE is not
+
+LAGGENTE is not Salesforce with an AI chat window. It does not ask the professional to maintain a pipeline, classify leads, update arbitrary stages, or perform data entry for the system.
+
+Conversations are primary. Memory, summaries, signals, and possible opportunities are generated from them and remain inspectable and correctable. They are views that help the professional act, not administrative work imposed on the professional.
+
+## Product language
+
+The MVP is Italian-first. User-facing interface copy, seeded content, conversations, notifications, dates, and product tests use `it-IT`. Source code, identifiers, and technical documentation may remain in English.
+
+Use `professional` in code and technical prose for the human real-estate professional. Avoid the bare word `agent` where it could be confused with an AI agent.
 
 ## Documentation map
 
@@ -29,8 +54,8 @@ Start with the [documentation index](docs/README.md).
 
 | Area | Document |
 | --- | --- |
-| Founding blueprint | [LAGGENTE MVP Blueprint](docs/blueprints/LAGGENTE_BLUEPRINT_MVP.md) |
 | Product thesis | [Product Vision](docs/vision/PRODUCT_VISION.md) |
+| Current product blueprint | [LAGGENTE MVP Blueprint](docs/blueprints/LAGGENTE_BLUEPRINT_MVP.md) |
 | First build | [MVP Scope](docs/product/MVP_SCOPE.md) |
 | System shape | [System Architecture](docs/architecture/SYSTEM_ARCHITECTURE.md) |
 | Delivery plan | [Milestones](docs/roadmap/MILESTONES.md) |
@@ -42,21 +67,15 @@ Start with the [documentation index](docs/README.md).
 
 ## Working principle
 
-The repository is the durable source of truth. ChatGPT Work, Codex cloud, and local Codex are different working surfaces around the same project—not separate versions of the project.
-
-- ChatGPT Work develops product direction, specifications, research, review material, and durable documentation.
-- Codex cloud works on bounded repository tasks and returns reviewable Git changes.
-- Local Codex owns machine-bound work: local integration, browser and microphone testing, Hetzner administration, Namecheap/DNS operations, secrets, and controlled deployments.
-- GitHub carries decisions and implementation between all three.
+The repository is the durable source of truth. ChatGPT Work, Codex cloud, and local Codex are different working surfaces around the same project, not separate versions of it.
 
 See [AGENTS.md](AGENTS.md) before making repository changes.
 
 ## Current status
 
-- Founding blueprint: draft 0.2
-- Pilot professional: Mauro
-- Pilot size: five real-estate agents
-- First Playbook: seller qualification and valuation request
-- Hosting decision: one existing Hetzner server for the MVP
-- Repository phase: documentation foundation
-
+- Product blueprint: agentic reset 0.3.
+- Pilot professional: Mauro.
+- Pilot size: five real-estate professionals.
+- Initial template: conversations with people considering selling a property.
+- Hosting decision: one existing Hetzner server for the MVP.
+- Repository phase: documentation foundation, ready for an explicitly authorized implementation milestone.

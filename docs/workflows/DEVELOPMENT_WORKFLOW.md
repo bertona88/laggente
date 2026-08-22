@@ -16,7 +16,7 @@ Suggested branch patterns:
 ```text
 docs/project-foundation
 feat/milestone-a-tenant-resolution
-feat/builder-publish-loop
+feat/studio-configuration-loop
 fix/account-isolation
 ops/hetzner-bootstrap
 ```
@@ -68,5 +68,4 @@ Update documentation in the same change when implementation alters:
 
 ## Release principle
 
-Publishing a professional configuration is a product operation. Deploying application code is an engineering operation. Never couple the two unnecessarily.
-
+Activating a professional space revision is a product operation. Deploying application code is an engineering operation. Never couple the two unnecessarily.
