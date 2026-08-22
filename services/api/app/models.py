@@ -1,0 +1,183 @@
+from __future__ import annotations
+
+import uuid
+from datetime import UTC, datetime
+from typing import Any
+
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, JSON, String, Text, UniqueConstraint
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from .database import Base
+
+
+def new_id() -> str:
+    return str(uuid.uuid4())
+
+
+def utcnow() -> datetime:
+    return datetime.now(UTC)
+
+
+class TimestampMixin:
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False
+    )
+
+
+class Account(Base, TimestampMixin):
+    __tablename__ = "accounts"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+
+
+class Member(Base, TimestampMixin):
+    __tablename__ = "members"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    account_id: Mapped[str] = mapped_column(ForeignKey("accounts.id", ondelete="CASCADE"), index=True)
+    # Pilot authentication is email-first before tenant context exists, so email is globally unique.
+    email: Mapped[str] = mapped_column(String(320), unique=True, index=True, nullable=False)
+    display_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    role: Mapped[str] = mapped_column(String(40), default="professional", nullable=False)
+    password_hash: Mapped[str | None] = mapped_column(String(300))
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    account: Mapped[Account] = relationship()
+
+
+class Space(Base, TimestampMixin):
+    __tablename__ = "spaces"
+    __table_args__ = (UniqueConstraint("slug", name="uq_space_slug"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    account_id: Mapped[str] = mapped_column(ForeignKey("accounts.id", ondelete="CASCADE"), index=True)
+    slug: Mapped[str] = mapped_column(String(63), nullable=False, index=True)
+    professional_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    agency: Mapped[str | None] = mapped_column(String(200))
+    territory: Mapped[str | None] = mapped_column(String(300))
+    public_role: Mapped[str] = mapped_column(String(100), default="agente immobiliare", nullable=False)
+    locale: Mapped[str] = mapped_column(String(16), default="it-IT", nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    active_revision_id: Mapped[str | None] = mapped_column(String(36), index=True)
+
+
+class ConfigRevision(Base, TimestampMixin):
+    __tablename__ = "config_revisions"
+    __table_args__ = (
+        UniqueConstraint("space_id", "revision_number", name="uq_space_revision_number"),
+        Index("ix_config_revision_account_space", "account_id", "space_id"),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    account_id: Mapped[str] = mapped_column(ForeignKey("accounts.id", ondelete="CASCADE"), index=True)
+    space_id: Mapped[str] = mapped_column(ForeignKey("spaces.id", ondelete="CASCADE"), index=True)
+    revision_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    status: Mapped[str] = mapped_column(String(24), default="draft", nullable=False)
+    document: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    rationale: Mapped[str | None] = mapped_column(Text)
+    proposed_by_member_id: Mapped[str | None] = mapped_column(String(36))
+    activated_by_member_id: Mapped[str | None] = mapped_column(String(36))
+    activated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class Conversation(Base, TimestampMixin):
+    __tablename__ = "conversations"
+    __table_args__ = (
+        Index("ix_conversation_account_space", "account_id", "space_id"),
+        Index("ix_conversation_account_kind", "account_id", "kind"),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    account_id: Mapped[str] = mapped_column(ForeignKey("accounts.id", ondelete="CASCADE"), index=True)
+    space_id: Mapped[str] = mapped_column(ForeignKey("spaces.id", ondelete="CASCADE"), index=True)
+    kind: Mapped[str] = mapped_column(String(24), nullable=False)
+    title: Mapped[str | None] = mapped_column(String(240))
+    visitor_token_hash: Mapped[str | None] = mapped_column(String(64), unique=True, index=True)
+    automatic_ai_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    professional_joined: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    last_message_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+
+class Message(Base):
+    __tablename__ = "messages"
+    __table_args__ = (
+        Index("ix_message_account_conversation", "account_id", "conversation_id"),
+        UniqueConstraint("conversation_id", "client_message_id", name="uq_conversation_client_message"),
+        UniqueConstraint("reply_to_message_id", name="uq_message_reply_to"),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    account_id: Mapped[str] = mapped_column(ForeignKey("accounts.id", ondelete="CASCADE"), index=True)
+    conversation_id: Mapped[str] = mapped_column(
+        ForeignKey("conversations.id", ondelete="CASCADE"), index=True
+    )
+    author_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    author_label: Mapped[str] = mapped_column(String(200), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    content_type: Mapped[str] = mapped_column(String(40), default="text", nullable=False)
+    client_message_id: Mapped[str | None] = mapped_column(String(100))
+    model_response_id: Mapped[str | None] = mapped_column(String(100))
+    assistant_reply_state: Mapped[str | None] = mapped_column(String(24))
+    reply_to_message_id: Mapped[str | None] = mapped_column(
+        ForeignKey("messages.id", ondelete="CASCADE"), index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+
+class MemoryItem(Base, TimestampMixin):
+    __tablename__ = "memory_items"
+    __table_args__ = (Index("ix_memory_account_conversation", "account_id", "conversation_id"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    account_id: Mapped[str] = mapped_column(ForeignKey("accounts.id", ondelete="CASCADE"), index=True)
+    space_id: Mapped[str] = mapped_column(ForeignKey("spaces.id", ondelete="CASCADE"), index=True)
+    conversation_id: Mapped[str] = mapped_column(
+        ForeignKey("conversations.id", ondelete="CASCADE"), index=True
+    )
+    kind: Mapped[str] = mapped_column(String(32), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    source_message_ids: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+    status: Mapped[str] = mapped_column(String(24), default="active", nullable=False)
+    corrected_content: Mapped[str | None] = mapped_column(Text)
+    corrected_by_member_id: Mapped[str | None] = mapped_column(String(36))
+
+
+class Event(Base):
+    __tablename__ = "events"
+    __table_args__ = (Index("ix_event_account_created", "account_id", "created_at"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    account_id: Mapped[str] = mapped_column(ForeignKey("accounts.id", ondelete="CASCADE"), index=True)
+    space_id: Mapped[str | None] = mapped_column(String(36), index=True)
+    conversation_id: Mapped[str | None] = mapped_column(String(36), index=True)
+    actor_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    actor_id: Mapped[str | None] = mapped_column(String(100))
+    event_type: Mapped[str] = mapped_column(String(80), nullable=False)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+
+class MagicLink(Base):
+    __tablename__ = "magic_links"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    account_id: Mapped[str] = mapped_column(ForeignKey("accounts.id", ondelete="CASCADE"), index=True)
+    member_id: Mapped[str] = mapped_column(ForeignKey("members.id", ondelete="CASCADE"), index=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    requested_ip_hash: Mapped[str | None] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+
+class Attachment(Base):
+    __tablename__ = "attachments"
+    __table_args__ = (Index("ix_attachment_account_conversation", "account_id", "conversation_id"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    account_id: Mapped[str] = mapped_column(ForeignKey("accounts.id", ondelete="CASCADE"), index=True)
+    space_id: Mapped[str] = mapped_column(ForeignKey("spaces.id", ondelete="CASCADE"), index=True)
+    conversation_id: Mapped[str] = mapped_column(
+        ForeignKey("conversations.id", ondelete="CASCADE"), index=True
+    )
+    message_id: Mapped[str | None] = mapped_column(String(36), index=True)
+    uploader_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    storage_key: Mapped[str] = mapped_column(String(500), unique=True, nullable=False)
+    original_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    media_type: Mapped[str] = mapped_column(String(120), nullable=False)
+    size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
+    sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    transcript: Mapped[str | None] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(24), default="available", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)

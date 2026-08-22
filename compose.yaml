@@ -1,0 +1,310 @@
+name: laggente
+
+x-service-defaults: &service-defaults
+  restart: unless-stopped
+  init: true
+  security_opt:
+    - no-new-privileges:true
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  data-init:
+    image: ${ALPINE_IMAGE:-alpine:3.21}
+    user: "0:0"
+    command:
+      - /bin/sh
+      - -ec
+      - |
+        mkdir -p /data/uploads /data/backups
+        chown -R 10001:10001 /data/uploads /data/backups
+        chmod 0750 /data/uploads /data/backups
+    volumes:
+      - uploads-data:/data/uploads
+      - backups-data:/data/backups
+    network_mode: none
+    restart: "no"
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+
+  db:
+    <<: *service-defaults
+    image: ${POSTGRES_IMAGE:-postgres:16-alpine}
+    env_file:
+      - ${LAGGENTE_DATABASE_ENV_FILE:-/opt/laggente/secrets/database.env}
+    command:
+      - postgres
+      - -c
+      - max_connections=50
+      - -c
+      - shared_buffers=128MB
+      - -c
+      - effective_cache_size=384MB
+      - -c
+      - work_mem=4MB
+      - -c
+      - maintenance_work_mem=64MB
+      - -c
+      - wal_compression=on
+      - -c
+      - log_min_duration_statement=1000
+      - -c
+      - log_parameter_max_length=0
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    shm_size: 64m
+    mem_limit: 384m
+    mem_reservation: 192m
+    cpus: 0.75
+    pids_limit: 160
+    stop_grace_period: 60s
+
+  migrate:
+    image: ${LAGGENTE_API_IMAGE:-laggente-api:local}
+    build:
+      context: .
+      dockerfile: services/api/Dockerfile
+    env_file:
+      - ${LAGGENTE_DATABASE_ENV_FILE:-/opt/laggente/secrets/database.env}
+    environment:
+      APP_ENV: production
+      AUTO_CREATE_SCHEMA: "false"
+      APP_VERSION: ${LAGGENTE_RELEASE:-development}
+      GIT_SHA: ${LAGGENTE_GIT_SHA:-unknown}
+    command: ["alembic", "upgrade", "head"]
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - backend
+    restart: "no"
+    init: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    mem_limit: 384m
+    cpus: 0.75
+    pids_limit: 128
+
+  api:
+    <<: *service-defaults
+    image: ${LAGGENTE_API_IMAGE:-laggente-api:local}
+    build:
+      context: .
+      dockerfile: services/api/Dockerfile
+    env_file:
+      - ${LAGGENTE_DATABASE_ENV_FILE:-/opt/laggente/secrets/database.env}
+      - ${LAGGENTE_APPLICATION_ENV_FILE:-/opt/laggente/secrets/application.env}
+    environment:
+      APP_ENV: production
+      AUTO_CREATE_SCHEMA: "false"
+      UPLOAD_DIR: /data/uploads
+      APP_VERSION: ${LAGGENTE_RELEASE:-development}
+      GIT_SHA: ${LAGGENTE_GIT_SHA:-unknown}
+      API_HEALTH_PATH: ${API_HEALTH_PATH:-/healthz}
+      API_READY_PATH: ${API_READY_PATH:-/readyz}
+    depends_on:
+      data-init:
+        condition: service_completed_successfully
+      db:
+        condition: service_healthy
+    volumes:
+      - uploads-data:/data/uploads
+    networks:
+      - backend
+    expose:
+      - "8000"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import os,urllib.request; url='http://127.0.0.1:8000'+os.environ.get('API_HEALTH_PATH','/healthz'); request=urllib.request.Request(url,headers={'Host':'laggente.com'}); urllib.request.urlopen(request,timeout=3).read()"
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 45s
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp:size=96m,mode=1777
+    mem_limit: 512m
+    mem_reservation: 224m
+    cpus: 1.0
+    pids_limit: 192
+    stop_grace_period: 45s
+
+  gateway:
+    <<: *service-defaults
+    image: ${LAGGENTE_GATEWAY_IMAGE:-laggente-gateway:local}
+    build:
+      context: .
+      dockerfile: infra/gateway/Dockerfile
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${LAGGENTE_LOOPBACK_PORT:-45200}:8080"
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--header", "Host: laggente.com", "-O", "/dev/null", "http://127.0.0.1:8080/_gateway_health"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 20s
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+      - /var/cache/nginx:size=32m,mode=0755
+    mem_limit: 64m
+    mem_reservation: 32m
+    cpus: 0.25
+    pids_limit: 64
+    stop_grace_period: 20s
+
+  backup:
+    <<: *service-defaults
+    image: ${LAGGENTE_BACKUP_IMAGE:-laggente-backup:local}
+    build:
+      context: .
+      dockerfile: infra/backup/Dockerfile
+    env_file:
+      - ${LAGGENTE_DATABASE_ENV_FILE:-/opt/laggente/secrets/database.env}
+    environment:
+      PGHOST: db
+      BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-86400}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+      BACKUP_KEEP_MINIMUM: ${BACKUP_KEEP_MINIMUM:-7}
+    command: ["/opt/backup/backup.sh", "daemon"]
+    depends_on:
+      data-init:
+        condition: service_completed_successfully
+      db:
+        condition: service_healthy
+    volumes:
+      - uploads-data:/data/uploads:ro
+      - backups-data:/backups
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "/opt/backup/healthcheck.sh"]
+      interval: 5m
+      timeout: 10s
+      retries: 3
+      start_period: 10m
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp:size=96m,mode=1777
+    mem_limit: 192m
+    mem_reservation: 64m
+    cpus: 0.5
+    pids_limit: 96
+    stop_grace_period: 2m
+
+  restore-db:
+    profiles: ["restore"]
+    image: ${POSTGRES_IMAGE:-postgres:16-alpine}
+    environment:
+      POSTGRES_USER: restore
+      POSTGRES_PASSWORD: restore-only-isolated
+      POSTGRES_DB: laggente_restore
+    tmpfs:
+      - /var/lib/postgresql/data:size=768m,mode=0700
+    networks:
+      - restore
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U restore -d laggente_restore"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+    restart: "no"
+    mem_limit: 768m
+    cpus: 1.0
+    pids_limit: 160
+
+  restore-verify:
+    profiles: ["restore"]
+    image: ${LAGGENTE_BACKUP_IMAGE:-laggente-backup:local}
+    build:
+      context: .
+      dockerfile: infra/backup/Dockerfile
+    environment:
+      PGHOST: restore-db
+      PGUSER: restore
+      PGPASSWORD: restore-only-isolated
+      PGDATABASE: laggente_restore
+      RESTORE_DUMP: ${RESTORE_DUMP:-}
+    command: ["/opt/backup/restore-verify.sh"]
+    depends_on:
+      restore-db:
+        condition: service_healthy
+    volumes:
+      - backups-data:/backups:ro
+    networks:
+      - restore
+    restart: "no"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:size=128m,mode=1777
+    mem_limit: 256m
+    cpus: 0.5
+    pids_limit: 96
+
+networks:
+  backend:
+    driver: bridge
+  restore:
+    driver: bridge
+    internal: true
+
+volumes:
+  postgres-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${LAGGENTE_DATA_ROOT:-/opt/laggente/data}/postgres
+  uploads-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${LAGGENTE_DATA_ROOT:-/opt/laggente/data}/uploads
+  backups-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${LAGGENTE_DATA_ROOT:-/opt/laggente/data}/backups

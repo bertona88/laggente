@@ -2,7 +2,9 @@
 
 ## Status
 
-This document describes the intended MVP architecture after the agentic product reset. It is not authorization to scaffold, deploy, change DNS, or operate production.
+This document describes the MVP pilot architecture implemented in this repository. It records
+system truth; deployment, DNS, migration, and production operations still require the authority
+defined by repository and operations policy.
 
 ## Product surfaces
 
@@ -39,17 +41,39 @@ The coordination layer is ordinary application code and persistent data. It is n
 The MVP runs on one existing Hetzner server with Docker Compose:
 
 - reverse proxy and TLS termination;
-- Next.js/React web application;
-- FastAPI service for ChatKit, Agents SDK, authorized tools, streaming, and application logic;
+- internal nginx gateway serving a bespoke Vite/React static single-page build for the brand,
+  Studio, and public space;
+- same-origin JSON and multipart REST routes, proxied from `/api/v1` to FastAPI;
+- FastAPI application logic and exactly two OpenAI Agents SDK assistant definitions;
 - PostgreSQL;
 - private upload storage on the server filesystem;
 - scheduled database and file backups.
 
-The Studio assistant and public assistant reuse this conversational infrastructure, durable store, streaming path, model integration, and authorized-tool framework. They have different roles, instructions, participants, and access contexts; shared infrastructure must never collapse their permission boundaries or expose private Studio material publicly.
+Node.js and Vite are build-stage tools only. The gateway image compiles `apps/web`, copies the
+resulting immutable files into nginx, serves history routes through `index.html`, and caches
+fingerprinted assets. Production has no separate web application process. The browser reads the
+hostname for presentation and routing, but FastAPI independently resolves the host to an active
+space and enforces `account_id` for every data operation.
+
+The SPA history fallback is deliberately outside the API namespace. Exact `/api/v1` and every
+`/api/v1/...` request go to FastAPI; known health paths are explicit; every other `/api/...` path
+returns an HTTP 404 and can never receive `index.html`. The host nginx keeps its attachment-upload
+regex limiter ahead of the ordinary `/api/v1/` prefix before forwarding into the same boundary.
+
+The Studio assistant and public assistant reuse the application-owned conversation store, HTTP
+transport, model integration, and authorized-tool framework. They have different roles,
+instructions, participants, and access contexts; shared infrastructure must never collapse their
+permission boundaries or expose private Studio material publicly.
 
 Redis, Kubernetes, Vercel, Railway, and a managed database are not part of the accepted MVP topology.
 
-OpenAI's current ChatKit path supports a custom server-side integration, durable store and file-store contracts, and Agents SDK streaming. The application remains responsible for authentication, authorization, persistence, and tenant context. See [ChatKit](https://developers.openai.com/api/docs/guides/chatkit) and [advanced ChatKit integrations](https://developers.openai.com/api/docs/guides/custom-chatkit).
+Conversation turns currently complete as durable, non-streaming HTTP request/response operations.
+The FastAPI service runs the relevant assistant through the Agents SDK and persists authored
+messages and derived interpretations in the application database. Provider-side conversation
+storage and SDK tracing are disabled; private reasoning is not persisted. ChatKit is not an
+implemented transport or store contract. See
+[ADR-0001](../decisions/0001-single-hetzner-server.md) and the
+[Agents SDK guide](https://developers.openai.com/api/docs/guides/agents).
 
 ## Two AI roles
 
@@ -90,6 +114,37 @@ The application between the two assistants owns:
 
 The coordination layer may ask an AI model to interpret or summarize. It does not surrender authorization or data ownership decisions to the model.
 
+### Pilot abuse and capacity ceilings
+
+The coordination layer owns the following pilot ceilings independently of both assistants and of
+tenant configuration:
+
+| Resource | Enforced ceiling |
+| --- | --- |
+| Durable image storage | 512 MiB per account and 50 MiB per conversation |
+| Attachments | 20 records per conversation, including image and audio records |
+| Audio transcription | 12 attempts per account in a rolling hour |
+| Public-assistant model use | 60 model-backed turns per space in a rolling hour |
+| Conversation creation | 60 new public conversations per space in a rolling hour |
+| Empty-conversation pressure | At most 60 unengaged public conversations per space; conversations without a visitor/professional message, professional participation, or a bound attachment expire after one hour and are pruned on a subsequent creation attempt |
+| Studio inbox projection | Cursorless offset pages of 1–100 conversations; the client can retrieve older pages |
+
+The inbox page size bounds each retrieval, not reachability or durable conversation retention. Raw
+audio is discarded after transcription. A successfully transcribed or photographed draft has a
+one-hour binding window; an abandoned unbound record and any private image payload are then
+reclaimed. A failed transcription releases its unusable row immediately while its content-free
+attempt event remains for rolling spend control. The byte ceilings apply to durable image payloads.
+The rolling public rate counters live in the single API process used by the current pilot
+topology and reset if that process restarts; database-backed storage, attachment, transcription,
+and unengaged-conversation checks remain persistent. These operational controls do not create a
+lead taxonomy, a mandatory visitor questionnaire, or another AI role.
+
+The API process enforces `CONVERSATION_RETENTION_DAYS` automatically. It starts the first cycle
+after a five-minute startup grace, then checks every six hours with a fresh database session. Each
+expired public conversation uses the same tenant-scoped deletion routine as an explicit request,
+including private-file removal and a content-free outcome event. A failed cycle is logged and
+retried at the next interval rather than disabling the public service.
+
 ## Configuration model
 
 Conversation is the configuration interface. The stored space configuration is the durable public behavior.
@@ -127,22 +182,32 @@ An `opportunity` is initially a generated view or signal that a conversation may
 | `members` | Authenticated people, roles, and permissions within an account |
 | `spaces` | Public identity, slug, active configuration reference, and visibility |
 | `config_revisions` | Proposed, active, and historical space configurations |
-| `participants` | Human professionals, visitors, AI identities, and system identity in conversations |
 | `conversations` | Persistent private Studio or public threads |
 | `messages` | Immutable authored items in a conversation |
 | `attachments` | Private audio, photograph, and other supported file metadata |
 | `memory_items` | Correctable, provenance-linked interpretations derived from conversations |
-| `events` | Audit trail for configuration, tools, speaker control, consent, and deletion |
+| `events` | Audit trail for authentication, configuration, assistant failures, media, memory correction, and speaker control |
+| `magic_links` | Signed, expiring, single-use Studio authentication records when magic-link mode is enabled |
 
-This is a conceptual minimum, not a command to create one table per noun. ChatKit storage models may be persisted as JSON where appropriate, while application-owned fields maintain tenant, space, participant, and authorization boundaries.
+This table describes the current application-owned persistence boundary, not a permanent command
+to create one table per future noun. Participant identity and visible authorship are represented by
+conversation state and immutable message authorship in this release; a separate participant
+lifecycle has not been introduced without evidence that it is needed.
 
 Every tenant-owned record contains `account_id`. Every public conversation and attachment is also bound to the resolved `space_id` and authorized through server-side context.
 
-## Chat persistence boundary
+## Conversation persistence and transport boundary
 
-The FastAPI ChatKit server uses a durable PostgreSQL-backed store for threads and items and a filesystem-backed file store for uploads. ChatKit transport objects do not become a separate source of business truth mirrored into an unrelated chat system.
+The browser calls relative `/api/v1` endpoints. The reverse proxy sends those same-origin requests
+to FastAPI, which authorizes them, runs application or assistant logic, and commits the resulting
+records to PostgreSQL before returning a complete JSON response. Uploads use bounded multipart
+requests and private filesystem storage; downloads pass through an authorized FastAPI route.
 
-Application records add the fields ChatKit cannot infer safely: account, space, authenticated member, visitor continuation identity, retention policy, consent, and AI-response control.
+Application records are the only durable conversation truth. They contain the context a model or
+generic chat transport cannot infer safely: account, space, authenticated member, anonymous
+visitor continuation identity, authorship, attachment ownership, revision activation, and
+AI-response control. Adding streaming or ChatKit later must preserve this boundary and must not
+create a second chat database.
 
 ## Human participation
 
@@ -170,7 +235,8 @@ The hostname is a routing input, never the security boundary.
 
 - No OpenAI, database, DNS, or deployment secret reaches the browser.
 - PostgreSQL is not exposed publicly.
-- Uploads are private and served through authorized, short-lived application URLs.
+- Uploads are private and served through same-origin application endpoints that re-authorize every
+  request from the current visitor or professional session and disable shared caching.
 - Public writes go through rate-limited server endpoints.
 - Tool arguments and configuration revisions are validated and authorized server-side.
 - User messages, professional knowledge, and uploads are untrusted input.

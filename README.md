@@ -74,6 +74,20 @@ The repository is the durable source of truth. ChatGPT Work, Codex cloud, and lo
 
 See [AGENTS.md](AGENTS.md) before making repository changes.
 
+## Implemented pilot
+
+The repository now contains the Mauro pilot as a bespoke Vite/React single-page interface. Vite
+produces static assets during the gateway image build; the existing internal nginx gateway serves
+those assets and proxies same-origin `/api/v1` REST endpoints to FastAPI. There is no Node.js web
+process in the production runtime. Exactly two OpenAI Agents SDK definitions power the private
+Studio assistant and the public assistant. PostgreSQL remains the application-owned source of truth
+for tenant-scoped configuration, conversations, messages, correctable memory, attachments, and
+audit events.
+
+Conversation turns currently use durable, non-streaming request/response transport. ChatKit is
+not part of the implemented runtime or persistence contract. See
+[ADR-0001](docs/decisions/0001-single-hetzner-server.md).
+
 ## Current status
 
 - Product blueprint: agentic reset 0.3.
@@ -81,4 +95,5 @@ See [AGENTS.md](AGENTS.md) before making repository changes.
 - Pilot size: five real-estate professionals.
 - Initial template: conversations with people considering selling a property.
 - Hosting decision: one existing Hetzner server for the MVP.
-- Repository phase: documentation foundation, ready for explicitly authorized application implementation.
+- Repository phase: implemented MVP pilot application and production infrastructure; release checks and
+  live deployment state must still be reported separately from repository state.

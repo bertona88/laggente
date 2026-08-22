@@ -25,4 +25,3 @@ Use the next sequential number and include:
 - consequences;
 - alternatives considered;
 - what earlier document or ADR is superseded, if applicable.
-

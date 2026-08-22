@@ -265,18 +265,31 @@ The design goal is not maximum autonomy. It is useful agency inside trustworthy 
 
 The accepted MVP topology is:
 
-- **Next.js/React** for the brand surface, Studio, conversation workspace, and public spaces;
-- **ChatKit with a custom server integration** for streaming conversations, threads, attachments, actions, and widgets;
-- **FastAPI/Python and the OpenAI Agents SDK** for the two assistant roles, tools, streaming, and interpretation;
+- a **bespoke Vite/React single-page interface** for the brand surface, Studio, conversation workspace, and public spaces, compiled to static assets during the gateway image build;
+- **same-origin REST** under `/api/v1` for conversations, configuration, authentication, attachments, and application actions;
+- **FastAPI/Python and the OpenAI Agents SDK** for application logic, authorized tools, interpretation, and exactly two assistant roles;
 - **PostgreSQL** for multi-tenant configuration, conversations, messages, memory, and events;
 - **private filesystem storage** on the Hetzner server for MVP uploads;
-- **email** for initial activity notifications;
+- optional **email delivery** for signed Studio magic links when that authentication mode is configured;
 - **Docker Compose** on the existing Hetzner server;
 - **wildcard DNS and TLS** for `*.laggente.com`.
 
-OpenAI's current guidance for new ChatKit work is the custom server-side path rather than Agent Builder-hosted workflows. See [ChatKit](https://developers.openai.com/api/docs/guides/chatkit), [advanced ChatKit integrations](https://developers.openai.com/api/docs/guides/custom-chatkit), and the [Agents SDK](https://developers.openai.com/api/docs/guides/agents).
+The production web runtime is the existing internal nginx gateway. It serves the immutable Vite
+build with an SPA history fallback and proxies `/api/v1` to FastAPI; there is no separate Node.js
+application server or per-tenant frontend process. Hostname routing still selects the public space,
+while FastAPI remains authoritative for tenant resolution and every protected operation.
 
-The FastAPI service implements durable ChatKit store and file-store contracts. It passes authenticated or anonymous server context into every operation and applies tenant authorization independently of model behavior.
+Conversation turns currently use durable, non-streaming request/response transport. The browser
+does not call OpenAI directly: FastAPI selects the private Studio assistant or public assistant,
+runs it through the Agents SDK, and persists the authored result before returning it. See the
+[Agents SDK](https://developers.openai.com/api/docs/guides/agents) and
+[ADR-0001](../decisions/0001-single-hetzner-server.md).
+
+The FastAPI service implements the application-owned conversation and file boundary. It passes
+authenticated or anonymous server context into every operation and applies tenant authorization
+independently of model behavior. ChatKit transport, widgets, and store/file-store contracts are
+not part of the implemented pilot; a later transport change must reuse this durable truth rather
+than mirror it into another chat system.
 
 ---
 
@@ -299,6 +312,11 @@ The MVP begins with a compact persistent model:
 
 Do not create a table for every possible interpretation. Summaries, signals, and possible opportunities may begin as typed memory items or generated views. Add independent lifecycles only after real product behavior requires them.
 
+In the implemented pilot, participant identity and visible authorship are carried by conversation
+state and immutable message fields rather than a separate participant table. The schema also has
+a `magic_links` support record for the optional email authentication mode. These storage choices
+do not change the conceptual roles above.
+
 Every tenant-owned record contains `account_id`. Public records also bind to the resolved professional space. The hostname selects context but never substitutes for server-side authorization.
 
 ---
@@ -314,11 +332,11 @@ The MVP uses one reasoning path:
 3. transcribe it on the server;
 4. show editable text;
 5. submit the corrected text into the same conversation;
-6. stream the assistant's response.
+6. persist and return the assistant's complete response through the current request/response path.
 
 Raw audio is deleted after transcription by default unless an explicit retained-audio policy applies.
 
-Photographs are private attachments to a conversation. The MVP limits file types, size, and count; serves them through authorized short-lived URLs; and never presents an image-derived claim as certain professional judgment.
+Photographs are private attachments to a conversation. The MVP limits file types, size, and count; serves them through stable same-origin endpoints that authorize every request from the current visitor or professional session; and never presents an image-derived claim as certain professional judgment.
 
 ---
 
@@ -368,15 +386,15 @@ This blueprint is a product specification, not legal advice.
 
 The product begins on the professional side and becomes real through the public side:
 
-1. Mauro signs in through a magic link.
-2. He creates his professional identity and chooses the public username `mauro`.
+1. Mauro signs in through the configured secure pilot method: strong password today, or a signed single-use magic link when email delivery is configured.
+2. The seeded pilot opens with his professional identity and public username `mauro`; self-service onboarding is outside this release.
 3. The Italian Studio talks with him about his territory, work, style, knowledge, boundaries, and desired visitor experience without reducing the conversation to a fixed form.
 4. The Studio develops an extensible configuration for his space and shows its concrete public effect.
 5. Mauro corrects what it misunderstood and explicitly activates the revision.
 6. `mauro.laggente.com` expresses Mauro's active identity, information, presentation, and public-assistant behavior without a code deployment.
 7. A visitor starts a natural, persistent Italian conversation without creating an account.
 8. The public assistant uses only Mauro's active configuration and the seller template as flexible guidance.
-9. Text streams and the visitor can eventually use a voice note and limited photograph upload.
+9. Text responses persist before display, and the visitor can use a voice note or limited photograph upload.
 10. The resulting conversation and derived, correctable context are privately available to Mauro's account.
 11. Mauro sees why the conversation may deserve attention and can join the same thread as a visible human.
 12. Automatic AI replies pause when Mauro writes, and he can explicitly re-enable them without losing continuity.

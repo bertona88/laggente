@@ -42,15 +42,18 @@ Before changing product behavior or architecture, read:
 
 ## Current repository phase
 
-The repository is documentation-only until an explicit implementation task authorizes application code or infrastructure files.
+The repository contains the explicitly authorized MVP pilot implementation and its infrastructure.
+Product behavior, architecture, and operations changes must remain reviewable through repository
+files and the governing documents below.
 
-Do not create framework scaffolds, placeholder applications, package manifests, Docker files, CI workflows, or speculative configuration merely because they may be useful later.
+Do not add placeholder applications, speculative services, integrations, configuration, or future
+CRM concepts merely because they may be useful later.
 
 ## Architectural guardrails
 
 - The MVP runs on the existing Hetzner server.
 - Do not introduce Vercel, Railway, Redis, Kubernetes, or a managed database without an explicit decision that replaces ADR-0001.
-- Plan for Docker Compose with a reverse proxy, Next.js web application, FastAPI agent service, PostgreSQL, private filesystem uploads, and backups.
+- Use Docker Compose with the existing nginx gateway serving the Vite/React static build and proxying same-origin `/api/v1`, plus the FastAPI agent service, PostgreSQL, private filesystem uploads, and backups.
 - Use one application deployment for every professional subdomain.
 - Resolve the tenant from the hostname, but enforce `account_id` in every server-side authorization decision and database query.
 - Keep persistent conversations and messages as primary records.

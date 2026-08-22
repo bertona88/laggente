@@ -1,0 +1,41 @@
+[project]
+name = "laggente-api"
+version = "0.1.0"
+description = "LAGGENTE FastAPI coordination and assistant service"
+requires-python = ">=3.12"
+dependencies = [
+  "alembic>=1.16,<2",
+  "email-validator>=2.2,<3",
+  "fastapi>=0.116,<1",
+  "httpx>=0.28,<1",
+  "openai>=1.99,<3",
+  "openai-agents>=0.2,<1",
+  "psycopg[binary]>=3.2,<4",
+  "pydantic-settings>=2.10,<3",
+  "python-multipart>=0.0.20,<1",
+  "sqlalchemy>=2.0.41,<3",
+  "uvicorn[standard]>=0.35,<1",
+]
+
+[dependency-groups]
+dev = [
+  "pytest>=8.4,<9",
+  "pytest-asyncio>=1.1,<2",
+]
+
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+pythonpath = ["."]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
