@@ -173,6 +173,55 @@ compose_with_release() {
         "$@"
 }
 
+inspect_published_port_bindings() {
+    local container_port=$1
+    [[ "$container_port" =~ ^[1-9][0-9]{0,4}$ ]] && \
+        ((10#$container_port <= 65535)) || \
+        die "invalid container port: $container_port"
+
+    # Docker records an exposed-but-unpublished port as a JSON null in
+    # NetworkSettings.Ports. Only a non-empty bindings array represents a host
+    # publication. Keep this distinction explicit instead of relying on
+    # `docker compose port`, whose output also includes exposed ports in some
+    # Compose versions.
+    jq -r --arg port "${container_port}/tcp" '
+        if (type != "array") or (length != 1) then
+            error("expected exactly one Docker inspect object")
+        else
+            .[0].NetworkSettings.Ports[$port] as $bindings
+            | if $bindings == null then
+                empty
+              elif ($bindings | type) != "array" then
+                error("Docker port bindings are not an array or null")
+              else
+                $bindings[]
+                | if ((.HostIp | type) != "string") or
+                     ((.HostPort | type) != "string") then
+                    error("Docker port binding is missing HostIp or HostPort")
+                  elif (.HostIp | contains(":")) then
+                    "[\(.HostIp)]:\(.HostPort)"
+                  else
+                    "\(.HostIp):\(.HostPort)"
+                  end
+              end
+        end
+    '
+}
+
+compose_service_published_bindings() {
+    local release_env=$1
+    local service=$2
+    local container_port=$3
+    local container_id
+
+    container_id=$(compose_with_release "$release_env" ps --all --quiet "$service")
+    [[ -n "$container_id" ]] || die "no container found for service $service"
+    [[ "$container_id" != *$'\n'* ]] || \
+        die "multiple containers found for singleton service $service"
+
+    docker inspect "$container_id" | inspect_published_port_bindings "$container_port"
+}
+
 wait_for_http() {
     local url=$1
     local host=$2

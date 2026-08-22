@@ -102,6 +102,11 @@ if [[ $(grep -Fc 'limit_req zone=laggente_api burst=5 nodelay;' \
     printf 'host nginx public health routes must each use the modest API rate limit\n' >&2
     exit 1
 fi
+if grep -Fq 'include /etc/nginx/proxy_params;' \
+    "$repo_root/infra/nginx/laggente.conf"; then
+    printf 'host nginx must not combine distribution proxy_params with its explicit proxy headers\n' >&2
+    exit 1
+fi
 if ! grep -Fq 'Cross-Origin-Resource-Policy "same-origin"' \
     "$repo_root/infra/nginx/laggente.conf"; then
     printf 'host nginx must prevent sibling origins from embedding private media\n' >&2
@@ -493,6 +498,41 @@ fi
 
 command -v jq >/dev/null 2>&1 || {
     printf 'jq is required for Compose secret-boundary validation\n' >&2
+    exit 1
+}
+
+# An exposed container port is internal metadata, not a host publication. Docker
+# represents that state as null; retain a regression fixture because `compose
+# port` has reported the exposed value itself in deployed Compose versions.
+unpublished_binding=$(
+    printf '%s\n' \
+        '[{"Config":{"ExposedPorts":{"5432/tcp":{}}},"NetworkSettings":{"Ports":{"5432/tcp":null}}}]' | (
+        # shellcheck source=production-lib.sh
+        source "$repo_root/scripts/production-lib.sh"
+        inspect_published_port_bindings 5432
+    )
+)
+[[ -z "$unpublished_binding" ]] || {
+    printf 'exposed-only container port was misclassified as host-published: %s\n' \
+        "$unpublished_binding" >&2
+    exit 1
+}
+published_binding=$(
+    printf '%s\n' \
+        '[{"NetworkSettings":{"Ports":{"8080/tcp":[{"HostIp":"127.0.0.1","HostPort":"45200"}]}}}]' | (
+        # shellcheck source=production-lib.sh
+        source "$repo_root/scripts/production-lib.sh"
+        inspect_published_port_bindings 8080
+    )
+)
+[[ "$published_binding" == '127.0.0.1:45200' ]] || {
+    printf 'published container port binding was not extracted correctly: %s\n' \
+        "${published_binding:-<none>}" >&2
+    exit 1
+}
+grep -Fq 'compose_service_published_bindings' \
+    "$repo_root/scripts/audit-production.sh" || {
+    printf 'production audit does not inspect actual Docker host bindings\n' >&2
     exit 1
 }
 

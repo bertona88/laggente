@@ -7,6 +7,7 @@ source "$script_dir/production-lib.sh"
 
 configure_docker_client
 require_repo
+require_command jq
 current_env="$laggente_releases_dir/current.env"
 [[ -e "$current_env" ]] || die "no active production release"
 
@@ -21,17 +22,21 @@ printf 'database/application secrets: present, split, and permission-restricted\
 
 compose_with_release "$current_env" ps
 
-published=$(compose_with_release "$current_env" port gateway 8080)
+published=$(compose_service_published_bindings "$current_env" gateway 8080)
 case "$published" in
-    127.0.0.1:*) printf 'gateway binding: %s\n' "$published" ;;
+    127.0.0.1:*)
+        [[ "$published" != *$'\n'* ]] || \
+            die "gateway has multiple published bindings: $published"
+        printf 'gateway binding: %s\n' "$published"
+        ;;
     *) die "gateway is not loopback-only: $published" ;;
 esac
 
 for service_port in 'db 5432' 'api 8000'; do
     read -r service port <<<"$service_port"
-    if compose_with_release "$current_env" port "$service" "$port" 2>/dev/null | grep -q .; then
-        die "LAGGENTE $service unexpectedly publishes container port $port"
-    fi
+    published=$(compose_service_published_bindings "$current_env" "$service" "$port")
+    [[ -z "$published" ]] || \
+        die "LAGGENTE $service unexpectedly publishes container port $port: $published"
 done
 
 latest_backup=$(compose_with_release "$current_env" exec -T backup /opt/backup/backup.sh latest)
