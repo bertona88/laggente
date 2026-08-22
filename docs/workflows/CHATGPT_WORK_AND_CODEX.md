@@ -22,7 +22,7 @@ Local Codex
 
 - developing and challenging the product thesis;
 - converting conversations and source material into durable specifications;
-- maintaining the blueprint, roadmap, ADR drafts, and decision context;
+- maintaining the blueprint, product documents, ADR drafts, and decision context;
 - researching current APIs, regulations, product choices, and tradeoffs;
 - producing reviewable repository changes when GitHub is connected;
 - reviewing implementation against product intent;
@@ -94,4 +94,3 @@ Every substantial implementation task should state:
 ## Context rule
 
 Do not rely on a chat saying “we decided this.” If a decision matters to future implementation, write it into the repository.
-

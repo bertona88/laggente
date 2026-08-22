@@ -8,20 +8,18 @@ This directory is the durable project map. The governing product shape is two co
 2. [Current MVP Blueprint](blueprints/LAGGENTE_BLUEPRINT_MVP.md)
 3. [MVP Scope](product/MVP_SCOPE.md)
 4. [System Architecture](architecture/SYSTEM_ARCHITECTURE.md)
-5. [Milestones](roadmap/MILESTONES.md)
-6. [Architecture Decision Records](decisions/README.md)
-7. [ChatGPT Work and Codex](workflows/CHATGPT_WORK_AND_CODEX.md)
+5. [Architecture Decision Records](decisions/README.md)
+6. [ChatGPT Work and Codex](workflows/CHATGPT_WORK_AND_CODEX.md)
 
 ## Directory structure
 
 | Directory | Purpose |
 | --- | --- |
 | `vision/` | Enduring thesis, positioning, and principles |
-| `product/` | Current product scope and definition of done |
+| `product/` | Current product shape and experience |
 | `blueprints/` | Current long-form product blueprint and build direction |
 | `architecture/` | Current system boundaries and technical shape |
 | `decisions/` | Architecture Decision Records (ADRs) |
-| `roadmap/` | Ordered delivery milestones and evidence gates |
 | `operations/` | Hosting, domains, deployment, backup, and runtime responsibilities |
 | `workflows/` | How humans, ChatGPT Work, Codex, GitHub, and the server interact |
 

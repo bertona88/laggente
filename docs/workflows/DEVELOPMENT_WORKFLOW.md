@@ -2,7 +2,7 @@
 
 ## Repository state
 
-The repository begins with documentation only. Application code is added when an explicit milestone task authorizes it.
+The repository begins with documentation only. Application code is added when an explicit implementation task authorizes it.
 
 ## Branches
 
@@ -15,7 +15,7 @@ Suggested branch patterns:
 
 ```text
 docs/project-foundation
-feat/milestone-a-tenant-resolution
+feat/professional-space-creation
 feat/studio-configuration-loop
 fix/account-isolation
 ops/hetzner-bootstrap
@@ -38,7 +38,7 @@ ops/hetzner-bootstrap
 A pull request should explain:
 
 - what user or operator outcome changed;
-- why the change belongs in the current milestone;
+- how the change serves the product described in the governing documents;
 - important architecture or security implications;
 - tests performed;
 - screenshots or recordings when UI or audio behavior changed;

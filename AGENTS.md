@@ -56,6 +56,7 @@ Do not create framework scaffolds, placeholder applications, package manifests, 
 - Keep persistent conversations and messages as primary records.
 - Treat memory, summaries, signals, and suggested opportunities as derived and correctable unless a later requirement proves that they need independent lifecycles.
 - Do not introduce a conventional CRM pipeline or speculative lead taxonomy into the MVP.
+- Keep professional space configuration document-shaped and extensible inside a typed platform-owned envelope. Do not force identity, knowledge, style, examples, or ways of working into a closed onboarding schema merely because fixed fields are easier to implement.
 - Tenant configuration can shape content, behavior, presentation, memory preferences, and available capabilities, but cannot override platform identity, safety, privacy, permissions, or human control.
 - Changes proposed by the private Studio assistant do not affect the public assistant until the professional explicitly activates them.
 - The OpenAI API key stays server-side.
