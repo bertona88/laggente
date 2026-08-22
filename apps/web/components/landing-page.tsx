@@ -4,7 +4,7 @@ import { AppLink as Link } from "@/components/app-link";
 import { ArrowRightIcon, ArrowUpRightIcon, ConversationIcon, SparkIcon } from "@/components/icons";
 import { BrandHeader } from "@/components/brand-header";
 import { Logo } from "@/components/logo";
-import { publicSpaceHref, studioHref } from "@/lib/hosts";
+import { studioHref } from "@/lib/hosts";
 
 const reveal = {
   hidden: { opacity: 0, y: 18 },
@@ -40,19 +40,19 @@ export function LandingPage() {
           style={{ opacity: textOpacity }}
         >
           <motion.p variants={reveal} transition={{ duration: 0.5 }} className="eyebrow eyebrow--light">
-            Il tuo spazio immobiliare personale
+            Assistente AI per agenti immobiliari
           </motion.p>
           <motion.h1 variants={reveal} transition={{ duration: 0.65 }} id="hero-title">
             La gente incontra <em>l’agente.</em>
           </motion.h1>
           <motion.p variants={reveal} transition={{ duration: 0.55 }} className="landing-hero__lead">
-            Una conversazione che inizia subito, ricorda ciò che conta e porta la persona giusta più vicino al professionista.
+            LAGGENTE è lo spazio digitale personale per professionisti immobiliari: accoglie le persone, mantiene il filo e ti coinvolge quando il tuo giudizio conta.
           </motion.p>
           <motion.div variants={reveal} transition={{ duration: 0.5 }} className="landing-hero__actions">
-            <Link className="button button--paper" href={publicSpaceHref("mauro")}>
-              Incontra Mauro <ArrowRightIcon />
+            <Link className="button button--paper" href="#come-funziona">
+              Scopri come funziona <ArrowRightIcon />
             </Link>
-            <span className="landing-hero__note">Assistente AI sempre dichiarato</span>
+            <span className="landing-hero__note">AI sempre dichiarata · controllo umano</span>
           </motion.div>
         </motion.div>
         <div className="landing-hero__scroll" aria-hidden="true">
@@ -60,7 +60,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section className="manifesto" aria-labelledby="manifesto-title">
+      <section id="come-funziona" className="manifesto" aria-labelledby="manifesto-title">
         <motion.div
           className="manifesto__intro"
           initial={{ opacity: 0, y: 22 }}
@@ -68,7 +68,7 @@ export function LandingPage() {
           viewport={{ once: true, amount: 0.45 }}
           transition={{ duration: 0.65 }}
         >
-          <p className="section-index">01 / Uno spazio vivo</p>
+          <p className="section-index">01 / Come funziona</p>
           <h2 id="manifesto-title">Non un modulo da compilare.<br />Un luogo in cui tornare.</h2>
         </motion.div>
         <div className="manifesto__flow" aria-label="Come funziona LAGGENTE">
@@ -96,7 +96,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section className="atelier" aria-labelledby="atelier-title">
+      <section id="lo-spazio" className="atelier" aria-labelledby="atelier-title">
         <div className="atelier__tone" aria-hidden="true">
           <span>L</span><span>A</span><span>G</span><span>G</span><span>E</span><span>N</span><span>T</span><span>E</span>
         </div>
@@ -109,38 +109,39 @@ export function LandingPage() {
         <div className="atelier__signals">
           <div><ConversationIcon /><span>Conversazioni<br />persistenti</span></div>
           <div><SparkIcon /><span>Memoria<br />correggibile</span></div>
-          <div><span className="atelier__human">M</span><span>Presenza umana<br />nello stesso filo</span></div>
+          <div><span className="atelier__human">TU</span><span>Presenza umana<br />nello stesso filo</span></div>
         </div>
       </section>
 
-      <section className="mauro-feature" aria-labelledby="mauro-title">
-        <div className="mauro-feature__portrait">
-          <div className="mauro-feature__monogram" aria-hidden="true">M</div>
-          <p>Roma Nord<br />Presenza locale</p>
+      <section id="controllo" className="control-feature" aria-labelledby="control-title">
+        <div className="control-feature__portrait">
+          <p>Il centro dello spazio</p>
+          <div className="control-feature__mark" aria-hidden="true">TU</div>
+          <p>Giudizio umano<br />Controllo visibile</p>
         </div>
         <motion.div
-          className="mauro-feature__content"
+          className="control-feature__content"
           initial={{ opacity: 0, x: 28 }}
           whileInView={{ opacity: 1, x: 0 }}
           viewport={{ once: true, amount: 0.35 }}
           transition={{ duration: 0.65 }}
         >
-          <p className="section-index">03 / Il primo spazio</p>
-          <h2 id="mauro-title">“Raccontami da dove vuoi partire.”</h2>
-          <p className="mauro-feature__quote">Lo spazio di Mauro accoglie chi sta pensando di vendere una casa con chiarezza, senza pressioni e senza trasformare la conversazione in un interrogatorio.</p>
-          <div className="mauro-feature__byline">
-            <div><strong>Mauro Rossi</strong><span>Agente immobiliare · Roma</span></div>
-            <Link className="circle-link" href={publicSpaceHref("mauro")} aria-label="Entra nello spazio pubblico di Mauro"><ArrowRightIcon /></Link>
+          <p className="section-index">03 / Sotto il tuo controllo</p>
+          <h2 id="control-title">L’AI apre la conversazione.<br />Tu resti la persona.</h2>
+          <p className="control-feature__copy">L’assistente si dichiara sempre, usa soltanto ciò che hai attivato e non parla mai come se fosse il professionista. Ogni interpretazione resta visibile e correggibile.</p>
+          <div className="control-feature__byline">
+            <div><strong>Ogni voce ha un autore.</strong><span>Professionista, visitatore e assistente restano riconoscibili.</span></div>
+            <Link className="circle-link" href="/terms" aria-label="Leggi i confini dell’assistente"><ArrowRightIcon /></Link>
           </div>
         </motion.div>
       </section>
 
       <section className="closing" aria-labelledby="closing-title">
-        <p className="section-index">04 / Entra</p>
-        <h2 id="closing-title">La porta è aperta.</h2>
+        <p className="section-index">04 / Per professionisti immobiliari</p>
+        <h2 id="closing-title">Il tuo spazio,<br />aperto.</h2>
         <div className="closing__actions">
-          <Link href={publicSpaceHref("mauro")}>Parla con l’assistente di Mauro <ArrowUpRightIcon /></Link>
-          <Link href={studioHref("/login")}>Sei un professionista? Entra nello Studio <ArrowUpRightIcon /></Link>
+          <Link href={studioHref("/login")}>Accedi allo Studio <ArrowUpRightIcon /></Link>
+          <Link href="#come-funziona">Scopri il modello LAGGENTE <ArrowUpRightIcon /></Link>
         </div>
       </section>
 

@@ -77,6 +77,19 @@ if ! grep -Fq 'try_files $uri $uri/ /index.html;' \
     printf 'gateway nginx is missing the SPA history fallback\n' >&2
     exit 1
 fi
+for search_asset in robots.txt sitemap.xml; do
+    [[ -s "$repo_root/apps/web/public/$search_asset" ]] || {
+        printf 'missing static search asset: %s\n' "$search_asset" >&2
+        exit 1
+    }
+done
+if ! grep -Fq 'map "$host:$uri" $laggente_robots_header {' \
+    "$repo_root/infra/gateway/nginx.conf" || \
+    ! grep -Fq 'add_header X-Robots-Tag $laggente_robots_header always;' \
+    "$repo_root/infra/gateway/nginx.conf"; then
+    printf 'gateway nginx is missing pilot search-index isolation\n' >&2
+    exit 1
+fi
 if ! grep -Fq 'location = /api/v1' "$repo_root/infra/gateway/nginx.conf" || \
     ! grep -Fq 'location ^~ /api/v1/' "$repo_root/infra/gateway/nginx.conf" || \
     ! grep -Fq 'proxy_pass http://$api_upstream;' "$repo_root/infra/gateway/nginx.conf"; then
@@ -698,9 +711,39 @@ if [[ ${1:-} == --build ]]; then
         }
     }
 
+    require_gateway_header() {
+        local host=$1
+        local path=$2
+        local header_name=$3
+        local expected=$4
+        local headers
+        local actual
+        headers=$(curl --silent --show-error --dump-header - --output /dev/null \
+            --header "Host: $host" "$gateway_validation_url$path")
+        actual=$(printf '%s\n' "$headers" | awk -v wanted="$header_name" '
+            tolower($1) == tolower(wanted ":") {
+                sub(/^[^:]+:[[:space:]]*/, "")
+                sub(/\r$/, "")
+                print
+                exit
+            }
+        ')
+        [[ "$actual" == "$expected" ]] || {
+            printf 'built gateway %s%s returned %s: %s, expected %s\n' \
+                "$host" "$path" "$header_name" "${actual:-<none>}" "$expected" >&2
+            exit 1
+        }
+    }
+
     require_gateway_status app.laggente.com /studio/conversazioni/validation 200
     require_gateway_status laggente.com /assets/does-not-exist.js 404
     require_gateway_status laggente.com /api/this-route-must-not-be-spa 404
+    require_gateway_status laggente.com /robots.txt 200
+    require_gateway_status laggente.com /sitemap.xml 200
+    require_gateway_header laggente.com / X-Robots-Tag ''
+    require_gateway_header laggente.com /not-an-index-route X-Robots-Tag 'noindex, nofollow'
+    require_gateway_header app.laggente.com /studio X-Robots-Tag 'noindex, nofollow'
+    require_gateway_header mauro.laggente.com / X-Robots-Tag 'noindex, nofollow'
     require_gateway_location \
         laggente.com '/studio?source=validation' \
         'https://app.laggente.com/studio?source=validation'

@@ -12,7 +12,7 @@ import { StudioShell } from "@/components/studio-shell";
 import { StudioWorkspace } from "@/components/studio-workspace";
 import { canonicalProductRedirect, tenantSlugFromHost } from "@/lib/tenant-routing";
 import { PrivacyPage, TermsPage } from "@/src/legal-pages";
-import { useDocumentTitle, useVisualViewportHeight } from "@/src/use-app-frame";
+import { useCanonicalUrl, useDocumentTitle, useVisualViewportHeight } from "@/src/use-app-frame";
 
 const RESERVED = new Set(["studio", "login", "privacy", "terms", "spazio", "api"]);
 
@@ -32,6 +32,15 @@ export function documentTitleForRoute(location: string, tenantSlug: string | nul
     : pathSlug && !RESERVED.has(pathSlug) ? pathSlug : null;
   if (slug) return `Spazio di ${slug.charAt(0).toLocaleUpperCase("it-IT")}${slug.slice(1)}`;
   return location === "/" ? "" : "Spazio non trovato";
+}
+
+export function canonicalUrlForRoute(location: string, tenantSlug: string | null, hostname: string) {
+  if (tenantSlug) return location === "/" ? `https://${tenantSlug}.laggente.com/` : null;
+  const normalizedHost = hostname.toLocaleLowerCase("en-US");
+  if (normalizedHost === "app.laggente.com") return null;
+  if (location === "/") return "https://laggente.com/";
+  if (location === "/privacy" || location === "/terms") return `https://laggente.com${location}`;
+  return null;
 }
 
 function Redirect({ href }: { href: string }) {
@@ -86,6 +95,7 @@ export function App() {
   const hostname = window.location.hostname.toLowerCase();
   const tenantSlug = tenantSlugFromHost(host);
   useDocumentTitle(documentTitleForRoute(location, tenantSlug));
+  useCanonicalUrl(canonicalUrlForRoute(location, tenantSlug, hostname));
   const canonical = canonicalProductRedirect(host, location, window.location.search);
   if (canonical) return <Redirect href={`${canonical}${window.location.hash}`} />;
 

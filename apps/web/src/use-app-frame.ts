@@ -21,6 +21,20 @@ export function useVisualViewportHeight() {
 
 export function useDocumentTitle(title: string) {
   useEffect(() => {
-    document.title = title ? `${title} — LAGGENTE` : "LAGGENTE — La gente incontra l’agente";
+    document.title = title ? `${title} — LAGGENTE` : "Assistente AI per agenti immobiliari | LAGGENTE";
   }, [title]);
+}
+
+export function useCanonicalUrl(url: string | null) {
+  useEffect(() => {
+    const existing = document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+    if (!url) {
+      existing?.remove();
+      return;
+    }
+    const canonical = existing || document.createElement("link");
+    canonical.rel = "canonical";
+    canonical.href = url;
+    if (!existing) document.head.append(canonical);
+  }, [url]);
 }

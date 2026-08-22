@@ -36,7 +36,7 @@ export function TermsPage() {
         <h1>Una conversazione, non una consulenza automatica.</h1>
         <p className="legal-page__lead">LAGGENTE aiuta a iniziare e continuare una conversazione con un professionista immobiliare. L’assistente AI non sostituisce il giudizio del professionista.</p>
         <h2>Identità trasparente</h2>
-        <p>L’assistente dichiara sempre di essere un sistema di intelligenza artificiale. Non può assumere impegni, confermare appuntamenti, produrre valutazioni immobiliari o parlare come se fosse Mauro.</p>
+        <p>L’assistente dichiara sempre di essere un sistema di intelligenza artificiale. Non può assumere impegni, confermare appuntamenti, produrre valutazioni immobiliari o parlare come se fosse il professionista.</p>
         <h2>Uso responsabile</h2>
         <p>Condividi soltanto informazioni pertinenti. Non caricare documenti d’identità, dati di pagamento o materiali di terzi senza averne il diritto.</p>
         <h2>Risposte e verifiche</h2>

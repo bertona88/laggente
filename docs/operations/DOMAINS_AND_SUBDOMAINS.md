@@ -158,6 +158,20 @@ formats continue to record only normalized `$uri` and never the arguments. Clien
 defense-in-depth fallback; it must not be the first mechanism that moves a Studio cookie or visitor
 continuation journey onto its canonical host.
 
+## Search indexing policy
+
+The brand apex homepage is the only crawl target during the pilot. It serves a small sitemap
+containing only `https://laggente.com/` and a real `robots.txt`. Every other apex SPA route, the
+Studio, and every professional subdomain emit `X-Robots-Tag: noindex, nofollow`. This prevents bare
+slug previews and soft-not-found SPA routes from becoming alternate indexable tenant URLs. A tenant
+space becomes indexable only after the professional has explicitly opted in and the product can
+serve truthful, unique metadata for that hostname; activating a space is not itself search-indexing
+consent.
+
+This keeps the public brand discoverable for focused phrases such as “assistente AI per agenti
+immobiliari” without turning pilot identities, private application routes, or thin generated pages
+into an SEO surface.
+
 ## Slug rules
 
 - lowercase ASCII letters, digits, and single hyphens;

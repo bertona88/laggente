@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { AppLink as Link } from "@/components/app-link";
 import { ArrowUpRightIcon, CloseIcon, MenuIcon } from "@/components/icons";
 import { Logo } from "@/components/logo";
-import { publicSpaceHref, studioHref } from "@/lib/hosts";
+import { studioHref } from "@/lib/hosts";
 
 export function BrandHeader({ inverse = false }: { inverse?: boolean }) {
   const [open, setOpen] = useState(false);
@@ -11,11 +11,11 @@ export function BrandHeader({ inverse = false }: { inverse?: boolean }) {
     <header className={`brand-header${inverse ? " brand-header--inverse" : ""}`}>
       <Logo inverse={inverse} />
       <nav className="brand-nav" aria-label="Navigazione principale">
-        <Link href={publicSpaceHref("mauro")}>Incontra Mauro</Link>
-        <Link href={studioHref("/login")}>Studio professionisti</Link>
+        <Link href="#come-funziona">Come funziona</Link>
+        <Link href="#controllo">Sotto il tuo controllo</Link>
       </nav>
-      <Link className="brand-header__cta" href={publicSpaceHref("mauro")}>
-        Entra nello spazio <ArrowUpRightIcon />
+      <Link className="brand-header__cta" href={studioHref("/login")}>
+        Accedi allo Studio <ArrowUpRightIcon />
       </Link>
       <button
         className="brand-header__menu"
@@ -37,7 +37,8 @@ export function BrandHeader({ inverse = false }: { inverse?: boolean }) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -12 }}
           >
-            <Link href={publicSpaceHref("mauro")} onClick={() => setOpen(false)}>Incontra Mauro</Link>
+            <Link href="#come-funziona" onClick={() => setOpen(false)}>Come funziona</Link>
+            <Link href="#controllo" onClick={() => setOpen(false)}>Sotto il tuo controllo</Link>
             <Link href={studioHref("/login")} onClick={() => setOpen(false)}>Accedi allo Studio</Link>
           </motion.nav>
         )}

@@ -62,6 +62,29 @@ for header in strict-transport-security x-content-type-options referrer-policy p
         exit 1
     fi
 done
+if grep -Eqi '^x-robots-tag:' <<<"$security_headers"; then
+    printf 'smoke: canonical apex homepage unexpectedly has an X-Robots-Tag\n' >&2
+    exit 1
+fi
+
+non_index_headers=$(curl --silent --show-error --head --max-time 15 \
+    "$base_url/not-an-index-route")
+pilot_headers=$(curl --silent --show-error --head --max-time 15 "$pilot_url/")
+for protected_headers in "$non_index_headers" "$pilot_headers"; do
+    if ! grep -Eqi '^x-robots-tag:[[:space:]]*noindex,[[:space:]]*nofollow' \
+        <<<"$protected_headers"; then
+        printf 'smoke: a non-indexable SPA surface is missing X-Robots-Tag\n' >&2
+        exit 1
+    fi
+done
+
+robots_body=$(curl --fail --silent --show-error --max-time 15 "$base_url/robots.txt")
+sitemap_body=$(curl --fail --silent --show-error --max-time 15 "$base_url/sitemap.xml")
+if ! grep -Fq 'Sitemap: https://laggente.com/sitemap.xml' <<<"$robots_body" || \
+    ! grep -Fq '<loc>https://laggente.com/</loc>' <<<"$sitemap_body"; then
+    printf 'smoke: crawler assets do not expose the canonical apex-only policy\n' >&2
+    exit 1
+fi
 
 pilot_shell=$(curl --fail --silent --show-error --max-time 15 "$pilot_url/")
 if ! grep -Fq 'id="root"' <<<"$pilot_shell"; then

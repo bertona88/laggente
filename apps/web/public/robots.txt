@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /login
+Disallow: /studio
+Disallow: /spazio/
+
+Sitemap: https://laggente.com/sitemap.xml
