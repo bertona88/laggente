@@ -88,7 +88,9 @@ LAGGENTE is:
 
 Indicative URL: `app.laggente.com`
 
-The Studio is where the professional shapes the public space. Its primary interface is a conversation, not a settings maze.
+The Studio is the first product experience. The professional signs in, creates their professional identity, chooses an available username that becomes their public subdomain, and shapes the public space through conversation rather than a settings maze.
+
+The Studio can begin with useful questions about the professional's territory, work, style, knowledge, preferences, and desired visitor experience. It follows the conversation rather than forcing every professional through the same onboarding fields or order.
 
 Mauro can say in Italian:
 
@@ -115,6 +117,10 @@ The Studio can shape, within platform-provided capabilities:
 
 The Studio does not impose its own real-estate doctrine. It may point out ambiguity, risk, or uncertainty, but its job is to help the professional express their intent safely and visibly.
 
+What the Studio learns becomes an evolving, document-shaped space configuration. The product keeps stable types for ownership, activation, permissions, capabilities, and safety, but it does not constrain the professional's identity or way of working to a narrow profile schema. New meaning can be represented as the conversation evolves, remains inspectable, and can be corrected.
+
+The configuration is not just an opaque prompt written by one model for another. The application can compose runtime instructions from it while preserving the underlying professional meaning, revision history, and public preview.
+
 It cannot change immutable platform identity, tenant isolation, safety, privacy, permissions, or authorship rules. It cannot generate arbitrary tenant code, scripts, or HTML in the MVP.
 
 ---
@@ -123,7 +129,7 @@ It cannot change immutable platform identity, tenant isolation, safety, privacy,
 
 Pilot URL: `mauro.laggente.com`
 
-The public page is a personal conversational space, not a landing page with a floating support widget.
+The public page is the active expression of what the professional created in the Studio, not a separate generic chatbot or a landing page with a floating support widget.
 
 It displays:
 
@@ -358,27 +364,28 @@ This blueprint is a product specification, not legal advice.
 
 ---
 
-## 17. The first build
+## 17. The experience we are building
 
-The first complete slice includes:
+The product begins on the professional side and becomes real through the public side:
 
 1. Mauro signs in through a magic link.
-2. The Studio and public surfaces are Italian.
-3. Mauro changes his public space by speaking naturally with the Studio.
-4. The Studio shows the proposed effect and Mauro activates it.
-5. The public assistant immediately uses the active revision without redeployment.
-6. A visitor starts a persistent conversation without creating an account.
-7. Text streams and the visitor can use a voice note and limited photograph upload.
-8. The assistant uses the seller template as flexible guidance.
-9. The system creates correctable memory and a useful view of the conversation.
-10. Mauro sees the thread and why it may deserve attention.
-11. Mauro joins the same thread and automatic AI replies pause.
-12. Mauro can explicitly re-enable the assistant without losing continuity.
+2. He creates his professional identity and chooses the public username `mauro`.
+3. The Italian Studio talks with him about his territory, work, style, knowledge, boundaries, and desired visitor experience without reducing the conversation to a fixed form.
+4. The Studio develops an extensible configuration for his space and shows its concrete public effect.
+5. Mauro corrects what it misunderstood and explicitly activates the revision.
+6. `mauro.laggente.com` expresses Mauro's active identity, information, presentation, and public-assistant behavior without a code deployment.
+7. A visitor starts a natural, persistent Italian conversation without creating an account.
+8. The public assistant uses only Mauro's active configuration and the seller template as flexible guidance.
+9. Text streams and the visitor can eventually use a voice note and limited photograph upload.
+10. The resulting conversation and derived, correctable context are privately available to Mauro's account.
+11. Mauro sees why the conversation may deserve attention and can join the same thread as a visible human.
+12. Automatic AI replies pause when Mauro writes, and he can explicitly re-enable them without losing continuity.
 
-The demo succeeds when these facts are obvious without a technical explanation:
+The experience is successful when these facts are obvious without a technical explanation:
 
-- Mauro shaped the space by talking;
+- Mauro created and shaped the space by talking;
 - the public assistant changed because Mauro activated a configuration revision;
+- Mauro's configuration could express what mattered without becoming a rigid professional profile;
 - the visitor had a natural, persistent conversation;
 - the system organized context without demanding CRM work;
 - Mauro entered the same conversation as a visible human.
@@ -405,7 +412,7 @@ The initial commercial signal remains qualified valuation appointments per profe
 
 ---
 
-## 19. Outside the first slice
+## 19. What this product is not trying to be
 
 - billing and public self-service signup;
 - native WhatsApp integration;
@@ -426,18 +433,19 @@ These may become useful later. They do not define the product now.
 
 ---
 
-## 20. Implementation brief
+## 20. How to implement the product
 
 Implementation must preserve the simple product shape:
 
 > two assistants around one persistent professional space.
 
-Build the smallest coherent walking slice for the current milestone. Do not scaffold future CRM concepts, speculative tables, integration placeholders, or agent roles.
+Begin with the professional-facing Studio and connect it immediately to the public assistant that proves the active configuration. Do not build an isolated generic chatbot, and do not build a generic prompt platform with no public behavior to validate it. Do not scaffold future CRM concepts, speculative tables, integration placeholders, or agent roles.
 
 For every implementation task:
 
 - state the user-visible result;
 - use Italian product fixtures and acceptance scenarios;
+- allow the professional's configuration to remain document-shaped and extensible inside typed platform controls;
 - keep configuration activation separate from code deployment;
 - authorize every tenant-owned operation server-side;
 - persist real conversations and authorship;

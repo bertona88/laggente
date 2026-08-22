@@ -45,6 +45,8 @@ The MVP runs on one existing Hetzner server with Docker Compose:
 - private upload storage on the server filesystem;
 - scheduled database and file backups.
 
+The Studio assistant and public assistant reuse this conversational infrastructure, durable store, streaming path, model integration, and authorized-tool framework. They have different roles, instructions, participants, and access contexts; shared infrastructure must never collapse their permission boundaries or expose private Studio material publicly.
+
 Redis, Kubernetes, Vercel, Railway, and a managed database are not part of the accepted MVP topology.
 
 OpenAI's current ChatKit path supports a custom server-side integration, durable store and file-store contracts, and Agents SDK streaming. The application remains responsible for authentication, authorization, persistence, and tenant context. See [ChatKit](https://developers.openai.com/api/docs/guides/chatkit) and [advanced ChatKit integrations](https://developers.openai.com/api/docs/guides/custom-chatkit).
@@ -101,7 +103,13 @@ Each professional space has:
 
 A Studio message may produce a proposed revision. It does not silently change public behavior. The professional reviews the visible effect and explicitly activates the revision. Activation changes data in PostgreSQL; it does not deploy code or infrastructure.
 
-The active configuration may remain document-shaped and evolve through validated schemas. Do not normalize every possible professional preference into a dedicated table before usage proves the need.
+The active configuration remains document-shaped and extensible. The platform validates a stable envelope for ownership, revision identity, activation, permissions, capabilities, safety, and references to protected resources. It must not require every professional-specific fact, preference, example, or way of working to fit a closed schema.
+
+The Studio may extend the configuration document as new meaning emerges from conversation. Runtime instructions are composed from the active configuration; the stored configuration is not merely one opaque generated prompt. Professional meaning remains inspectable and correctable, and stable application controls remain typed and server-authorized.
+
+The meta-prompting loop is therefore concrete product behavior: Studio conversation → evolving space configuration → professional preview and activation → composed public-assistant behavior. It is not a general-purpose prompt generator built independently of the space it is meant to create.
+
+Do not normalize every possible professional preference into a dedicated table, build a universal onboarding field set, or treat the current seller template as the configuration schema.
 
 ## Conversation and memory model
 

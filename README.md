@@ -30,11 +30,15 @@ The pilot begins with Mauro and expands to five real-estate professionals. Each 
 - `app.laggente.com` — the private Studio;
 - `<slug>.laggente.com` — the public personal space, beginning with `mauro.laggente.com`.
 
+The experience begins with the professional, not the visitor. Mauro creates his identity, chooses the public slug that becomes his subdomain, and talks with the private Studio assistant about his territory, work, style, knowledge, preferences, and the kind of space he wants to offer people.
+
+That conversation shapes a living configuration for Mauro's space. The configuration is deliberately extensible: it can grow with what Mauro says and with what the product learns, rather than forcing every professional into a narrow profile schema or fixed onboarding questionnaire. The application keeps only the stable structure required for ownership, publication, permissions, safety, and reliable execution.
+
 Mauro starts from a useful template for conversations with people who may want to sell a property. The template is not a questionnaire, sales pipeline, or universal real-estate ontology. Through the Studio, Mauro can change how his space introduces him, what it knows, how it speaks, what it notices, what it can do, and when it should invite him into a conversation.
 
 The Studio prepares a proposed change and shows Mauro its effect. Mauro decides when that change becomes active. Previous revisions remain recoverable.
 
-The public assistant holds natural, persistent conversations in Italian. It can work with text, voice notes, and photographs; maintain useful memory; surface corrections; and help Mauro understand where his attention may be valuable. Mauro can enter the same conversation without forcing the person through a separate handoff flow.
+The public assistant is the expression and proof of that configuration. It holds natural, persistent conversations in Italian using only Mauro's active space; it can work with text, voice notes, and photographs; maintain useful memory; surface corrections; and help Mauro understand where his attention may be valuable. Visitor information and conversations belong to Mauro's private account context, and Mauro can enter the same conversation without forcing the person through a separate handoff flow.
 
 ## What LAGGENTE is not
 
@@ -56,9 +60,8 @@ Start with the [documentation index](docs/README.md).
 | --- | --- |
 | Product thesis | [Product Vision](docs/vision/PRODUCT_VISION.md) |
 | Current product blueprint | [LAGGENTE MVP Blueprint](docs/blueprints/LAGGENTE_BLUEPRINT_MVP.md) |
-| First build | [MVP Scope](docs/product/MVP_SCOPE.md) |
+| Product we want | [MVP Scope](docs/product/MVP_SCOPE.md) |
 | System shape | [System Architecture](docs/architecture/SYSTEM_ARCHITECTURE.md) |
-| Delivery plan | [Milestones](docs/roadmap/MILESTONES.md) |
 | Hosting | [Hetzner Deployment](docs/operations/HETZNER_DEPLOYMENT.md) |
 | Domains | [Domains and Subdomains](docs/operations/DOMAINS_AND_SUBDOMAINS.md) |
 | AI collaboration | [ChatGPT Work and Codex](docs/workflows/CHATGPT_WORK_AND_CODEX.md) |
@@ -78,4 +81,4 @@ See [AGENTS.md](AGENTS.md) before making repository changes.
 - Pilot size: five real-estate professionals.
 - Initial template: conversations with people considering selling a property.
 - Hosting decision: one existing Hetzner server for the MVP.
-- Repository phase: documentation foundation, ready for an explicitly authorized implementation milestone.
+- Repository phase: documentation foundation, ready for explicitly authorized application implementation.

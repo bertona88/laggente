@@ -14,6 +14,8 @@ professional ↔ Studio assistant ↔ shared space ↔ public assistant ↔ visi
 
 The shared space is the product. It contains the professional's identity and knowledge, active behavior, persistent conversations, messages, files, useful memory, and human participation.
 
+The experience begins with the professional creating that space. They choose their public identity and subdomain, then teach the private Studio who they are and what the space should become through open conversation. The public assistant is the resulting space in use, not a generic visitor chatbot built before the professional side.
+
 ## Two conversational assistants
 
 LAGGENTE does contain two chatbot-like interfaces. That is not something to disguise.
@@ -21,6 +23,8 @@ LAGGENTE does contain two chatbot-like interfaces. That is not something to disg
 ### Private Studio assistant
 
 The professional explains how they work and what they want their public space to become. The Studio can propose and apply authorized changes to content, behavior, tone, presentation, memory preferences, and available capabilities. It begins from useful templates but does not impose its own real-estate method.
+
+The Studio must not reduce that conversation to a closed professional-profile schema. Professional meaning remains extensible and document-shaped inside platform-owned boundaries for identity, permissions, activation, safety, and executable capabilities.
 
 ### Public assistant
 
