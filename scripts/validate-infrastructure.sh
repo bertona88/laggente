@@ -7,6 +7,22 @@ repo_root=$(cd -- "$script_dir/.." && pwd)
 bash -n "$repo_root"/scripts/*.sh
 sh -n "$repo_root"/infra/backup/*.sh
 
+bootstrap_script="$repo_root/scripts/bootstrap-server.sh"
+if ! grep -Eq '^[[:space:]]+slirp4netns[[:space:]]*\\$' "$bootstrap_script"; then
+    printf 'server bootstrap does not install the supported rootless network backend\n' >&2
+    exit 1
+fi
+for rootless_contract in \
+    'Environment="DOCKERD_ROOTLESS_ROOTLESSKIT_NET=slirp4netns"' \
+    'Environment="DOCKERD_ROOTLESS_ROOTLESSKIT_PORT_DRIVER=builtin"' \
+    'rootless_network_published=$(rootless_docker port'; do
+    if ! grep -Fq "$rootless_contract" "$bootstrap_script"; then
+        printf 'server bootstrap is missing rootless Docker contract: %s\n' \
+            "$rootless_contract" >&2
+        exit 1
+    fi
+done
+
 [[ -f "$repo_root/infra/secrets/database.env.example" ]] || {
     printf 'missing database secret example\n' >&2
     exit 1
@@ -456,6 +472,21 @@ if ! command -v docker >/dev/null 2>&1; then
     exit 0
 fi
 
+docker_security_options=$(docker info --format '{{json .SecurityOptions}}')
+if [[ "$docker_security_options" == *'name=rootless'* ]]; then
+    command -v slirp4netns >/dev/null 2>&1 || {
+        printf 'rootless Docker is running without the required slirp4netns backend\n' >&2
+        exit 1
+    }
+    if ! ps -u "$(id -u)" -o args= | \
+        grep -F 'rootlesskit ' | \
+        grep -F -- '--net=slirp4netns' | \
+        grep -F -- '--port-driver=builtin' >/dev/null; then
+        printf 'rootless Docker is not using slirp4netns with the builtin port driver\n' >&2
+        exit 1
+    fi
+fi
+
 command -v jq >/dev/null 2>&1 || {
     printf 'jq is required for Compose secret-boundary validation\n' >&2
     exit 1
@@ -526,14 +557,43 @@ if [[ ${1:-} == --build ]]; then
         exit 1
     }
     gateway_validation_container="laggente-gateway-validation-$$"
-    docker run --detach --rm \
-        --name "$gateway_validation_container" \
-        --publish 127.0.0.1::8080 \
-        "$gateway_validation_image" >/dev/null
-    gateway_published=$(docker port "$gateway_validation_container" 8080/tcp)
-    gateway_validation_port=${gateway_published##*:}
-    [[ "$gateway_validation_port" =~ ^[0-9]+$ ]] || {
-        printf 'could not resolve built gateway validation port\n' >&2
+    gateway_validation_started=false
+    gateway_run_log="$validation_tmp/gateway-run.log"
+    # Use an explicit high loopback port so this test exercises the same fixed-host-port
+    # contract as production. A collision is harmless: choose another candidate and retry
+    # without ever widening the bind to 0.0.0.0. A missing mapping is a rootless-network
+    # failure and must not be bypassed.
+    for _attempt in {1..12}; do
+        gateway_validation_port=$((49152 + ((RANDOM * 32768 + RANDOM + $$) % 16384)))
+        if docker run --detach --rm \
+            --name "$gateway_validation_container" \
+            --publish "127.0.0.1:${gateway_validation_port}:8080" \
+            "$gateway_validation_image" \
+            >"$validation_tmp/gateway-container-id" 2>"$gateway_run_log"; then
+            gateway_validation_started=true
+            break
+        fi
+        docker rm -f "$gateway_validation_container" >/dev/null 2>&1 || true
+    done
+    [[ "$gateway_validation_started" == true ]] || {
+        printf 'could not start the built gateway on an ephemeral loopback port\n' >&2
+        sed -n '1,20p' "$gateway_run_log" >&2
+        exit 1
+    }
+
+    if ! gateway_published=$(docker inspect "$gateway_validation_container" | jq -er '
+        .[0].NetworkSettings.Ports["8080/tcp"] as $bindings
+        | select(($bindings | type) == "array" and ($bindings | length) == 1)
+        | $bindings[0]
+        | select(.HostIp == "127.0.0.1")
+        | .HostPort
+    '); then
+        printf 'built gateway validation port is not published loopback-only\n' >&2
+        exit 1
+    fi
+    [[ "$gateway_published" == "$gateway_validation_port" ]] || {
+        printf 'built gateway validation port resolved to %s, expected %s\n' \
+            "$gateway_published" "$gateway_validation_port" >&2
         exit 1
     }
     gateway_validation_url="http://127.0.0.1:$gateway_validation_port"

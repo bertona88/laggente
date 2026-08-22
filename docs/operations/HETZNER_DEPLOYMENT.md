@@ -68,7 +68,7 @@ retention policy. See [Backup and Restore](BACKUP_AND_RESTORE.md).
 | `scripts/audit-production.sh` | Read-only topology, capacity, backup, and endpoint audit |
 | `scripts/smoke-production.sh` | Public static-shell, module-asset, API-boundary/metadata, redirect, and security-header smoke checks |
 
-Docker is installed from Docker's official apt repository with the Compose plugin, following the [official Ubuntu installation procedure](https://docs.docker.com/engine/install/ubuntu/). The bootstrap uses a rootless daemon owned by the dedicated `laggente` user so Docker access does not grant that account a rootful host daemon socket. Rootless requirements and systemd behavior follow [Docker's rootless-mode documentation](https://docs.docker.com/engine/security/rootless/).
+Docker is installed from Docker's official apt repository with the Compose plugin, following the [official Ubuntu installation procedure](https://docs.docker.com/engine/install/ubuntu/). The bootstrap uses a rootless daemon owned by the dedicated `laggente` user so Docker access does not grant that account a rootful host daemon socket. Rootless requirements and systemd behavior follow [Docker's rootless-mode documentation](https://docs.docker.com/engine/security/rootless/). On Ubuntu 24.04 the bootstrap also installs `slirp4netns` and pins RootlessKit to `slirp4netns` with its `builtin` port driver through a user-systemd drop-in. Do not remove that explicit selection: the Docker 29 automatic fallback used when no external userspace backend is installed failed the loopback publication gate on this host and is not part of this deployment contract. Bootstrap verifies both the running RootlessKit arguments and an actual `127.0.0.1` port forward before it succeeds.
 
 ## 1. Prepare an exact source snapshot
 
@@ -91,9 +91,22 @@ ssh -i /Users/andreabertoncini/.ssh/hetzner_wofi_ed25519 \
 rsync -az --delete \
   -e 'ssh -i /Users/andreabertoncini/.ssh/hetzner_wofi_ed25519 -o BatchMode=yes' \
   "$release_stage/" root@116.203.123.0:/opt/laggente/repo/
+
+ssh -i /Users/andreabertoncini/.ssh/hetzner_wofi_ed25519 \
+  -o BatchMode=yes root@116.203.123.0 \
+  'chown -R laggente:laggente /opt/laggente/repo && chmod 0750 /opt/laggente/repo'
+
+rsync -rlnci --delete \
+  -e 'ssh -i /Users/andreabertoncini/.ssh/hetzner_wofi_ed25519 -o BatchMode=yes' \
+  "$release_stage/" root@116.203.123.0:/opt/laggente/repo/
 ```
 
-`--delete` is intentionally scoped to `/opt/laggente/repo/`. It never targets `/opt/laggente/data`, `/opt/laggente/secrets`, or another deployed project. Remove the local staging directory after the remote source identity has been verified.
+`--delete` is intentionally scoped to `/opt/laggente/repo/`. It never targets `/opt/laggente/data`,
+`/opt/laggente/secrets`, or another deployed project. The explicit ownership repair is required
+because `mktemp` creates the local staging root with mode `0700` and archive-mode rsync can preserve
+that root mode or the local numeric owner on a root receiver. The checksum dry run deliberately
+ignores the corrected server ownership metadata and must produce no itemized content changes.
+Remove the local staging directory after that exact-tree verification.
 
 ## 2. Bootstrap the server
 
@@ -113,9 +126,11 @@ The script:
 
 - refuses a non-Ubuntu-24.04 host or an occupied port `45200`;
 - creates the dedicated `laggente` login and copies only the selected public SSH authorization;
-- installs Docker Engine, Buildx, Compose, and rootless prerequisites from the official repository;
+- installs Docker Engine, Buildx, Compose, Ubuntu's `slirp4netns`, and the other rootless prerequisites;
 - refuses to disable a rootful Docker daemon if it contains any container;
-- enables the rootless Docker user service with systemd lingering;
+- installs an idempotent user-systemd drop-in selecting `slirp4netns` plus the `builtin` port driver;
+- enables or safely restarts the rootless Docker user service with systemd lingering and proves a
+  loopback-only container port is reachable;
 - creates `/opt/laggente/{repo,releases,data,secrets}` with restricted ownership;
 - leaves nginx, DNS, TLS, firewall, WOFI, and every existing service unchanged.
 
@@ -131,7 +146,16 @@ sudo -u laggente env \
   XDG_RUNTIME_DIR="/run/user/$deploy_uid" \
   DOCKER_HOST="unix:///run/user/$deploy_uid/docker.sock" \
   docker compose version
+sudo -u laggente env XDG_RUNTIME_DIR="/run/user/$deploy_uid" \
+  systemctl --user show docker.service -p Environment --value
+ps -u laggente -o args= | grep 'rootlesskit .*--net=slirp4netns.*--port-driver=builtin'
 ```
+
+The systemd environment must include
+`DOCKERD_ROOTLESS_ROOTLESSKIT_NET=slirp4netns` and
+`DOCKERD_ROOTLESS_ROOTLESSKIT_PORT_DRIVER=builtin`; the process check must return the running
+RootlessKit parent and child. A missing published port is a failed rootless networking gate, not a
+reason to weaken the gateway bind or skip infrastructure validation.
 
 ## 3. Populate production secrets
 
@@ -207,9 +231,12 @@ Complete [Domains and Subdomains](DOMAINS_AND_SUBDOMAINS.md) before enabling the
 ## 5. First application release
 
 Validate the encoded topology before using the release script. With Docker available, `--build`
-also builds the static gateway and backup images, starts an ephemeral loopback-only gateway, and
-checks SPA history fallback, missing-asset and unknown-API behavior, and query-preserving canonical
-redirects:
+also builds the static gateway and backup images, starts an ephemeral gateway on an explicitly
+selected high `127.0.0.1` port, verifies that Docker published only that loopback mapping, and checks
+SPA history fallback, missing-asset and unknown-API behavior, and query-preserving canonical
+redirects. The explicit mapping deliberately exercises the same fixed-host-port contract as
+production. If Docker starts the container without materializing that mapping, repair the rootless
+network backend and rerun the gate; do not bypass it:
 
 ```bash
 ./scripts/validate-infrastructure.sh --build

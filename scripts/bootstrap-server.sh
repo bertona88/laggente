@@ -85,7 +85,16 @@ install -m 0600 -o "$deploy_user" -g "$deploy_group" \
     "$authorized_keys_source" "/home/$deploy_user/.ssh/authorized_keys"
 
 apt-get update
-apt-get install -y ca-certificates curl gnupg openssl rsync jq uidmap dbus-user-session
+apt-get install -y \
+    ca-certificates \
+    curl \
+    dbus-user-session \
+    gnupg \
+    jq \
+    openssl \
+    rsync \
+    slirp4netns \
+    uidmap
 
 conflicting_packages=()
 for package in docker.io docker-compose docker-compose-v2 docker-doc docker-buildx podman-docker containerd runc; do
@@ -141,7 +150,8 @@ install -d -m 0700 -o "$deploy_user" -g "$deploy_group" "/home/$deploy_user/.con
 install -d -m 0700 -o "$deploy_user" -g "$deploy_group" \
     "/home/$deploy_user/.config/docker" \
     "/home/$deploy_user/.config/systemd" \
-    "/home/$deploy_user/.config/systemd/user"
+    "/home/$deploy_user/.config/systemd/user" \
+    "/home/$deploy_user/.config/systemd/user/docker.service.d"
 printf '{\n  "data-root": "/opt/laggente/data/docker",\n  "log-driver": "json-file",\n  "log-opts": {"max-size": "10m", "max-file": "3"}\n}\n' \
     >"/home/$deploy_user/.config/docker/daemon.json"
 chown "$deploy_user:$deploy_group" "/home/$deploy_user/.config/docker/daemon.json"
@@ -158,19 +168,100 @@ if [[ ! -f "/home/$deploy_user/.config/systemd/user/docker.service" ]]; then
         PATH="/usr/bin:/bin" \
         dockerd-rootless-setuptool.sh install
 fi
-runuser -u "$deploy_user" -- env XDG_RUNTIME_DIR="$runtime_dir" \
-    systemctl --user enable --now docker.service
 
-runuser -u "$deploy_user" -- env \
-    HOME="/home/$deploy_user" \
-    XDG_RUNTIME_DIR="$runtime_dir" \
-    DOCKER_HOST="unix://$runtime_dir/docker.sock" \
-    docker info >/dev/null
-runuser -u "$deploy_user" -- env \
-    HOME="/home/$deploy_user" \
-    XDG_RUNTIME_DIR="$runtime_dir" \
-    DOCKER_HOST="unix://$runtime_dir/docker.sock" \
-    docker compose version >/dev/null
+docker_network_dropin="/home/$deploy_user/.config/systemd/user/docker.service.d/10-laggente-network.conf"
+docker_network_dropin_tmp=$(mktemp)
+printf '%s\n' \
+    '[Service]' \
+    'Environment="DOCKERD_ROOTLESS_ROOTLESSKIT_NET=slirp4netns"' \
+    'Environment="DOCKERD_ROOTLESS_ROOTLESSKIT_PORT_DRIVER=builtin"' \
+    >"$docker_network_dropin_tmp"
+docker_network_changed=false
+if [[ ! -f "$docker_network_dropin" ]] || \
+   ! cmp -s "$docker_network_dropin_tmp" "$docker_network_dropin"; then
+    install -m 0600 -o "$deploy_user" -g "$deploy_group" \
+        "$docker_network_dropin_tmp" "$docker_network_dropin"
+    docker_network_changed=true
+fi
+rm -f -- "$docker_network_dropin_tmp"
+
+runuser -u "$deploy_user" -- env XDG_RUNTIME_DIR="$runtime_dir" \
+    systemctl --user daemon-reload
+runuser -u "$deploy_user" -- env XDG_RUNTIME_DIR="$runtime_dir" \
+    systemctl --user enable docker.service
+
+docker_network_running=false
+if ps -u "$deploy_user" -o args= | \
+    grep -F 'rootlesskit ' | \
+    grep -F -- '--net=slirp4netns' | \
+    grep -F -- '--port-driver=builtin' >/dev/null; then
+    docker_network_running=true
+fi
+if runuser -u "$deploy_user" -- env XDG_RUNTIME_DIR="$runtime_dir" \
+    systemctl --user is-active --quiet docker.service; then
+    if [[ "$docker_network_changed" == true || "$docker_network_running" != true ]]; then
+        runuser -u "$deploy_user" -- env XDG_RUNTIME_DIR="$runtime_dir" \
+            systemctl --user restart docker.service
+    fi
+else
+    runuser -u "$deploy_user" -- env XDG_RUNTIME_DIR="$runtime_dir" \
+        systemctl --user start docker.service
+fi
+
+rootless_docker() {
+    runuser -u "$deploy_user" -- env \
+        HOME="/home/$deploy_user" \
+        XDG_RUNTIME_DIR="$runtime_dir" \
+        DOCKER_HOST="unix://$runtime_dir/docker.sock" \
+        docker "$@"
+}
+
+rootless_docker info >/dev/null
+rootless_docker compose version >/dev/null
+if ! command -v slirp4netns >/dev/null 2>&1; then
+    printf 'slirp4netns is required for the rootless Docker network\n' >&2
+    exit 1
+fi
+if ! ps -u "$deploy_user" -o args= | \
+    grep -F 'rootlesskit ' | \
+    grep -F -- '--net=slirp4netns' | \
+    grep -F -- '--port-driver=builtin' >/dev/null; then
+    printf 'rootless Docker did not start with slirp4netns and the builtin port driver\n' >&2
+    exit 1
+fi
+
+rootless_network_check="laggente-rootless-network-check-$$"
+cleanup_rootless_network_check() {
+    rootless_docker rm -f "$rootless_network_check" >/dev/null 2>&1 || true
+}
+trap cleanup_rootless_network_check EXIT HUP INT TERM
+rootless_docker run --detach --rm \
+    --name "$rootless_network_check" \
+    --publish "127.0.0.1:$loopback_port:8080" \
+    alpine:3.21 \
+    sh -c 'mkdir -p /srv && printf ready >/srv/index.html && exec busybox httpd -f -p 8080 -h /srv' \
+    >/dev/null
+rootless_network_published=$(rootless_docker port "$rootless_network_check" 8080/tcp)
+if [[ "$rootless_network_published" != "127.0.0.1:$loopback_port" ]]; then
+    printf 'rootless Docker did not publish the loopback validation port safely: %s\n' \
+        "${rootless_network_published:-<none>}" >&2
+    exit 1
+fi
+rootless_network_ready=false
+for _attempt in {1..20}; do
+    if curl --fail --silent --show-error --max-time 2 \
+        "http://127.0.0.1:$loopback_port/" >/dev/null; then
+        rootless_network_ready=true
+        break
+    fi
+    sleep 0.25
+done
+if [[ "$rootless_network_ready" != true ]]; then
+    printf 'rootless Docker loopback port forwarding did not become reachable\n' >&2
+    exit 1
+fi
+cleanup_rootless_network_check
+trap - EXIT HUP INT TERM
 
 for secret_class in database application; do
     example="/opt/laggente/repo/infra/secrets/$secret_class.env.example"
