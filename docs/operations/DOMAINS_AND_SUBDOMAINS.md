@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The personal subdomain is the professional's public digital branch office and the first node of the future LAGGENTE network.
+The personal subdomain is the professional's public conversational space and the first node of the future LAGGENTE network.
 
 All professional subdomains use one application deployment.
 
@@ -14,7 +14,7 @@ All professional subdomains use one application deployment.
 | `www.laggente.com` | Redirect to the canonical brand host |
 | `app.laggente.com` | Private Studio and dashboard |
 | `mauro.laggente.com` | Mauro's public branch office |
-| `<slug>.laggente.com` | Any published professional branch office |
+| `<slug>.laggente.com` | Any active professional space |
 
 The API should normally be exposed as a same-origin `/api` route rather than requiring browser calls to a separate API subdomain.
 
@@ -38,7 +38,7 @@ For the five-agent pilot, either:
 1. issue certificates for the known named hosts; or
 2. use a wildcard certificate for `*.laggente.com` through a DNS challenge.
 
-The wildcard approach is the target because publishing a professional should not require a certificate or proxy change. DNS API credentials remain server-side.
+The wildcard approach is the target because activating a professional space should not require a certificate or proxy change. DNS API credentials remain server-side.
 
 ## Slug rules
 
@@ -46,7 +46,7 @@ The wildcard approach is the target because publishing a professional should not
 - unique at the database level;
 - cannot begin or end with a hyphen;
 - immutable or deliberately migrated after publication;
-- resolved only when the public profile is active and published.
+- resolved only when the professional space is active.
 
 Reserve at least:
 
@@ -85,4 +85,3 @@ Subdomain behavior can additionally be tested with a loopback wildcard domain wh
 ## Future custom domains
 
 Customer-owned domains are outside the MVP. When introduced, add a verified `domains` mapping with ownership proof, certificate lifecycle, status, and audit events. Do not overload the professional slug table with unverified external hosts.
-

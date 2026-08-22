@@ -11,9 +11,9 @@ ChatGPT Work and Codex cloud may design, implement, and review the repository-si
 | Service | Responsibility |
 | --- | --- |
 | Reverse proxy | HTTPS, hostname validation, routing, security headers |
-| Web | Next.js marketing, Studio, dashboard, and public pages |
+| Web | Next.js marketing, Studio, conversation workspace, and public spaces |
 | API | FastAPI, ChatKit server, Agents SDK, tools, streaming, and business logic |
-| PostgreSQL | Persistent product state and configuration versions |
+| PostgreSQL | Persistent spaces, conversations, messages, memory, and configuration revisions |
 | Backup job | Database dumps and private upload backup |
 
 The MVP does not require Redis. Background work should remain simple until measured load or reliability requirements justify a queue.
@@ -81,7 +81,6 @@ The deployment design must support:
 - returning to the previously deployed application image or Git release;
 - backward-compatible database changes where possible;
 - restoring the database only as a deliberate last resort;
-- rolling back professional configuration independently through `config_versions`.
+- returning a professional space to an earlier configuration revision.
 
 Application rollback and configuration rollback are separate operations.
-

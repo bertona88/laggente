@@ -1,71 +1,89 @@
 # Delivery Milestones
 
-The roadmap expands only after the preceding vertical slice works. Each milestone has an evidence gate, not merely a list of completed screens.
+The roadmap builds one simple product: two conversational assistants around one persistent professional space. Each milestone ends with observable behavior, not a count of screens, tables, agents, or configuration fields.
 
-## Milestone 0 — Documentation foundation
+## Milestone 0 — Agentic documentation foundation
 
 - establish the repository as the durable source of truth;
-- store the founding blueprint;
+- define the two-assistant product shape;
+- separate conversational behavior from deterministic control boundaries;
+- define the seller context as a starter template rather than a universal pipeline;
 - record the Hetzner and wildcard tenancy decisions;
-- define ChatGPT Work, Codex cloud, and local Codex responsibilities;
-- avoid premature application scaffolding.
+- avoid premature application scaffolding and CRM ontology.
 
-**Done when:** future product and coding tasks can begin from the repository without reconstructing the project from chat history.
+**Done when:** an implementation task can begin without inventing a third agent, mandatory lead workflow, or hidden configuration model.
 
-## Milestone A — First living branch office
+## Milestone A — A living persistent conversation
 
 - approved application scaffold and local environment;
-- authentication;
+- Italian-first public surface;
 - PostgreSQL and tenant isolation;
 - subdomain resolution and path fallback;
-- seeded fictional Mauro profile;
-- custom chat server;
-- first streamed public conversation.
+- seeded fictional Mauro space;
+- custom ChatKit server with durable storage;
+- secure anonymous visitor continuation;
+- first streamed public conversation that survives reload;
+- visible AI identity and message authorship.
 
-**Done when:** Mauro can enter Studio and a visitor can open his public branch office.
+**Done when:** a visitor can open Mauro's public space, converse in Italian, reload or return, and continue the same persisted thread.
 
-## Milestone B — Build by talking
+## Milestone B — Shape the space by talking
 
-- conversational professional onboarding;
-- typed configuration tools;
-- draft, preview, approve, publish, and rollback;
-- public identity generated from published configuration;
-- immediate propagation to the public experience.
+- magic-link professional authentication;
+- Italian Studio conversation;
+- typed configuration capabilities;
+- seller-oriented starting template;
+- proposed configuration revision and concrete preview;
+- explicit activation and recoverable history;
+- immediate propagation to the public assistant without code deployment.
 
-**Done when:** Mauro changes a required question or tone through conversation and publishes without a code deployment.
+**Done when:** Mauro asks the Studio for a meaningful change, understands its effect, activates it, and sees the public assistant behave differently.
 
-## Milestone C — Convert a homeowner
+## Milestone C — Remember and organize
 
-- Seller Playbook;
-- structured fact capture;
-- approved knowledge;
-- voice-note transcription;
-- limited photograph upload;
-- editable customer summary;
-- opportunity dashboard and dossier;
-- email notification;
-- human handoff and takeover.
+- provenance-linked conversational memory;
+- professional and visitor corrections;
+- concise generated conversation view;
+- open questions, signals, and suggested next actions;
+- conversation list ordered by useful suggestions rather than a required pipeline;
+- approved professional knowledge;
+- email notification for relevant activity.
 
-**Done when:** a real public conversation produces a dossier Mauro can act on and the same thread visibly transitions to the human.
+**Done when:** Mauro can open a real conversation and understand what happened, what remains uncertain, and why his attention may be useful without maintaining lead records or stages.
 
-## Milestone D — Five-agent pilot
+## Milestone D — Work in the same conversation
 
-- onboard four additional professionals;
+- professional entry into the public thread;
+- explicit human authorship;
+- automatic AI replies pause when the professional writes;
+- explicit AI re-enable action;
+- continuous shared history and memory;
+- chained voice-note transcription with editable text;
+- limited private photograph upload;
+- privacy, retention, deletion, and audit behavior needed for the pilot.
+
+**Done when:** a visitor uses text or audio, Mauro joins the same thread as a visible human, the AI stops replying automatically, and Mauro can later re-enable it without losing continuity.
+
+## Milestone E — Five-professional pilot
+
+- onboard four additional professionals from the starter template;
+- let each professional shape a meaningfully different space through the Studio;
 - publish personal subdomains;
 - generate QR codes and share messages;
-- capture conversion events;
+- capture product evidence without imposing a CRM workflow;
 - run with real contacts for thirty days;
-- collect structured qualitative feedback.
+- collect structured qualitative feedback and corrections.
 
-**Done when:** five agents repeatedly use their links with real contacts and useful opportunities can be measured.
+**Done when:** five professionals repeatedly use their links with real people, modify their spaces conversationally, and can identify conversations where LAGGENTE created useful human attention.
 
-## Milestone E — Evidence-driven expansion
+## Milestone F — Evidence-driven expansion
 
-- identify high-converting questions and handoff moments;
-- quantify opportunity value and professional response time;
-- identify repeated missing tools;
-- decide whether the second Playbook is buyer search, WhatsApp, or visit booking;
-- design pricing around measured value.
+- identify which configuration capabilities professionals actually use;
+- identify which memories and suggestions are consistently valuable or wrong;
+- measure return conversations and professional response behavior;
+- observe valuation conversations and appointments originating in LAGGENTE;
+- identify repeated missing tools or channels;
+- decide the next template or integration from real behavior;
+- introduce independent opportunity lifecycles only if evidence proves they are needed.
 
-**Done when:** the next roadmap is selected from observed behavior rather than speculation.
-
+**Done when:** the next roadmap follows observed work rather than a speculative CRM model.
