@@ -80,6 +80,17 @@ def test_private_image_upload_authorized_content_and_message_binding(client, pub
     assert image_input.storage_key
     assert image_input.sha256
 
+    followup = client.post(
+        f"/api/v1/public/conversations/{conversation_id}/messages",
+        headers=headers,
+        json={
+            "content": "Grazie, ora vorrei parlare dei tempi.",
+            "client_message_id": "photo-followup-without-image",
+        },
+    )
+    assert followup.status_code == 200, followup.text
+    assert client.app.state.assistant_service.public_calls[-1]["image_inputs"] == []
+
     reloaded = client.get(
         f"/api/v1/public/conversations/{conversation_id}",
         headers=headers,

@@ -75,12 +75,13 @@ implemented transport or store contract. See
 [ADR-0001](../decisions/0001-single-hetzner-server.md) and the
 [Agents SDK guide](https://developers.openai.com/api/docs/guides/agents).
 
-When recent public conversation history contains an authorized visitor photograph, FastAPI reads
-the tenant-, space-, and conversation-scoped file from private storage, verifies its path, media
-type, size, and digest, and supplies the bytes to the Responses API as a Base64 `input_image` with
-`detail: high`. The cookie-authorized same-origin file URL is not sent to the provider. This model
-input is transient: application-owned attachment storage remains the durable source and provider
-storage remains disabled.
+When the current visitor turn contains an authorized photograph, FastAPI reads the tenant-, space-,
+and conversation-scoped file from private storage, verifies its path, media type, size, and digest,
+and supplies the bytes to the Responses API as a Base64 `input_image` with `detail: high`. Historical
+photographs are not replayed on later text turns. The cookie-authorized same-origin file URL is not
+sent to the provider. This model input is transient: application-owned attachment storage remains
+the durable source and provider response storage remains disabled. The visitor-facing privacy
+notice explicitly discloses this provider processing.
 
 ## Two AI roles
 

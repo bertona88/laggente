@@ -446,7 +446,7 @@ for production_line in \
     }
 done
 grep -q '^CONVERSATION_RETENTION_DAYS=365$' "$application_env"
-grep -q '^PRIVACY_NOTICE_VERSION=2026-08-22$' "$application_env"
+grep -q '^PRIVACY_NOTICE_VERSION=2026-08-22[.]2$' "$application_env"
 (
     # Exercise the same exact production-origin/host contract used by deploy and audit.
     # shellcheck source=production-lib.sh

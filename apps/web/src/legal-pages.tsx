@@ -16,6 +16,8 @@ export function PrivacyPage() {
         <p>Ogni messaggio indica chiaramente se è stato scritto dall’assistente AI, dal professionista o da te. L’assistente non impersona mai il professionista.</p>
         <h2>Cosa viene conservato</h2>
         <p>Conserviamo i messaggi, le informazioni che scegli di condividere e gli allegati necessari alla conversazione. Le interpretazioni generate dall’AI sono visibili e correggibili. Le note vocali vengono eliminate dopo la trascrizione, salvo diversa indicazione esplicita.</p>
+        <h2>Come interviene il fornitore AI</h2>
+        <p>Il testo, le note vocali e le fotografie necessari a rispondere vengono elaborati dal fornitore AI di LAGGENTE. Una fotografia viene inviata soltanto nel turno a cui è allegata; il suo indirizzo privato non viene condiviso e LAGGENTE non usa la funzione di archiviazione delle risposte del fornitore.</p>
         <h2>Le tue scelte</h2>
         <p>Puoi chiedere al professionista l’accesso, la correzione o la cancellazione dei tuoi dati. Non è necessario fornire recapiti per iniziare una conversazione.</p>
         <p className="legal-page__notice">Questa informativa sintetica accompagna il pilot. L’informativa legale completa e i contatti del titolare saranno pubblicati prima dell’apertura al pubblico.</p>

@@ -208,7 +208,10 @@ async def generate_public_reply(
         account_id=conversation.account_id,
         space_id=conversation.space_id,
         conversation_id=conversation.id,
-        messages=history,
+        # Only the photograph bound to this visitor turn is needed to answer it. Re-sending
+        # historical photographs on every later text turn would repeatedly disclose and bill
+        # the same private bytes, and could multiply memory use inside the bounded API container.
+        messages=[trigger_message],
     )
     # Release the synchronous SQLAlchemy connection before the external model await. The
     # detached inputs remain usable because SessionLocal uses expire_on_commit=False.

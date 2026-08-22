@@ -588,7 +588,7 @@ export function PublicSpace({ slug }: { slug: string }) {
           {pendingAudioAttachmentId && !recording && <div className="recording-state" role="status"><i /> Trascrizione pronta <span>puoi correggerla prima di inviarla</span></div>}
           {pendingImageAttachment && <div className="recording-state" role="status"><i /> Fotografia pronta <span>riprova l’invio senza ricaricarla</span></div>}
           {uploading && <LoadingLine label="Preparo il file in modo privato…" />}
-          <p className="upload-notice">Continuando confermi di aver ricevuto l’<Link href="/privacy">informativa privacy</Link>; non è un consenso marketing. Non inviare documenti d’identità o dati non necessari. Foto e audio sono privati; l’audio viene eliminato dopo la trascrizione.</p>
+          <p className="upload-notice">Continuando confermi di aver ricevuto l’<Link href="/privacy">informativa privacy</Link>; non è un consenso marketing. Non inviare documenti d’identità o dati non necessari. Foto e audio non sono pubblici e vengono elaborati dal fornitore AI; l’audio viene eliminato dopo la trascrizione.</p>
           <form className="chat-composer" onSubmit={onSubmit}>
             <input
               ref={imageInputRef}

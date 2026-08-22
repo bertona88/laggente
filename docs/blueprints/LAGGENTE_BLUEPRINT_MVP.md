@@ -336,7 +336,7 @@ The MVP uses one reasoning path:
 
 Raw audio is deleted after transcription by default unless an explicit retained-audio policy applies.
 
-Photographs are private attachments to a conversation. The MVP limits file types, size, and count; serves them through stable same-origin endpoints that authorize every request from the current visitor or professional session; and never presents an image-derived claim as certain professional judgment.
+Photographs are private attachments to a conversation. The MVP limits file types, size, and count; serves them through stable same-origin endpoints that authorize every request from the current visitor or professional session; and never presents an image-derived claim as certain professional judgment. When a photograph is attached to an AI-assisted turn, its verified bytes are processed by the configured AI provider for that turn only, as disclosed in the versioned visitor privacy notice; the private attachment URL is not shared and historical photographs are not replayed on later text turns.
 
 ---
 
