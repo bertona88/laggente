@@ -63,6 +63,10 @@ if ! grep -Fq 'log_parameter_max_length=0' "$repo_root/compose.yaml"; then
     printf 'PostgreSQL slow-statement logging must not include private bind values\n' >&2
     exit 1
 fi
+if ! grep -Fq '      - FOWNER' "$repo_root/compose.yaml"; then
+    printf 'data initializer cannot repair modes after ownership moves to runtime UID 10001\n' >&2
+    exit 1
+fi
 if ! grep -Fq 'COPY --from=web-build /build/dist/' \
     "$repo_root/infra/gateway/Dockerfile"; then
     printf 'gateway image does not copy the built Vite assets into nginx\n' >&2

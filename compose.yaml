@@ -32,6 +32,8 @@ services:
     cap_add:
       - CHOWN
       - DAC_OVERRIDE
+      # Repeated initializations chmod directories already owned by runtime UID 10001.
+      - FOWNER
     security_opt:
       - no-new-privileges:true
     read_only: true
