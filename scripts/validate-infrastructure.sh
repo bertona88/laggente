@@ -423,6 +423,7 @@ printf '%s\n' \
     'OPENAI_API_KEY=validation-openai-key' \
     'OPENAI_MODEL=gpt-5.6' \
     'RESEND_API_KEY=' \
+    'RESEND_WEBHOOK_SECRET=' \
     'FROM_EMAIL=' \
     'AGENT_MAIL_ENABLED=false' \
     'AGENT_MAIL_PROVIDER=capture' \
@@ -459,6 +460,7 @@ file_mode() {
 }
 grep -q '^POSTGRES_PASSWORD=' "$database_env"
 grep -q '^OPENAI_API_KEY=' "$application_env"
+grep -q '^RESEND_WEBHOOK_SECRET=' "$application_env"
 for production_line in \
     'APP_ENV=production' \
     'BASE_DOMAIN=laggente.com' \
@@ -495,7 +497,7 @@ if (
     printf 'production application contract accepted an unsafe APP_ORIGIN\n' >&2
     exit 1
 fi
-if grep -Eq '^(OPENAI_API_KEY|SESSION_SECRET|PILOT_PASSWORD|RESEND_API_KEY|AGENT_MAIL_INBOUND_SECRET|AWS_ACCESS_KEY_ID|AWS_SECRET_ACCESS_KEY|AWS_SESSION_TOKEN)=' "$database_env"; then
+if grep -Eq '^(OPENAI_API_KEY|SESSION_SECRET|PILOT_PASSWORD|RESEND_API_KEY|RESEND_WEBHOOK_SECRET|AGENT_MAIL_INBOUND_SECRET|AWS_ACCESS_KEY_ID|AWS_SECRET_ACCESS_KEY|AWS_SESSION_TOKEN)=' "$database_env"; then
     printf 'generated database env crossed the application-secret boundary\n' >&2
     exit 1
 fi
@@ -594,7 +596,8 @@ if ! jq -e '
         and ($services[.].environment.OPENAI_API_KEY == null)
         and ($services[.].environment.SESSION_SECRET == null)
         and ($services[.].environment.PILOT_PASSWORD == null)
-        and ($services[.].environment.RESEND_API_KEY == null)))
+        and ($services[.].environment.RESEND_API_KEY == null)
+        and ($services[.].environment.RESEND_WEBHOOK_SECRET == null)))
     and ($services.api.environment.POSTGRES_PASSWORD != null)
     and ($services.api.environment.OPENAI_API_KEY != null)
     and ($services.api.environment.SESSION_SECRET != null)
@@ -605,6 +608,7 @@ if ! jq -e '
     and ($services.gateway.environment.SESSION_SECRET == null)
     and ($services.gateway.environment.PILOT_PASSWORD == null)
     and ($services.gateway.environment.RESEND_API_KEY == null)
+    and ($services.gateway.environment.RESEND_WEBHOOK_SECRET == null)
     and (($services.migrate.volumes // []) | length == 0)
 ' "$compose_json" >/dev/null; then
     printf 'resolved Compose configuration violates the service secret boundary\n' >&2
