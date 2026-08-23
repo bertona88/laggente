@@ -2,6 +2,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useState } from "react";
 import { AppLink as Link } from "@/components/app-link";
 import { ArrowUpRightIcon, CheckIcon, CloseIcon, SparkIcon } from "@/components/icons";
+import { useStudioSession } from "@/components/studio-shell";
 import { apiRequest } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
 import { publicSpaceHref } from "@/lib/hosts";
@@ -23,7 +24,7 @@ export function PublicMiniPreview({ revision, fallbackName = "il professionista"
     <div className="mini-preview" aria-label="Anteprima dello spazio pubblico">
       <div className="mini-preview__visual">
         <img src={preview.hero_image_url || "/images/laggente-hero.webp"} alt="" />
-        <div><span>{preview.territory || "Roma Nord"}</span><strong>{name}</strong><small>{preview.professional_role || "Agente immobiliare"}</small></div>
+        <div><span>{preview.territory || "Il tuo territorio"}</span><strong>{name}</strong><small>{preview.professional_role || "Agente immobiliare"}</small></div>
       </div>
       <div className="mini-preview__chat">
         <p><i>AI</i><strong>LAGGENTE — assistente AI di {name}</strong></p>
@@ -44,6 +45,7 @@ export function RevisionInspector({
   onActivated?: (revision: ConfigRevision) => void;
   title?: string;
 }) {
+  const { session, loading: sessionLoading, refreshSession } = useStudioSession();
   const [confirming, setConfirming] = useState(false);
   const [activating, setActivating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -55,6 +57,7 @@ export function RevisionInspector({
     try {
       const value = await apiRequest<unknown>(`/studio/config/revisions/${encodeURIComponent(revision.id)}/activate`, { method: "POST" });
       const activated = normalizeRevision((value as Record<string, unknown>)?.revision || value) || { ...revision, status: "active" as const };
+      await refreshSession();
       onActivated?.(activated);
       setConfirming(false);
     } catch (reason) {
@@ -76,6 +79,8 @@ export function RevisionInspector({
   }
 
   const isActive = revision.status === "active";
+  const slugReady = !sessionLoading && Boolean(session?.space?.slug_claimed);
+  const publicSlug = session?.space?.slug_claimed ? session.space.slug : null;
   const resolvedProfessionalName = revision.preview?.professional_name
     || activeRevision?.preview?.professional_name
     || "il professionista";
@@ -99,11 +104,12 @@ export function RevisionInspector({
       <footer>
         <span>Preparata {formatDateTime(revision.created_at)}</span>
         {!isActive && (
-          <button className="button button--ink button--wide" type="button" onClick={() => setConfirming(true)}>
+          <button className="button button--ink button--wide" type="button" onClick={() => setConfirming(true)} disabled={!slugReady}>
             Attiva nello spazio pubblico <CheckIcon />
           </button>
         )}
-        {isActive && <Link className="button button--outline button--wide" href={publicSpaceHref("mauro")} target="_blank">Vedi lo spazio pubblico <ArrowUpRightIcon /></Link>}
+        {!isActive && !slugReady && <small className="revision-slug-warning">Scegli prima il tuo indirizzo pubblico nello Studio.</small>}
+        {isActive && publicSlug && <Link className="button button--outline button--wide" href={publicSpaceHref(publicSlug)} target="_blank">Vedi lo spazio pubblico <ArrowUpRightIcon /></Link>}
       </footer>
 
       <AnimatePresence>

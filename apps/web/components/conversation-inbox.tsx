@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { AppLink as Link } from "@/components/app-link";
 import { ChevronRightIcon, ConversationIcon } from "@/components/icons";
 import { InlineError, LoadingLine } from "@/components/status";
+import { useStudioSession } from "@/components/studio-shell";
 import { apiRequest, unwrapList } from "@/lib/api";
 import { normalizeConversationSummary } from "@/lib/conversations";
 import { formatDateTime, initials } from "@/lib/format";
@@ -11,6 +12,7 @@ import { publicSpaceHref } from "@/lib/hosts";
 import { startVisiblePolling } from "@/lib/visible-polling";
 
 export function ConversationInbox() {
+  const { session } = useStudioSession();
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -74,6 +76,7 @@ export function ConversationInbox() {
       .filter(Boolean)
       .some((value) => value!.toLocaleLowerCase("it-IT").includes(needle)));
   }, [conversations, query]);
+  const professionalFirstName = session?.member.display_name.split(/\s+/)[0] || "Professionista";
 
   return (
     <section className="inbox-page">
@@ -89,7 +92,7 @@ export function ConversationInbox() {
         {loading && <LoadingLine label="Raccolgo le conversazioni…" />}
         {error && <InlineError message={error} retry={load} />}
         {!loading && !error && !conversations.length && (
-          <div className="inbox-empty"><ConversationIcon /><h2>Qui è ancora tranquillo.</h2><p>Quando una persona scrive nello spazio pubblico, la conversazione apparirà qui con il suo contesto originale.</p><Link href={publicSpaceHref("mauro")} target="_blank">Apri lo spazio pubblico ↗</Link></div>
+          <div className="inbox-empty"><ConversationIcon /><h2>Qui è ancora tranquillo.</h2><p>Quando una persona scrive nello spazio pubblico, la conversazione apparirà qui con il suo contesto originale.</p>{session?.space?.is_active && session.space.slug_claimed && <Link href={publicSpaceHref(session.space.slug)} target="_blank">Apri lo spazio pubblico ↗</Link>}</div>
         )}
         {!loading && conversations.length > 0 && !filtered.length && (
           <div className="inbox-empty inbox-empty--small"><h2>Nessun risultato</h2><p>Prova con un nome, una zona o una parola usata nella conversazione.</p></div>
@@ -103,7 +106,7 @@ export function ConversationInbox() {
                 <div className="inbox-row__identity"><strong>{name}</strong><span>{formatDateTime(conversation.last_message_at)}</span></div>
                 <div className="inbox-row__content"><strong>{conversation.summary || conversation.last_message || "Conversazione appena iniziata"}</strong>{conversation.attention_reason && <span>{conversation.attention_reason}</span>}</div>
                 <div className="inbox-row__state">
-                  {conversation.professional_present ? <span className="human-present">Mauro presente</span> : conversation.automatic_replies_enabled ? <span>AI attiva</span> : <span>AI in pausa</span>}
+                  {conversation.professional_present ? <span className="human-present">{professionalFirstName} presente</span> : conversation.automatic_replies_enabled ? <span>AI attiva</span> : <span>AI in pausa</span>}
                   <ChevronRightIcon />
                 </div>
               </Link>

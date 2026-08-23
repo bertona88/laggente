@@ -113,6 +113,36 @@ export interface StudioBootstrap {
   proposed_revision?: ConfigRevision | null;
 }
 
+export interface StudioMember {
+  id: string;
+  account_id: string;
+  email: string;
+  display_name: string;
+  role: string;
+  can_invite: boolean;
+}
+
+export interface StudioSpaceState {
+  id: string;
+  account_id: string;
+  slug: string;
+  professional_name: string;
+  agency?: string | null;
+  territory?: string | null;
+  public_role: string;
+  locale: string;
+  is_active: boolean;
+  slug_claimed: boolean;
+  onboarding_state: "invited" | "building" | "published" | string;
+  active_revision_id?: string | null;
+}
+
+export interface StudioSession {
+  authenticated: boolean;
+  member: StudioMember;
+  space: StudioSpaceState | null;
+}
+
 export interface ApiErrorBody {
   detail?: string | { msg?: string }[];
   message?: string;

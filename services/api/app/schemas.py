@@ -72,11 +72,7 @@ class MemberOut(APIModel):
     email: EmailStr
     display_name: str
     role: str
-
-
-class SessionOut(APIModel):
-    authenticated: bool = True
-    member: MemberOut
+    can_invite: bool
 
 
 class MagicLinkRequest(BaseModel):
@@ -91,6 +87,18 @@ class MagicLinkRequestOut(BaseModel):
 
 class MagicLinkConsume(BaseModel):
     token: str = Field(min_length=20, max_length=1000)
+
+
+class ProfessionalInvitationCreate(BaseModel):
+    email: EmailStr
+
+
+class ProfessionalInvitationOut(BaseModel):
+    accepted: bool = True
+    email: EmailStr
+    status: Literal["sent", "resent"]
+    expires_at: datetime
+    development_magic_link: str | None = None
 
 
 class PilotPasswordLogin(BaseModel):
@@ -108,7 +116,24 @@ class SpaceOut(APIModel):
     public_role: str
     locale: str
     is_active: bool
+    slug_claimed: bool
+    onboarding_state: str
     active_revision_id: str | None
+
+
+class SessionOut(APIModel):
+    authenticated: bool = True
+    member: MemberOut
+    space: SpaceOut | None = None
+
+
+class SlugAvailabilityOut(BaseModel):
+    slug: str
+    available: bool
+
+
+class SlugClaim(BaseModel):
+    slug: str = Field(min_length=1, max_length=63)
 
 
 class RevisionCreate(BaseModel):

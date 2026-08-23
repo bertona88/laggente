@@ -23,7 +23,7 @@ import {
 } from "@/lib/api";
 import { createClientMessageAttemptTracker } from "@/lib/client-message-id";
 import { confirmConversationDeletion, shouldDisableConversationDeletion } from "@/lib/conversation-deletion";
-import { formatTime } from "@/lib/format";
+import { formatTime, initials } from "@/lib/format";
 import {
   acceptResolvedMediaStream,
   finishMediaCaptureRequest,
@@ -84,7 +84,7 @@ export function MessageBubble({ message }: { message: ConversationMessage }) {
       {(assistant || professional) && (
         <div className="chat-message__author">
           <span className={`speaker-mark speaker-mark--${professional ? "human" : "ai"}`} aria-hidden="true">
-            {professional ? "M" : "AI"}
+            {professional ? initials(message.author_name) || "P" : "AI"}
           </span>
           <strong>{message.author_name}</strong>
         </div>
@@ -248,10 +248,10 @@ export function PublicSpace({ slug }: { slug: string }) {
         <Logo />
         <div>
           <p className="eyebrow">Spazio non disponibile</p>
-          <h1>{slug === "mauro" ? "Non riesco ad aprire questa conversazione." : "Questa porta non è ancora aperta."}</h1>
-          <p>{slug === "mauro" ? "Nessun messaggio può essere inviato finché il collegamento sicuro non torna disponibile." : "Controlla l’indirizzo oppure torna a LAGGENTE."}</p>
-          {slug === "mauro" && <button className="button button--ink" type="button" onClick={() => void loadSpace()}>Riprova</button>}
-          {slug === "mauro" && conversationId && (
+          <h1>Non riesco ad aprire questo spazio.</h1>
+          <p>Controlla l’indirizzo oppure riprova. Nessun messaggio può essere inviato finché il collegamento sicuro non torna disponibile.</p>
+          <button className="button button--ink" type="button" onClick={() => void loadSpace()}>Riprova</button>
+          {conversationId && (
             <button className="button button--ink" type="button" disabled={deleting} onClick={() => void deleteConversation()}>
               {deleting ? "Eliminazione…" : "Elimina la conversazione conservata"}
             </button>

@@ -92,6 +92,7 @@ def seed_demo_data(db: Session, settings: Settings) -> None:
         email=settings.pilot_email.lower(),
         display_name=settings.pilot_name,
         password_hash=hash_password(settings.pilot_password) if settings.pilot_password else None,
+        can_invite=True,
     )
     db.add(member)
     space = Space(
@@ -100,6 +101,8 @@ def seed_demo_data(db: Session, settings: Settings) -> None:
         professional_name=settings.pilot_name,
         agency="Mauro Immobiliare",
         territory="Roma Nord",
+        slug_claimed=True,
+        onboarding_state="published",
     )
     db.add(space)
     db.flush()

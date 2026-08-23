@@ -1,10 +1,10 @@
 # LAGGENTE
 
-## Agentic product blueprint 0.3
+## Agentic product blueprint 0.4
 
 **Status:** Current MVP blueprint
-**Date:** 2026-08-22
-**Supersedes:** Founding draft 0.2
+**Date:** 2026-08-23
+**Supersedes:** Agentic product blueprint 0.3
 
 ---
 
@@ -89,6 +89,12 @@ LAGGENTE is:
 Indicative URL: `app.laggente.com`
 
 The Studio is the first product experience. The professional signs in, creates their professional identity, chooses an available username that becomes their public subdomain, and shapes the public space through conversation rather than a settings maze.
+
+During the pilot, entry is invitation-only. A member with explicit platform invitation permission
+can send a new professional a single-use magic link. The application creates a dormant tenant
+before the link is opened, so the recipient enters their own private Studio immediately. The
+invitation permission does not propagate to invited members, and the dormant space cannot resolve
+publicly until its recipient claims a slug and activates a first revision.
 
 The Studio can begin with useful questions about the professional's territory, work, style, knowledge, preferences, and desired visitor experience. It follows the conversation rather than forcing every professional through the same onboarding fields or order.
 
@@ -386,27 +392,30 @@ This blueprint is a product specification, not legal advice.
 
 The product begins on the professional side and becomes real through the public side:
 
-1. Mauro signs in through the configured secure pilot method: strong password today, or a signed single-use magic link when email delivery is configured.
-2. The seeded pilot opens with his professional identity and public username `mauro`; self-service onboarding is outside this release.
-3. The Italian Studio talks with him about his territory, work, style, knowledge, boundaries, and desired visitor experience without reducing the conversation to a fixed form.
-4. The Studio develops an extensible configuration for his space and shows its concrete public effect.
-5. Mauro corrects what it misunderstood and explicitly activates the revision.
-6. `mauro.laggente.com` expresses Mauro's active identity, information, presentation, and public-assistant behavior without a code deployment.
-7. A visitor starts a natural, persistent Italian conversation without creating an account.
-8. The public assistant uses only Mauro's active configuration and the seller template as flexible guidance.
-9. Text responses persist before display, and the visitor can use a voice note or limited photograph upload.
-10. The resulting conversation and derived, correctable context are privately available to Mauro's account.
-11. Mauro sees why the conversation may deserve attention and can join the same thread as a visible human.
-12. Automatic AI replies pause when Mauro writes, and he can explicitly re-enable them without losing continuity.
+1. Mauro remains the seeded first tenant and signs in through the configured secure pilot method.
+2. A pilot member with invitation permission enters Giulia's email address in Studio.
+3. LAGGENTE creates a separate dormant account, member, private Studio thread, and inactive space, then sends Giulia a signed single-use invitation link.
+4. Giulia opens the link and says naturally: “Sono Giulia Bianchi, lavoro principalmente a Milano Porta Romana…”
+5. The Italian Studio turns that conversation into an extensible first draft without reducing Giulia to a fixed form or publishing anything silently.
+6. Giulia chooses the available username `giulia`, reserving `giulia.laggente.com` globally.
+7. She reviews the concrete public effect, corrects the Studio if needed, and explicitly activates the revision.
+8. The first activation makes the dormant space public. It changes PostgreSQL state; it does not deploy code, create infrastructure, or load a Giulia-specific environment file.
+9. `giulia.laggente.com` now uses the same public assistant, seller template, conversation persistence, voice-note, photograph, memory, and human-control machinery as Mauro's space, scoped to Giulia's `account_id` and active configuration.
+10. A visitor starts a natural, persistent Italian conversation without creating an account.
+11. The resulting conversation and derived, correctable context are privately available only to Giulia's account.
+12. Giulia can join the same thread as a visible human; automatic AI replies pause when she writes and can be explicitly re-enabled.
+13. After the invitation has been consumed, Giulia can return through an ordinary magic-link login without receiving another invitation.
 
 The experience is successful when these facts are obvious without a technical explanation:
 
-- Mauro created and shaped the space by talking;
-- the public assistant changed because Mauro activated a configuration revision;
-- Mauro's configuration could express what mattered without becoming a rigid professional profile;
+- a new professional received an invitation and created a genuinely separate space by talking;
+- the public assistant changed because that professional activated a configuration revision;
+- Giulia's configuration could express what mattered without becoming a rigid professional profile;
+- `giulia.laggente.com` required no Giulia-specific code, deployment, DNS record, or application configuration;
 - the visitor had a natural, persistent conversation;
 - the system organized context without demanding CRM work;
-- Mauro entered the same conversation as a visible human.
+- Giulia entered the same conversation as a visible human;
+- Mauro could not read or operate Giulia's tenant-owned conversation.
 
 ---
 

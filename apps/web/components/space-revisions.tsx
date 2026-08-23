@@ -3,6 +3,7 @@ import { AppLink as Link } from "@/components/app-link";
 import { ArrowUpRightIcon, CheckIcon, LayersIcon } from "@/components/icons";
 import { RevisionInspector } from "@/components/revision-inspector";
 import { InlineError, LoadingLine } from "@/components/status";
+import { useStudioSession } from "@/components/studio-shell";
 import { apiRequest, unwrapList } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
 import { publicSpaceHref } from "@/lib/hosts";
@@ -10,6 +11,7 @@ import { normalizeRevision } from "@/lib/revisions";
 import type { ConfigRevision } from "@/lib/types";
 
 export function SpaceRevisions() {
+  const { session } = useStudioSession();
   const [revisions, setRevisions] = useState<ConfigRevision[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -51,7 +53,7 @@ export function SpaceRevisions() {
     <section className="space-page">
       <header className="page-header page-header--compact">
         <div><p>Spazio pubblico</p><h1>Ciò che le persone incontrano</h1><span>Solo la versione attiva guida l’assistente pubblico. Le bozze restano private finché non le confermi.</span></div>
-        <Link className="button button--outline" href={publicSpaceHref("mauro")} target="_blank">Apri lo spazio <ArrowUpRightIcon /></Link>
+        {session?.space?.is_active && session.space.slug_claimed && <Link className="button button--outline" href={publicSpaceHref(session.space.slug)} target="_blank">Apri lo spazio <ArrowUpRightIcon /></Link>}
       </header>
       {loading && <div className="space-page__loading"><LoadingLine label="Raccolgo le versioni…" /></div>}
       {error && <div className="space-page__loading"><InlineError message={error} retry={load} /></div>}

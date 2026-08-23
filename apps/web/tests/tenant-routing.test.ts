@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { canonicalProductRedirect, tenantRewriteTarget, tenantSlugFromHost } from "@/lib/tenant-routing";
+import { canonicalProductRedirect, isReservedTenantSlug, tenantRewriteTarget, tenantSlugFromHost } from "@/lib/tenant-routing";
 
 describe("tenant routing", () => {
   it("rewrites a professional root to its single-deployment space", () => {
     expect(tenantRewriteTarget("mauro.laggente.com", "/")).toBe("/spazio/mauro");
+    expect(tenantRewriteTarget("giulia.laggente.com", "/")).toBe("/spazio/giulia");
     expect(tenantSlugFromHost("mauro.localhost:3000")).toBe("mauro");
   });
 
@@ -14,7 +15,11 @@ describe("tenant routing", () => {
 
   it("does not treat reserved or malformed subdomains as tenants", () => {
     expect(tenantSlugFromHost("app.laggente.com")).toBeNull();
+    expect(tenantSlugFromHost("assets.laggente.com")).toBeNull();
+    expect(tenantSlugFromHost("static.laggente.com")).toBeNull();
     expect(tenantSlugFromHost("bad_slug.laggente.com")).toBeNull();
+    expect(isReservedTenantSlug("Blog")).toBe(true);
+    expect(canonicalProductRedirect("laggente.com", "/blog/article")).toBeNull();
   });
 
   it("redirects apex and www product entry points to their cookie-owning hosts", () => {
@@ -24,6 +29,8 @@ describe("tenant routing", () => {
       .toBe("https://mauro.laggente.com/conversazione");
     expect(canonicalProductRedirect("app.laggente.com", "/mauro", "?from=studio"))
       .toBe("https://mauro.laggente.com/?from=studio");
+    expect(canonicalProductRedirect("laggente.com", "/giulia", "?from=invite"))
+      .toBe("https://giulia.laggente.com/?from=invite");
     expect(canonicalProductRedirect("laggente.com", "/login", "?token=magic"))
       .toBe("https://app.laggente.com/login?token=magic");
     expect(canonicalProductRedirect("www.laggente.com", "/studio/conversazioni"))

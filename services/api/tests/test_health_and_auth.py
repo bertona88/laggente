@@ -4,6 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 from threading import Barrier
 from urllib.parse import parse_qs, urlparse
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import event, func, select
 
@@ -146,12 +147,29 @@ def test_magic_link_concurrent_consumption_issues_exactly_one_session(tmp_path):
         assert session_started_count == 1
 
 
-def test_auth_mode_does_not_fall_back_to_unconfigured_method(client):
+def test_password_backed_member_does_not_receive_a_magic_link_in_pilot_mode(client):
     assert client.get("/api/v1/auth/mode").json() == {"mode": "pilot_password"}
     response = client.post(
         "/api/v1/auth/magic-link/request", json={"email": "mauro@laggente.com"}
     )
-    assert response.status_code == 409
+    assert response.status_code == 200
+    assert response.json()["development_magic_link"] is None
+
+
+def test_production_requires_transactional_email_for_professional_invitations():
+    settings = Settings(
+        _env_file=None,
+        APP_ENV="production",
+        SESSION_SECRET="p" * 48,
+        AUTH_MODE="pilot_password",
+        PILOT_PASSWORD="password-pilot-molto-sicura",
+        COOKIE_SECURE=True,
+        AUTO_CREATE_SCHEMA=False,
+        RESEND_API_KEY=None,
+        FROM_EMAIL=None,
+    )
+    with pytest.raises(RuntimeError, match="professional invitations"):
+        settings.validate_runtime()
 
 
 def test_production_cors_excludes_public_tenant_origins(tmp_path):
@@ -162,6 +180,8 @@ def test_production_cors_excludes_public_tenant_origins(tmp_path):
         SESSION_SECRET="p" * 48,
         AUTH_MODE="pilot_password",
         PILOT_PASSWORD="password-pilot-molto-sicura",
+        RESEND_API_KEY="re_test_key",
+        FROM_EMAIL="LAGGENTE <studio@laggente.com>",
         COOKIE_SECURE=True,
         AUTO_CREATE_SCHEMA=False,
         SEED_DEMO=False,

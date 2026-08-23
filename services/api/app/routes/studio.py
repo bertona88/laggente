@@ -13,7 +13,7 @@ from ..config import Settings
 from ..conversations import active_revision, list_memories, list_messages, serialize_messages
 from ..database import get_db
 from ..dependencies import ProfessionalContext, current_professional, professional_space, runtime_settings
-from ..models import ConfigRevision, Conversation, Event, Member, MemoryItem, Message, Space, utcnow
+from ..models import Account, ConfigRevision, Conversation, Event, Member, MemoryItem, Message, Space, utcnow
 from ..retention import delete_conversation_data, purge_expired_conversations
 from ..schemas import (
     MAX_CONFIGURATION_DOCUMENT_BYTES,
@@ -25,10 +25,13 @@ from ..schemas import (
     MessageCreate,
     RevisionCreate,
     RevisionOut,
+    SlugAvailabilityOut,
+    SlugClaim,
     SpaceDetail,
     SpaceOut,
     StudioTurnOut,
 )
+from ..tenant import normalize_claimed_slug
 
 router = APIRouter(prefix="/studio", tags=["studio"])
 
@@ -152,6 +155,68 @@ def get_space(
     )
 
 
+@router.get("/space/slug/{slug}/availability", response_model=SlugAvailabilityOut)
+def get_slug_availability(
+    slug: str,
+    db: Session = Depends(get_db),
+    context: ProfessionalContext = Depends(current_professional),
+) -> SlugAvailabilityOut:
+    normalized = normalize_claimed_slug(slug)
+    owned_space = professional_space(db, context)
+    existing = db.scalar(
+        select(Space.id).where(Space.slug == normalized, Space.id != owned_space.id)
+    )
+    return SlugAvailabilityOut(slug=normalized, available=existing is None)
+
+
+@router.patch("/space/slug", response_model=SpaceOut)
+def claim_space_slug(
+    body: SlugClaim,
+    db: Session = Depends(get_db),
+    context: ProfessionalContext = Depends(current_professional),
+) -> SpaceOut:
+    normalized = normalize_claimed_slug(body.slug)
+    authorized_space = professional_space(db, context)
+    space = db.scalar(
+        select(Space)
+        .where(Space.id == authorized_space.id, Space.account_id == context.account_id)
+        .with_for_update()
+    )
+    if not space:
+        raise HTTPException(status_code=404, detail="Spazio non trovato")
+    if space.onboarding_state == "published" and space.slug != normalized:
+        raise HTTPException(
+            status_code=409,
+            detail="Lo spazio pubblicato non può cambiare indirizzo da questo flusso",
+        )
+    existing = db.scalar(
+        select(Space.id).where(Space.slug == normalized, Space.id != space.id)
+    )
+    if existing:
+        raise HTTPException(status_code=409, detail="Questo indirizzo è già stato scelto")
+    previous_slug = space.slug if space.slug_claimed else None
+    space.slug = normalized
+    space.slug_claimed = True
+    if space.onboarding_state == "invited":
+        space.onboarding_state = "building"
+    db.add(
+        Event(
+            account_id=context.account_id,
+            space_id=space.id,
+            actor_type="professional",
+            actor_id=context.member.id,
+            event_type="public_slug_claimed",
+            payload={"slug": normalized, "previous_slug": previous_slug},
+        )
+    )
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Questo indirizzo è già stato scelto")
+    return SpaceOut.model_validate(space)
+
+
 @router.get("/config/revisions", response_model=list[RevisionOut])
 def list_revisions(
     db: Session = Depends(get_db),
@@ -243,6 +308,11 @@ def activate_revision(
     )
     if not space:
         raise HTTPException(status_code=404, detail="Spazio non trovato")
+    if not space.slug_claimed:
+        raise HTTPException(
+            status_code=409,
+            detail="Scegli il tuo indirizzo pubblico prima di attivare la prima versione",
+        )
     target = db.scalar(
         select(ConfigRevision).where(
             ConfigRevision.id == revision_id,
@@ -264,6 +334,12 @@ def activate_revision(
     space.agency = identity.get("agency")
     space.territory = identity.get("territory")
     space.public_role = identity.get("role", space.public_role)
+    space.is_active = True
+    space.onboarding_state = "published"
+    context.member.display_name = space.professional_name
+    account = db.scalar(select(Account).where(Account.id == context.account_id))
+    if account:
+        account.name = f"{space.professional_name} — LAGGENTE"
     db.add(
         Event(
             account_id=context.account_id,
@@ -275,6 +351,7 @@ def activate_revision(
                 "revision_id": target.id,
                 "revision_number": target.revision_number,
                 "previous_revision_id": current.id if current else None,
+                "public_slug": space.slug,
             },
         )
     )
@@ -285,7 +362,10 @@ def activate_revision(
             conversation_id=studio.id,
             author_type="system",
             author_label="LAGGENTE",
-            content=f"La revisione {target.revision_number} è ora attiva nello spazio pubblico.",
+            content=(
+                f"La revisione {target.revision_number} è ora attiva su "
+                f"{space.slug}.laggente.com."
+            ),
         )
     )
     db.commit()

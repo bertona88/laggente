@@ -41,6 +41,9 @@ class Member(Base, TimestampMixin):
     role: Mapped[str] = mapped_column(String(40), default="professional", nullable=False)
     password_hash: Mapped[str | None] = mapped_column(String(300))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    # Invitation is a platform permission. Existing pilot operators receive it through the
+    # provisioning migration; professionals created by an invitation do not inherit it.
+    can_invite: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     account: Mapped[Account] = relationship()
 
 
@@ -56,6 +59,10 @@ class Space(Base, TimestampMixin):
     public_role: Mapped[str] = mapped_column(String(100), default="agente immobiliare", nullable=False)
     locale: Mapped[str] = mapped_column(String(16), default="it-IT", nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    slug_claimed: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    onboarding_state: Mapped[str] = mapped_column(
+        String(24), default="published", nullable=False
+    )
     active_revision_id: Mapped[str | None] = mapped_column(String(36), index=True)
 
 
@@ -155,6 +162,8 @@ class MagicLink(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
     account_id: Mapped[str] = mapped_column(ForeignKey("accounts.id", ondelete="CASCADE"), index=True)
     member_id: Mapped[str] = mapped_column(ForeignKey("members.id", ondelete="CASCADE"), index=True)
+    purpose: Mapped[str] = mapped_column(String(40), default="login", nullable=False, index=True)
+    created_by_member_id: Mapped[str | None] = mapped_column(String(36), index=True)
     token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

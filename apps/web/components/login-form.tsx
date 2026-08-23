@@ -6,7 +6,7 @@ import { Logo } from "@/components/logo";
 import { InlineError, LoadingLine } from "@/components/status";
 import { apiRequest } from "@/lib/api";
 import { studioHref } from "@/lib/hosts";
-import { magicLinkTokenFromFragment } from "@/lib/magic-link";
+import { invitationTokenFromFragment, magicLinkTokenFromFragment } from "@/lib/magic-link";
 
 type AuthMode = "pilot_password" | "magic_link";
 
@@ -17,6 +17,7 @@ export function LoginForm() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const [preferMagicLink, setPreferMagicLink] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -32,7 +33,8 @@ export function LoginForm() {
     }
 
     async function prepareLogin() {
-      const token = magicLinkTokenFromFragment(window.location.hash);
+      const invitationToken = invitationTokenFromFragment(window.location.hash);
+      const token = invitationToken || magicLinkTokenFromFragment(window.location.hash);
       if (!token) {
         await loadMode();
         return;
@@ -40,7 +42,7 @@ export function LoginForm() {
 
       setLoading(true);
       try {
-        await apiRequest("/auth/magic-link/consume", {
+        await apiRequest(invitationToken ? "/auth/invitation/consume" : "/auth/magic-link/consume", {
           method: "POST",
           body: JSON.stringify({ token }),
         });
@@ -68,7 +70,7 @@ export function LoginForm() {
     setLoading(true);
     setError(null);
     try {
-      if (mode === "magic_link") {
+      if (mode === "magic_link" || preferMagicLink) {
         await apiRequest("/auth/magic-link/request", {
           method: "POST",
           body: JSON.stringify({ email }),
@@ -129,7 +131,7 @@ export function LoginForm() {
                   required
                 />
               </label>
-              {mode === "pilot_password" && (
+              {mode === "pilot_password" && !preferMagicLink && (
                 <label>
                   <span>Password</span>
                   <input
@@ -144,9 +146,21 @@ export function LoginForm() {
               )}
               {error && <InlineError message={error} />}
               <button className="button button--ink button--wide" type="submit" disabled={loading}>
-                {loading ? "Accesso in corso…" : mode === "magic_link" ? "Ricevi il link di accesso" : "Entra nello Studio"}
+                {loading ? "Accesso in corso…" : mode === "magic_link" || preferMagicLink ? "Ricevi il link di accesso" : "Entra nello Studio"}
                 {!loading && <ArrowRightIcon />}
               </button>
+              {mode === "pilot_password" && (
+                <button
+                  className="login-method-toggle"
+                  type="button"
+                  onClick={() => {
+                    setPreferMagicLink((current) => !current);
+                    setError(null);
+                  }}
+                >
+                  {preferMagicLink ? "Usa la password del pilot" : "Non hai una password? Usa un magic link"}
+                </button>
+              )}
             </form>
           )}
           <div className="login-form__security"><LockIcon /><span>Accesso riservato. La sessione dello Studio non viene condivisa con gli spazi pubblici.</span></div>

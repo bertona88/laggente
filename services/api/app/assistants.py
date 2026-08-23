@@ -25,6 +25,7 @@ from . import database
 from .config import Settings
 from .media import ALLOWED_MEDIA_TYPES, media_magic_matches
 from .models import ConfigRevision, Conversation, Event, MemoryItem, Message, Space
+from .onboarding import starter_space_configuration
 from .schemas import MAX_CONFIGURATION_DOCUMENT_BYTES, PublicAgentOutput, SpaceConfigEnvelope
 
 
@@ -99,26 +100,65 @@ def _json(value) -> str:
 
 @function_tool
 def inspect_active_space_configuration(ctx: RunContextWrapper[StudioRunContext]) -> str:
-    """Read the active public configuration for the authenticated professional's own space."""
+    """Read active and latest-draft configuration for this professional's own space."""
     state = ctx.context
     with database.SessionLocal() as db:
         space = db.scalar(
             select(Space).where(Space.id == state.space_id, Space.account_id == state.account_id)
         )
-        if not space or not space.active_revision_id:
-            return _json({"active_configuration": None})
-        revision = db.scalar(
-            select(ConfigRevision).where(
-                ConfigRevision.id == space.active_revision_id,
+        if not space:
+            return _json({"error": "space_not_found"})
+        active = None
+        if space.active_revision_id:
+            active = db.scalar(
+                select(ConfigRevision).where(
+                    ConfigRevision.id == space.active_revision_id,
+                    ConfigRevision.space_id == state.space_id,
+                    ConfigRevision.account_id == state.account_id,
+                )
+            )
+        draft = db.scalar(
+            select(ConfigRevision)
+            .where(
                 ConfigRevision.space_id == state.space_id,
                 ConfigRevision.account_id == state.account_id,
+                ConfigRevision.status == "draft",
             )
+            .order_by(ConfigRevision.revision_number.desc())
+            .limit(1)
         )
         return _json(
             {
-                "revision_id": revision.id if revision else None,
-                "revision_number": revision.revision_number if revision else None,
-                "document": revision.document if revision else None,
+                "space": {
+                    "slug": space.slug if space.slug_claimed else None,
+                    "slug_claimed": space.slug_claimed,
+                    "onboarding_state": space.onboarding_state,
+                },
+                "active_configuration": (
+                    {
+                        "revision_id": active.id,
+                        "revision_number": active.revision_number,
+                        "document": active.document,
+                    }
+                    if active
+                    else None
+                ),
+                "latest_draft": (
+                    {
+                        "revision_id": draft.id,
+                        "revision_number": draft.revision_number,
+                        "document": draft.document,
+                    }
+                    if draft
+                    else None
+                ),
+                "working_configuration": (
+                    draft.document
+                    if draft
+                    else active.document
+                    if active
+                    else starter_space_configuration()
+                ),
             }
         )
 
@@ -294,9 +334,13 @@ questionario. Esistono esattamente due ruoli AI nel prodotto: tu e l'assistente 
 inventare coordinatori o specialisti.
 
 Usa soltanto gli strumenti autorizzati disponibili. Prima di proporre una modifica, leggi la
-configurazione attiva. Per modifiche concrete chiama propose_configuration_revision con un
-documento completo valido: la proposta resta bozza e devi ricordare chiaramente che il
-professionista deve attivarla esplicitamente. Non dichiarare mai una bozza come già pubblica.
+configurazione attiva e l'eventuale ultima bozza. Se il professionista è appena stato invitato e
+non esiste ancora una versione attiva, parti dalla working_configuration neutra restituita dallo
+strumento: sostituisci i contenuti generici solo con ciò che la persona ha davvero detto e fai una
+prima proposta dopo una presentazione sufficientemente concreta. Per modifiche concrete chiama
+propose_configuration_revision con un documento completo valido: la proposta resta bozza e devi
+ricordare chiaramente che il professionista deve scegliere il proprio indirizzo e attivarla
+esplicitamente. Non dichiarare mai una bozza come già pubblica.
 Puoi ispezionare conversazioni pubbliche solo quando serve alla richiesta del professionista.
 Non chiedere né mostrare segreti. Non memorizzare o esporre ragionamenti privati.
 """.strip()

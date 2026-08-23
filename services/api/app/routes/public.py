@@ -467,6 +467,8 @@ async def post_public_message(
                 select(Space).where(
                     Space.id == conversation.space_id,
                     Space.account_id == conversation.account_id,
+                    Space.slug_claimed.is_(True),
+                    Space.onboarding_state == "published",
                     Space.is_active.is_(True),
                 )
             )

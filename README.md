@@ -30,7 +30,17 @@ The pilot begins with Mauro and expands to five real-estate professionals. Each 
 - `app.laggente.com` — the private Studio;
 - `<slug>.laggente.com` — the public personal space, beginning with `mauro.laggente.com`.
 
-The experience begins with the professional, not the visitor. Mauro creates his identity, chooses the public slug that becomes his subdomain, and talks with the private Studio assistant about his territory, work, style, knowledge, preferences, and the kind of space he wants to offer people.
+Expansion is invitation-only during the pilot. A member with the platform invitation permission
+enters one email address. LAGGENTE creates a separate dormant account and sends a single-use magic
+link. The invited professional introduces themselves to Studio in natural Italian, reserves an
+available slug, reviews the generated revision, and activates it. That first activation—not a code
+change, deployment, or per-professional environment file—opens the public subdomain.
+
+The experience begins with the professional, not the visitor. Each invited professional creates
+their identity, chooses the public slug that becomes their subdomain, and talks with the private
+Studio assistant about their territory, work, style, knowledge, preferences, and the kind of space
+they want to offer people. Mauro remains the seeded first tenant, not a runtime template for the
+professionals who follow.
 
 That conversation shapes a living configuration for Mauro's space. The configuration is deliberately extensible: it can grow with what Mauro says and with what the product learns, rather than forcing every professional into a narrow profile schema or fixed onboarding questionnaire. The application keeps only the stable structure required for ownership, publication, permissions, safety, and reliable execution.
 
@@ -86,14 +96,20 @@ private Studio assistant and the public assistant. PostgreSQL remains the applic
 of truth for tenant-scoped configuration, conversations, messages, correctable memory, attachments,
 and audit events.
 
+The implemented pilot can provision additional professional spaces end to end through an
+authorized Studio invitation. Dormant invited tenants cannot resolve publicly; slug selection is
+globally checked and first publication requires both a claimed slug and an explicitly activated
+configuration. Shared Studio, public-space, conversation, media, and takeover code reads the
+resolved tenant and contains no Mauro-specific runtime fallback.
+
 Conversation turns currently use durable, non-streaming request/response transport. ChatKit is
 not part of the implemented runtime or persistence contract. See
 [ADR-0001](docs/decisions/0001-single-hetzner-server.md).
 
 ## Current status
 
-- Product blueprint: agentic reset 0.3.
-- Pilot professional: Mauro.
+- Product blueprint: invited multi-tenant proof 0.4.
+- Seeded pilot professional: Mauro; additional professionals join by controlled invitation.
 - Pilot size: five real-estate professionals.
 - Initial template: conversations with people considering selling a property.
 - Hosting decision: one existing Hetzner server for the MVP.

@@ -10,8 +10,8 @@ from sqlalchemy.orm import Session
 from ..config import Settings
 from ..database import get_db
 from ..dependencies import current_professional, runtime_settings
-from ..email import AuthEmailSender, EmailDeliveryError
-from ..models import Event, MagicLink, Member, utcnow
+from ..email import EmailDeliveryError
+from ..models import Event, MagicLink, Member, Space, utcnow
 from ..rate_limit import client_ip
 from ..schemas import (
     MagicLinkConsume,
@@ -35,6 +35,19 @@ from ..security import (
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
+def _member_space(db: Session, member: Member) -> Space | None:
+    return db.scalar(
+        select(Space).where(Space.account_id == member.account_id).order_by(Space.created_at).limit(1)
+    )
+
+
+def _session_out(db: Session, member: Member) -> SessionOut:
+    return SessionOut(
+        member=MemberOut.model_validate(member),
+        space=_member_space(db, member),
+    )
+
+
 @router.get("/mode")
 def auth_mode(settings: Settings = Depends(runtime_settings)) -> dict[str, str]:
     return {"mode": settings.auth_mode}
@@ -50,13 +63,20 @@ async def request_magic_link(
     request.app.state.rate_limiter.check(
         f"magic:{client_ip(request)}", limit=8, window_seconds=15 * 60
     )
-    if settings.auth_mode != "magic_link":
-        raise HTTPException(status_code=409, detail="Accesso con password pilot attivo")
     member = db.scalar(
         select(Member).where(Member.email == body.email.lower(), Member.is_active.is_(True))
     )
     development_link = None
-    if member:
+    # In pilot-password mode, invited professionals have no password and keep using magic links.
+    # An unaccepted invitation must still use its purpose-bound token; unknown, password-backed,
+    # or not-yet-accepted addresses receive the same response without a login token.
+    member_space = _member_space(db, member) if member else None
+    invitation_accepted = not member_space or member_space.onboarding_state != "invited"
+    if (
+        member
+        and invitation_accepted
+        and (settings.auth_mode == "magic_link" or not member.password_hash)
+    ):
         signer = TokenSigner(settings.session_secret)
         token = signer.issue(
             "magic_link",
@@ -67,6 +87,7 @@ async def request_magic_link(
         record = MagicLink(
             account_id=member.account_id,
             member_id=member.id,
+            purpose="login",
             token_hash=hash_token(token),
             expires_at=datetime.now(UTC) + timedelta(seconds=settings.magic_link_ttl_seconds),
             requested_ip_hash=hash_ip(client_ip(request), settings.session_secret),
@@ -91,8 +112,6 @@ def consume_magic_link(
     db: Session = Depends(get_db),
     settings: Settings = Depends(runtime_settings),
 ) -> SessionOut:
-    if settings.auth_mode != "magic_link":
-        raise HTTPException(status_code=409, detail="Accesso con password pilot attivo")
     try:
         claims = TokenSigner(settings.session_secret).verify(body.token, "magic_link")
     except TokenError:
@@ -106,6 +125,7 @@ def consume_magic_link(
             MagicLink.token_hash == hash_token(body.token),
             MagicLink.member_id == member_id,
             MagicLink.account_id == account_id,
+            MagicLink.purpose == "login",
             MagicLink.consumed_at.is_(None),
             MagicLink.expires_at > consumed_at,
         )
@@ -138,7 +158,87 @@ def consume_magic_link(
     set_session_cookie(
         response, settings, issue_session_token(settings, member.id, member.account_id)
     )
-    return SessionOut(member=MemberOut.model_validate(member))
+    return _session_out(db, member)
+
+
+@router.post("/invitation/consume", response_model=SessionOut)
+def consume_professional_invitation(
+    body: MagicLinkConsume,
+    response: Response,
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(runtime_settings),
+) -> SessionOut:
+    try:
+        claims = TokenSigner(settings.session_secret).verify(
+            body.token, "professional_invitation"
+        )
+    except TokenError:
+        raise HTTPException(status_code=401, detail="Invito non valido o scaduto")
+    member_id = claims.get("member_id")
+    account_id = claims.get("account_id")
+    accepted_at = utcnow()
+    # Serialize sibling invitation consumption on the invited member. With resent links, two
+    # distinct token rows must still produce at most one accepted invitation session.
+    member = db.scalar(
+        select(Member)
+        .where(
+            Member.id == member_id,
+            Member.account_id == account_id,
+            Member.is_active.is_(True),
+        )
+        .with_for_update()
+    )
+    if not member:
+        db.rollback()
+        raise HTTPException(status_code=401, detail="Invito non disponibile")
+    space = _member_space(db, member)
+    if not space or space.onboarding_state not in {"invited", "building"}:
+        db.rollback()
+        raise HTTPException(status_code=401, detail="Invito non disponibile")
+    consume_result = db.execute(
+        update(MagicLink)
+        .where(
+            MagicLink.token_hash == hash_token(body.token),
+            MagicLink.member_id == member_id,
+            MagicLink.account_id == account_id,
+            MagicLink.purpose == "professional_invitation",
+            MagicLink.consumed_at.is_(None),
+            MagicLink.expires_at > accepted_at,
+        )
+        .values(consumed_at=accepted_at)
+        .execution_options(synchronize_session=False)
+    )
+    if consume_result.rowcount != 1:
+        db.rollback()
+        raise HTTPException(status_code=401, detail="Invito non valido, scaduto o già usato")
+    space.onboarding_state = "building"
+    # A resend may have produced more than one link. Accepting one invalidates every sibling link.
+    db.execute(
+        update(MagicLink)
+        .where(
+            MagicLink.member_id == member.id,
+            MagicLink.account_id == member.account_id,
+            MagicLink.purpose == "professional_invitation",
+            MagicLink.consumed_at.is_(None),
+        )
+        .values(consumed_at=accepted_at)
+        .execution_options(synchronize_session=False)
+    )
+    db.add(
+        Event(
+            account_id=member.account_id,
+            space_id=space.id,
+            actor_type="professional",
+            actor_id=member.id,
+            event_type="professional_invitation_accepted",
+            payload={"onboarding_state": "building"},
+        )
+    )
+    db.commit()
+    set_session_cookie(
+        response, settings, issue_session_token(settings, member.id, member.account_id)
+    )
+    return _session_out(db, member)
 
 
 @router.post("/pilot-login", response_model=SessionOut)
@@ -172,12 +272,15 @@ def pilot_login(
     set_session_cookie(
         response, settings, issue_session_token(settings, member.id, member.account_id)
     )
-    return SessionOut(member=MemberOut.model_validate(member))
+    return _session_out(db, member)
 
 
 @router.get("/session", response_model=SessionOut)
-def session(context=Depends(current_professional)) -> SessionOut:
-    return SessionOut(member=MemberOut.model_validate(context.member))
+def session(
+    db: Session = Depends(get_db),
+    context=Depends(current_professional),
+) -> SessionOut:
+    return _session_out(db, context.member)
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)

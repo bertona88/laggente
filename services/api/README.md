@@ -25,6 +25,9 @@ set it to `false` and run Alembic before starting the service.
 - `SESSION_SECRET` (at least 32 random characters)
 - `AUTH_MODE=pilot_password` with `PILOT_EMAIL` and a `PILOT_PASSWORD` of at least 14 characters,
   or `AUTH_MODE=magic_link` with `RESEND_API_KEY` and `FROM_EMAIL`
+- `RESEND_API_KEY` and `FROM_EMAIL` whenever professional invitations are used, even if the
+  seeded operator still uses `AUTH_MODE=pilot_password`
+- optional `INVITATION_TTL_SECONDS` (default seven days)
 - `OPENAI_API_KEY` and optional `OPENAI_MODEL` (default `gpt-5.6`)
 - `COOKIE_SECURE=true`
 - `AUTO_CREATE_SCHEMA=false`
@@ -42,11 +45,13 @@ replayed on later text turns.
 
 All product routes use `/api/v1`. The main groups are:
 
-- `/auth/*` — auth mode, pilot login, signed single-use magic links, session, logout;
+- `/auth/*` — auth mode, pilot login, purpose-bound single-use invitation and login magic links,
+  session, and logout;
 - `/public/{slug}` and `/public/conversations/*` — active public presentation and anonymous
   continuation-token conversations;
-- `/studio/*` — private Studio conversation, configuration proposal/activation, public
-  conversations, professional join, AI pause/resume, and memory correction;
+- `/studio/*` — authorized professional invitation, dormant-space slug claim, private Studio
+  conversation, configuration proposal/activation, public conversations, professional join, AI
+  pause/resume, and memory correction;
 - `/public/conversations/{id}/attachments` and `/attachments/*` — limited private image/audio
   media with cookie-authorized same-origin content and server-side transcription;
 - `/healthz`, `/readyz`, `/version` — operations endpoints (also exposed under `/api/v1`).
@@ -54,6 +59,16 @@ All product routes use `/api/v1`. The main groups are:
 Public conversation transport is conventional REST for this release. App-owned PostgreSQL
 records are the durable source of truth, so a future ChatKit transport can implement its store
 contract without creating a second chat database.
+
+## Invited professional lifecycle
+
+`POST /studio/invitations` is available only to a member with `can_invite=true`. It creates a new
+tenant and inactive space before sending the recipient a purpose-bound invitation link. The
+recipient talks to Studio while the space is private, claims a globally unique slug through
+`PATCH /studio/space/slug`, and activates a draft through the ordinary revision endpoint. First
+activation marks the space published and makes the shared public routes resolve it. Invited
+members do not inherit invitation permission and can request ordinary login magic links after the
+invitation has been consumed.
 
 ## Pilot capacity and abuse ceilings
 

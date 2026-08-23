@@ -15,8 +15,8 @@ export function isLocalHostname(hostname: string): boolean {
     || value.endsWith(".localhost");
 }
 
-export function publicSpaceHref(slug = "mauro", hostname?: string): string {
-  const safeSlug = slug.trim().toLocaleLowerCase("en-US") || "mauro";
+export function publicSpaceHref(slug: string, hostname?: string): string {
+  const safeSlug = slug.trim().toLocaleLowerCase("en-US");
   return isLocalHostname(normalizedHostname(hostname))
     ? `/${safeSlug}`
     : `https://${safeSlug}.laggente.com`;

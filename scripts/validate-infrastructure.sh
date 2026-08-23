@@ -752,8 +752,11 @@ if [[ ${1:-} == --build ]]; then
         app.laggente.com '/?source=validation' \
         'https://app.laggente.com/studio?source=validation'
     require_gateway_location \
-        app.laggente.com '/mauro/conversazione?source=validation' \
-        'https://mauro.laggente.com/conversazione?source=validation'
+        app.laggente.com '/giulia/conversazione?source=validation' \
+        'https://giulia.laggente.com/conversazione?source=validation'
+    require_gateway_location \
+        laggente.com '/giulia?source=validation' \
+        'https://giulia.laggente.com/?source=validation'
     require_gateway_status mauro.laggente.com /mauro 200
 
     docker rm -f "$gateway_validation_container" >/dev/null

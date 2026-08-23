@@ -36,6 +36,28 @@ The professional may also join the public conversation directly.
 
 The coordination layer is ordinary application code and persistent data. It is not a third AI agent.
 
+## Invited tenant lifecycle
+
+Pilot expansion is a deterministic application lifecycle around the same two assistants:
+
+| State | Durable result | Public resolution |
+| --- | --- | --- |
+| `invited` | A permitted pilot member has created a new account, non-inviting member, private Studio thread, and placeholder space; a purpose-bound single-use link has been sent | Denied |
+| `building` | The recipient accepted the invitation and can talk to Studio, accumulate private draft revisions, and claim one globally unique slug | Denied |
+| `published` | The professional explicitly activated a revision; identity is projected onto the space and the claimed slug is active | Allowed |
+
+The placeholder slug exists only to satisfy the compact current schema and is never claimed or
+publicly active. Slug claim and revision activation are separate operations: the professional can
+introduce themselves and receive a draft before choosing an address, but first activation is
+rejected until an address has been claimed. Activating the first revision atomically switches the
+space to `published`; it does not create DNS, TLS, containers, source files, or tenant code.
+
+Invitation authority is stored on the inviting member and does not propagate to a new member.
+The invitation token has a distinct signed purpose from an ordinary login token. Consuming any
+version of a resent invitation invalidates its siblings. After acceptance, a passwordless invited
+professional uses the ordinary magic-link login flow, including while the seeded operator remains
+on pilot-password authentication.
+
 ## Runtime topology
 
 The MVP runs on one existing Hetzner server with Docker Compose:
@@ -187,15 +209,15 @@ An `opportunity` is initially a generated view or signal that a conversation may
 | Entity | Purpose |
 | --- | --- |
 | `accounts` | Tenant boundary for a professional or agency |
-| `members` | Authenticated people, roles, and permissions within an account |
-| `spaces` | Public identity, slug, active configuration reference, and visibility |
+| `members` | Authenticated people, roles, account permissions, and the non-propagating platform invitation permission |
+| `spaces` | Public identity, claimed or placeholder slug, onboarding state, active configuration reference, and visibility |
 | `config_revisions` | Proposed, active, and historical space configurations |
 | `conversations` | Persistent private Studio or public threads |
 | `messages` | Immutable authored items in a conversation |
 | `attachments` | Private audio, photograph, and other supported file metadata |
 | `memory_items` | Correctable, provenance-linked interpretations derived from conversations |
 | `events` | Audit trail for authentication, configuration, assistant failures, media, memory correction, and speaker control |
-| `magic_links` | Signed, expiring, single-use Studio authentication records when magic-link mode is enabled |
+| `magic_links` | Purpose-bound, expiring, single-use invitation and Studio authentication records |
 
 This table describes the current application-owned persistence boundary, not a permanent command
 to create one table per future noun. Participant identity and visible authorship are represented by
@@ -233,7 +255,7 @@ When the professional writes, the interface identifies them explicitly and autom
 1. DNS sends `*.laggente.com` to the Hetzner server.
 2. The reverse proxy terminates TLS and forwards the validated original hostname.
 3. The application extracts and normalizes the slug.
-4. The server resolves the slug to an active space and `account_id`.
+4. The server resolves the slug only to a claimed, active `published` space and its `account_id`.
 5. Every store operation, query, tool invocation, file path, and event independently enforces that context.
 6. Unknown, inactive, or reserved hosts return a safe not-found response.
 
@@ -249,6 +271,9 @@ The hostname is a routing input, never the security boundary.
 - Tool arguments and configuration revisions are validated and authorized server-side.
 - User messages, professional knowledge, and uploads are untrusted input.
 - Professional sessions use host-only cookies for `app.laggente.com`, not cookies shared with tenant subdomains.
+- Only members with explicit `can_invite` permission may create another account; invited members do not inherit it.
+- An invited account is tenant-isolated immediately and cannot resolve through its placeholder or claimed hostname before first activation.
+- Invitation tokens and login tokens use different signed purposes and durable record purposes.
 - An anonymous continuation token grants access only to its own public conversation and is revocable.
 - AI and human authorship is explicit and audited.
 - Raw audio is deleted after transcription by default unless an explicit retained-audio policy applies.

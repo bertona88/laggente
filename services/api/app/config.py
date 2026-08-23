@@ -31,6 +31,12 @@ class Settings(BaseSettings):
     cookie_secure: bool = Field(default=False, alias="COOKIE_SECURE")
     session_ttl_seconds: int = Field(default=60 * 60 * 24 * 14, alias="SESSION_TTL_SECONDS")
     magic_link_ttl_seconds: int = Field(default=15 * 60, alias="MAGIC_LINK_TTL_SECONDS")
+    invitation_ttl_seconds: int = Field(
+        default=7 * 24 * 60 * 60,
+        ge=15 * 60,
+        le=30 * 24 * 60 * 60,
+        alias="INVITATION_TTL_SECONDS",
+    )
     auth_mode: str = Field(default="pilot_password", alias="AUTH_MODE")
     pilot_email: str = Field(default="mauro@laggente.com", alias="PILOT_EMAIL")
     pilot_password: str | None = Field(default=None, alias="PILOT_PASSWORD")
@@ -97,17 +103,16 @@ class Settings(BaseSettings):
                 raise RuntimeError("COOKIE_SECURE must be true in production")
             if self.auto_create_schema:
                 raise RuntimeError("AUTO_CREATE_SCHEMA must be false in production; use Alembic")
-            if self.auth_mode == "magic_link":
-                if not self.resend_api_key or not self.from_email:
-                    raise RuntimeError(
-                        "RESEND_API_KEY and FROM_EMAIL are required for AUTH_MODE=magic_link"
-                    )
-            elif self.auth_mode == "pilot_password":
+            if not self.resend_api_key or not self.from_email:
+                raise RuntimeError(
+                    "RESEND_API_KEY and FROM_EMAIL are required for professional invitations"
+                )
+            if self.auth_mode == "pilot_password":
                 if not self.pilot_password or len(self.pilot_password) < 14:
                     raise RuntimeError(
                         "A PILOT_PASSWORD of at least 14 characters is required for pilot_password auth"
                     )
-            else:
+            elif self.auth_mode != "magic_link":
                 raise RuntimeError("AUTH_MODE must be magic_link or pilot_password")
 
 
