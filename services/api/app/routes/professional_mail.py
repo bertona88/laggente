@@ -10,7 +10,7 @@ from email import policy
 from email.parser import BytesParser
 from email.utils import parseaddr
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -25,8 +25,18 @@ from ..dependencies import (
     runtime_settings,
 )
 from ..models import Conversation, Event, Message, ProfessionalEmail, Space, utcnow
-from ..professional_email import PreparedProfessionalEmail, normalize_address
-from ..schemas import InboundProfessionalEmail, ProfessionalEmailOut
+from ..professional_email import (
+    PreparedProfessionalEmail,
+    ProfessionalEmailError,
+    normalize_address,
+    verify_resend_webhook,
+)
+from ..schemas import (
+    InboundProfessionalEmail,
+    ProfessionalEmailOut,
+    ResendEmailReceivedData,
+    ResendWebhookEvent,
+)
 
 router = APIRouter(tags=["professional-email"])
 
@@ -231,32 +241,21 @@ def _plain_body(parsed) -> str:
         return "[Email non leggibile]"
 
 
-@router.post(
-    "/integrations/professional-email/inbound",
-    response_model=ProfessionalEmailOut,
-    status_code=status.HTTP_201_CREATED,
-)
-async def ingest_professional_email(
-    request: Request,
-    db: Session = Depends(get_db),
-    settings: Settings = Depends(runtime_settings),
+def _store_inbound_email(
+    db: Session,
+    *,
+    settings: Settings,
+    recipient_value: str,
+    receipt_id: str,
+    raw: bytes,
+    received_at: datetime | None,
+    provider: str,
 ) -> ProfessionalEmailOut:
-    if not settings.agent_mail_enabled:
-        raise HTTPException(status_code=404, detail="Not Found")
-    request_body = await request.body()
-    if len(request_body) > settings.agent_mail_max_inbound_bytes * 2:
-        raise HTTPException(status_code=413, detail="Payload inbound troppo grande")
-    _verify_inbound_signature(request_body, request, settings)
-    try:
-        body = InboundProfessionalEmail.model_validate(json.loads(request_body))
-        raw = base64.b64decode(body.raw_base64, validate=True)
-    except (json.JSONDecodeError, ValidationError, binascii.Error, UnicodeDecodeError) as exc:
-        raise HTTPException(status_code=422, detail="Payload inbound non valido") from exc
     if len(raw) > settings.agent_mail_max_inbound_bytes:
         raise HTTPException(status_code=413, detail="Email inbound troppo grande")
 
     try:
-        recipient = normalize_address(str(body.recipient))
+        recipient = normalize_address(recipient_value)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail="Destinatario inbound non valido") from exc
     local, _, domain = recipient.partition("@")
@@ -271,8 +270,8 @@ async def ingest_professional_email(
         select(ProfessionalEmail).where(
             ProfessionalEmail.account_id == space.account_id,
             ProfessionalEmail.space_id == space.id,
-            ProfessionalEmail.provider == "inbound_relay",
-            ProfessionalEmail.provider_message_id == body.receipt_id,
+            ProfessionalEmail.provider == provider,
+            ProfessionalEmail.provider_message_id == receipt_id,
         )
     )
     if duplicate:
@@ -304,7 +303,7 @@ async def ingest_professional_email(
                 ProfessionalEmail.direction == "outbound",
             )
         )
-    received_at = body.received_at or utcnow()
+    received_at = received_at or utcnow()
     plain_body = _plain_body(parsed)
     record = ProfessionalEmail(
         account_id=space.account_id,
@@ -321,8 +320,8 @@ async def ingest_professional_email(
         raw_sha256=hashlib.sha256(raw).hexdigest(),
         content_sha256=hashlib.sha256(plain_body.encode("utf-8")).hexdigest(),
         internet_message_id=internet_message_id,
-        provider="inbound_relay",
-        provider_message_id=body.receipt_id,
+        provider=provider,
+        provider_message_id=receipt_id,
         received_at=received_at,
     )
     db.add(record)
@@ -348,7 +347,8 @@ async def ingest_professional_email(
             event_type="professional_email_received",
             payload={
                 "email_id": record.id,
-                "receipt_id": body.receipt_id,
+                "receipt_id": receipt_id,
+                "provider": provider,
                 "raw_sha256": record.raw_sha256,
                 "content_is_untrusted": True,
             },
@@ -362,8 +362,8 @@ async def ingest_professional_email(
             select(ProfessionalEmail).where(
                 ProfessionalEmail.account_id == space.account_id,
                 ProfessionalEmail.space_id == space.id,
-                ProfessionalEmail.provider == "inbound_relay",
-                ProfessionalEmail.provider_message_id == body.receipt_id,
+                ProfessionalEmail.provider == provider,
+                ProfessionalEmail.provider_message_id == receipt_id,
             )
         )
         if not duplicate:
@@ -371,3 +371,100 @@ async def ingest_professional_email(
         return ProfessionalEmailOut.model_validate(duplicate)
     db.refresh(record)
     return ProfessionalEmailOut.model_validate(record)
+
+
+@router.post(
+    "/integrations/professional-email/inbound",
+    response_model=ProfessionalEmailOut,
+    status_code=status.HTTP_201_CREATED,
+)
+async def ingest_professional_email(
+    request: Request,
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(runtime_settings),
+) -> ProfessionalEmailOut:
+    """Future SES/S3 relay endpoint retained behind the replaceable transport boundary."""
+
+    if not settings.agent_mail_enabled or settings.agent_mail_provider not in {"capture", "ses"}:
+        raise HTTPException(status_code=404, detail="Not Found")
+    request_body = await request.body()
+    if len(request_body) > settings.agent_mail_max_inbound_bytes * 2:
+        raise HTTPException(status_code=413, detail="Payload inbound troppo grande")
+    _verify_inbound_signature(request_body, request, settings)
+    try:
+        body = InboundProfessionalEmail.model_validate(json.loads(request_body))
+        raw = base64.b64decode(body.raw_base64, validate=True)
+    except (json.JSONDecodeError, ValidationError, binascii.Error, UnicodeDecodeError) as exc:
+        raise HTTPException(status_code=422, detail="Payload inbound non valido") from exc
+    return _store_inbound_email(
+        db,
+        settings=settings,
+        recipient_value=str(body.recipient),
+        receipt_id=body.receipt_id,
+        raw=raw,
+        received_at=body.received_at,
+        provider="inbound_relay",
+    )
+
+
+@router.post(
+    "/integrations/professional-email/resend",
+    response_model=None,
+    status_code=status.HTTP_201_CREATED,
+)
+async def ingest_resend_professional_email(
+    request: Request,
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(runtime_settings),
+) -> ProfessionalEmailOut | Response:
+    if not settings.agent_mail_enabled or settings.agent_mail_provider != "resend":
+        raise HTTPException(status_code=404, detail="Not Found")
+    request_body = await request.body()
+    if len(request_body) > 256 * 1024:
+        raise HTTPException(status_code=413, detail="Webhook troppo grande")
+    try:
+        verify_resend_webhook(
+            request_body,
+            {key.lower(): value for key, value in request.headers.items()},
+            settings.resend_webhook_secret or "",
+            now=int(datetime.now(UTC).timestamp()),
+        )
+    except ProfessionalEmailError as exc:
+        raise HTTPException(status_code=401, detail="Firma webhook non valida") from exc
+    try:
+        event = ResendWebhookEvent.model_validate(json.loads(request_body))
+    except (json.JSONDecodeError, ValidationError, UnicodeDecodeError) as exc:
+        raise HTTPException(status_code=422, detail="Webhook non valido") from exc
+    if event.type != "email.received":
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+    try:
+        data = ResendEmailReceivedData.model_validate(event.data)
+    except ValidationError as exc:
+        raise HTTPException(status_code=422, detail="Evento email.received non valido") from exc
+    recipient = next(
+        (
+            str(address)
+            for address in data.to
+            if str(address).lower().endswith(f"@{settings.agent_mail_reply_domain}")
+        ),
+        None,
+    )
+    if not recipient:
+        raise HTTPException(status_code=404, detail="Destinatario non riconosciuto")
+    try:
+        raw = await request.app.state.resend_inbound_source.retrieve_raw(data.email_id)
+    except ProfessionalEmailError as exc:
+        if str(exc) == "inbound_email_too_large":
+            raise HTTPException(status_code=413, detail="Email inbound troppo grande") from exc
+        raise HTTPException(status_code=503, detail="Email inbound non disponibile") from exc
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="Email inbound non disponibile") from exc
+    return _store_inbound_email(
+        db,
+        settings=settings,
+        recipient_value=recipient,
+        receipt_id=data.email_id,
+        raw=raw,
+        received_at=data.created_at,
+        provider="resend_inbound",
+    )

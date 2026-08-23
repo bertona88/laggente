@@ -44,6 +44,7 @@ class Settings(BaseSettings):
     )
     openai_max_turns: int = Field(default=6, alias="OPENAI_MAX_TURNS")
     resend_api_key: str | None = Field(default=None, alias="RESEND_API_KEY")
+    resend_webhook_secret: str | None = Field(default=None, alias="RESEND_WEBHOOK_SECRET")
     from_email: str | None = Field(default=None, alias="FROM_EMAIL")
     agent_mail_enabled: bool = Field(default=False, alias="AGENT_MAIL_ENABLED")
     agent_mail_provider: str = Field(default="capture", alias="AGENT_MAIL_PROVIDER")
@@ -130,14 +131,23 @@ class Settings(BaseSettings):
 
     def validate_runtime(self) -> None:
         if self.agent_mail_enabled:
-            if self.agent_mail_provider not in {"capture", "ses"}:
-                raise RuntimeError("AGENT_MAIL_PROVIDER must be capture or ses")
+            if self.agent_mail_provider not in {"capture", "resend", "ses"}:
+                raise RuntimeError("AGENT_MAIL_PROVIDER must be capture, resend, or ses")
             if not self.agent_mail_from_domain or not self.agent_mail_reply_domain:
                 raise RuntimeError("Agent mail sender and reply domains are required")
-            if not self.agent_mail_inbound_secret or len(self.agent_mail_inbound_secret) < 32:
+            if self.agent_mail_provider == "resend" and (
+                not self.resend_api_key or not self.resend_webhook_secret
+            ):
+                raise RuntimeError(
+                    "RESEND_API_KEY and RESEND_WEBHOOK_SECRET are required for Resend agent mail"
+                )
+            if self.agent_mail_provider == "ses" and (
+                not self.agent_mail_inbound_secret
+                or len(self.agent_mail_inbound_secret) < 32
+            ):
                 raise RuntimeError(
                     "AGENT_MAIL_INBOUND_SECRET must contain at least 32 characters "
-                    "when agent mail is enabled"
+                    "for the SES inbound relay"
                 )
         if self.is_production:
             if self.session_secret == "development-only-change-me" or len(self.session_secret) < 32:
@@ -158,9 +168,11 @@ class Settings(BaseSettings):
                     )
             else:
                 raise RuntimeError("AUTH_MODE must be magic_link or pilot_password")
-            if self.agent_mail_enabled and self.agent_mail_provider != "ses":
-                raise RuntimeError("Production agent mail requires AGENT_MAIL_PROVIDER=ses")
-            if self.agent_mail_enabled and (
+            if self.agent_mail_enabled and self.agent_mail_provider == "capture":
+                raise RuntimeError(
+                    "Production agent mail requires AGENT_MAIL_PROVIDER=resend or ses"
+                )
+            if self.agent_mail_enabled and self.agent_mail_provider == "ses" and (
                 not self.aws_access_key_id or not self.aws_secret_access_key
             ):
                 raise RuntimeError(

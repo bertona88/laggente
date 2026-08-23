@@ -233,6 +233,19 @@ class InboundProfessionalEmail(BaseModel):
     received_at: datetime | None = None
 
 
+class ResendEmailReceivedData(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    email_id: str = Field(min_length=1, max_length=998)
+    to: list[EmailStr] = Field(min_length=1, max_length=50)
+    created_at: datetime | None = None
+
+
+class ResendWebhookEvent(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    type: str = Field(min_length=1, max_length=100)
+    data: dict[str, Any]
+
+
 class PublicSpaceOut(BaseModel):
     slug: str
     professional_name: str

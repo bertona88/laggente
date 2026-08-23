@@ -49,10 +49,11 @@ The MVP runs on one existing Hetzner server with Docker Compose:
 - private upload storage on the server filesystem;
 - scheduled database and file backups.
 
-When separately activated, outbound professional email uses Amazon SES as a replaceable transport.
-Inbound SES receipt infrastructure stores the raw message in AWS and a narrowly scoped relay posts
-it to FastAPI with an application HMAC. SES, S3, and the relay are transport infrastructure, not a
-new product runtime, database, or AI role. See
+When separately activated, outbound professional email uses Resend as the pilot replaceable
+transport, and signed Resend receiving webhooks lead FastAPI to fetch and retain the original raw
+message. The existing Amazon SES raw-MIME adapter and SES/S3 signed relay remain the planned later
+transport. Resend, SES, S3, and either inbound path are transport infrastructure, not a new product
+runtime, database, or AI role. See
 [ADR-0003](../decisions/0003-agent-native-professional-email.md).
 
 Node.js and Vite are build-stage tools only. The gateway image compiles `apps/web`, copies the

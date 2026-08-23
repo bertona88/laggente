@@ -31,11 +31,11 @@ set it to `false` and run Alembic before starting the service.
 - `BASE_DOMAIN`, `APP_ORIGIN`, `CORS_ORIGINS`, and `TRUSTED_HOSTS`
 - `UPLOAD_DIR=/data/uploads`
 - Agent-native email is disabled by default. Activation requires `AGENT_MAIL_ENABLED=true`,
-  `AGENT_MAIL_PROVIDER=ses`, sender/reply domains, `AGENT_MAIL_AWS_REGION`, and a random
-  `AGENT_MAIL_INBOUND_SECRET` of at least 32 characters. AWS credentials use the standard boto3
-  credential chain and are never accepted from the browser. On Hetzner, use a dedicated IAM key
-  limited to SES sending through `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` in the API-only
-  application secret file.
+  `AGENT_MAIL_PROVIDER=resend`, sender/reply domains, `RESEND_API_KEY`, and
+  `RESEND_WEBHOOK_SECRET`. The pilot uses the same server-side Resend key as magic-link delivery;
+  inbound raw-message retrieval requires full API access. The retained later SES path instead uses
+  `AGENT_MAIL_PROVIDER=ses`, a random `AGENT_MAIL_INBOUND_SECRET` of at least 32 characters, the
+  standard boto3 credential chain, and a dedicated IAM key in the API-only application secret file.
 
 The OpenAI key stays server-side. Model responses use the Responses API through the Agents SDK
 with provider storage and SDK tracing disabled. No model reasoning is persisted. For an authorized
@@ -54,9 +54,10 @@ All product routes use `/api/v1`. The main groups are:
 - `/studio/*` — private Studio conversation, configuration proposal/activation, public
   conversations, professional join, AI pause/resume, memory correction, and explicit human
   authorization of sealed email drafts;
-- `/integrations/professional-email/inbound` — HMAC-authenticated relay ingestion for raw incoming
-  email; its content is stored and exposed to Studio as untrusted data and never causes an
-  automatic reply;
+- `/integrations/professional-email/resend` — signed Resend receiving webhook; the API retrieves the
+  original raw email, stores it as untrusted data, and never causes an automatic reply;
+- `/integrations/professional-email/inbound` — retained HMAC-authenticated SES/S3 relay ingestion
+  endpoint for the planned later provider switch;
 - `/public/conversations/{id}/attachments` and `/attachments/*` — limited private image/audio
   media with cookie-authorized same-origin content and server-side transcription;
 - `/healthz`, `/readyz`, `/version` — operations endpoints (also exposed under `/api/v1`).

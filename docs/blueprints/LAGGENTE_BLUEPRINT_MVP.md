@@ -280,8 +280,9 @@ The accepted MVP topology is:
 - **PostgreSQL** for multi-tenant configuration, conversations, messages, memory, and events;
 - **private filesystem storage** on the Hetzner server for MVP uploads;
 - optional **email delivery** for signed Studio magic links when that authentication mode is configured;
-- optional **Amazon SES transport** for human-authorized professional email, with raw incoming
-  messages relayed into the application through a signed server-to-server endpoint;
+- optional **Resend pilot transport** for human-authorized professional email and signed inbound
+  receiving events, behind a replaceable boundary that retains Amazon SES as the planned later
+  raw-message transport;
 - **Docker Compose** on the existing Hetzner server;
 - **wildcard DNS and TLS** for `*.laggente.com`.
 

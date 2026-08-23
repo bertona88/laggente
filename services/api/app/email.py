@@ -34,7 +34,10 @@ class AuthEmailSender:
         async with httpx.AsyncClient(timeout=10) as client:
             response = await client.post(
                 "https://api.resend.com/emails",
-                headers={"Authorization": f"Bearer {self.settings.resend_api_key}"},
+                headers={
+                    "Authorization": f"Bearer {self.settings.resend_api_key}",
+                    "User-Agent": f"LAGGENTE/{self.settings.version}",
+                },
                 json=payload,
             )
         if response.status_code >= 300:

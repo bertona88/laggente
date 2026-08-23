@@ -3,9 +3,18 @@
 ## Current state
 
 The repository implements sealed professional email artifacts, explicit human authorization, an
-Amazon SES outbound transport, signed inbound ingestion, and a development capture transport.
-`AGENT_MAIL_ENABLED=false` is the production-safe default. Nothing in this implementation creates
-an AWS account, changes DNS, runs the migration, deploys the branch, or makes email live.
+outbound Resend transport, signed Resend receiving ingestion, a development capture transport, and
+the retained Amazon SES/S3 path for a later provider switch. `AGENT_MAIL_ENABLED=false` is the
+production-safe default.
+
+The Resend sending domain `laggente.com` is verified, and its DKIM, sending CNAME, and DMARC records
+have been published without changing the apex Namecheap forwarding records. Namecheap's
+`EmailType=FWD` API mode did not retain a custom subdomain MX, so the safe pilot reply domain is the
+Resend-provided
+`aldioprena.resend.app`; `inbound.laggente.com` remains reserved for the later SES path.
+
+Repository support and DNS records are not evidence that the database migration ran, the branch was
+deployed, a Resend API key or webhook was created, the feature was enabled, or live delivery passed.
 
 ## Target flow
 
@@ -13,42 +22,37 @@ an AWS account, changes DNS, runs the migration, deploys the branch, or makes em
 Mauro ↔ private Studio assistant
              ↓ sealed draft
       human authorization endpoint
-             ↓ exact RFC 822 bytes
-          Amazon SES → recipient
+             ↓ sealed fields + idempotency key
+             Resend → recipient
 
-recipient reply → inbound.laggente.com MX → SES receipt rule → private S3
-                                                       ↓
-                                                signed AWS relay
-                                                       ↓
-                                       FastAPI inbound endpoint → Studio event
+recipient reply → aldioprena.resend.app → signed Resend email.received webhook
+                                                   ↓
+                                      Resend raw-message retrieval
+                                                   ↓
+                                      FastAPI ingestion → Studio event
 ```
 
-There are still exactly two AI roles. SES, S3, the relay, FastAPI, and PostgreSQL are ordinary
-infrastructure and application code.
+There are still exactly two AI roles. Resend, FastAPI, and PostgreSQL are ordinary infrastructure
+and application code. Incoming content is stored as untrusted data and does not cause a model call,
+tool call, or automatic reply.
 
-## What the AWS account owner must do
+## Resend pilot activation
 
-1. Finish AWS account signup and select the ordinary usage-based SES path; no optional fixed-price
-   SES tier or SES Mail Manager subscription is required by this architecture.
-2. In `eu-south-1`, verify the sender identity for `laggente.com`, publish the three SES DKIM CNAME
-   records, and configure a custom MAIL FROM subdomain such as `bounce.laggente.com` with its SES MX
-   and SPF records. Keep DMARC aligned through DKIM.
-3. Request SES production access. State the real one-to-one professional correspondence use case,
-   low pilot volume, explicit human authorization, and bounce/complaint suppression policy.
-4. Create a dedicated IAM principal for the Hetzner API with only SES send permission in the chosen
-   region. Provide its access-key ID and secret through the API-only application secret file; never
-   paste them into Studio, source code, a browser, or a chat message.
-5. Verify `inbound.laggente.com` as the receiving identity. Publish only that subdomain's SES inbound
-   MX record. Do not replace the apex `laggente.com` MX records.
-6. Create a private, encrypted S3 bucket with short lifecycle retention for raw inbound mail. Create
-   an SES receipt rule limited to `inbound.laggente.com` that writes raw messages to that bucket.
-7. Deploy the versioned relay in [`infra/email-relay`](../../infra/email-relay/README.md) as a
-   narrowly scoped Lambda that can read only that bucket prefix. It Base64-encodes the untouched raw
-   message and POSTs `{recipient, receipt_id, raw_base64, received_at}` to
-   `/api/v1/integrations/professional-email/inbound`. It signs the exact JSON bytes with
-   `HMAC-SHA256(secret, timestamp + "." + body)` in `X-Laggente-Signature: sha256=...` and sends the
-   Unix timestamp in `X-Laggente-Timestamp`.
-8. Configure SES bounce and complaint events and a suppression procedure before pilot traffic.
+1. Deploy this branch with the database migration while `AGENT_MAIL_ENABLED=false`.
+2. Create one server-side Resend API key with full access. Full access is required because the same
+   pilot key sends mail and calls `GET /emails/receiving/{id}` to obtain the signed raw-message URL.
+   Store it only in the restricted Hetzner application secret file; never commit or expose it to a
+   browser client.
+3. Configure production with the values below. `FROM_EMAIL` is used for magic links; the professional
+   sender address is derived per tenant from `AGENT_MAIL_FROM_DOMAIN`.
+4. Add a Resend webhook for only `email.received` pointing to
+   `https://app.laggente.com/api/v1/integrations/professional-email/resend`. Copy its distinct signing
+   secret to `RESEND_WEBHOOK_SECRET`. Create the webhook only after the endpoint is deployed, so the
+   provider does not retry a missing route.
+5. Restart the API, confirm readiness, then enable `AGENT_MAIL_ENABLED=true` and perform a controlled
+   outbound/reply round trip. Verify the stored provider IDs, raw hashes, one Studio event, and no
+   automatic assistant reply.
+6. Configure and exercise a bounce/complaint suppression procedure before pilot traffic expands.
 
 ## Values needed by LAGGENTE
 
@@ -57,20 +61,31 @@ ownership and permissions:
 
 ```dotenv
 AGENT_MAIL_ENABLED=true
-AGENT_MAIL_PROVIDER=ses
+AGENT_MAIL_PROVIDER=resend
 AGENT_MAIL_FROM_DOMAIN=laggente.com
-AGENT_MAIL_REPLY_DOMAIN=inbound.laggente.com
-AGENT_MAIL_AWS_REGION=eu-south-1
-AGENT_MAIL_INBOUND_SECRET=<at-least-32-random-characters-shared-with-relay>
+AGENT_MAIL_REPLY_DOMAIN=aldioprena.resend.app
 AGENT_MAIL_MAX_INBOUND_BYTES=5242880
-AWS_ACCESS_KEY_ID=<dedicated-ses-sender-key-id>
-AWS_SECRET_ACCESS_KEY=<dedicated-ses-sender-secret>
-AWS_SESSION_TOKEN=
+RESEND_API_KEY=<full-access-server-side-key>
+RESEND_WEBHOOK_SECRET=<signing-secret-for-the-email-received-webhook>
+FROM_EMAIL=LAGGENTE <accesso@laggente.com>
 ```
 
-Do not enable the flag until DNS and SES identities read back correctly, production access is
-approved, the database migration is complete, the relay signature test passes, and a controlled
-outbound/reply round trip succeeds. Deployment and DNS changes require separate explicit approval.
+Do not enable the flag until the sending domain is verified, the database migration is complete,
+the webhook signature path passes, and a controlled outbound/reply round trip succeeds. Deployment
+still requires separate explicit approval.
+
+## Planned later switch to Amazon SES
+
+The SES adapter and [`infra/email-relay`](../../infra/email-relay/README.md) remain implemented and
+tested. A later switch sets `AGENT_MAIL_PROVIDER=ses` and `AGENT_MAIL_REPLY_DOMAIN=inbound.laggente.com`,
+then supplies `AGENT_MAIL_AWS_REGION`, a 32-character `AGENT_MAIL_INBOUND_SECRET`, and dedicated
+`AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY` credentials. Before switching, complete SES production
+access, DKIM and custom MAIL FROM, the `inbound.laggente.com` MX boundary, private encrypted S3
+receipt storage with short retention, the signed relay, and bounce/complaint handling. Do not alter
+the apex forwarding MX records.
+
+The switch changes transport configuration only. It does not change the two assistant roles, human
+authorization, immutable artifact, tenant isolation, inbound distrust, or no-automatic-retry rules.
 
 ## Acceptance checks
 
