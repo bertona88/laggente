@@ -67,16 +67,12 @@ async def request_magic_link(
         select(Member).where(Member.email == body.email.lower(), Member.is_active.is_(True))
     )
     development_link = None
-    # In pilot-password mode, invited professionals have no password and keep using magic links.
-    # An unaccepted invitation must still use its purpose-bound token; unknown, password-backed,
-    # or not-yet-accepted addresses receive the same response without a login token.
+    # An unaccepted invitation must still use its purpose-bound token. Unknown or not-yet-accepted
+    # addresses receive the same response without a login token so this endpoint cannot enumerate
+    # members. An authorized password-backed pilot member may still use a magic link for recovery.
     member_space = _member_space(db, member) if member else None
     invitation_accepted = not member_space or member_space.onboarding_state != "invited"
-    if (
-        member
-        and invitation_accepted
-        and (settings.auth_mode == "magic_link" or not member.password_hash)
-    ):
+    if member and invitation_accepted:
         signer = TokenSigner(settings.session_secret)
         token = signer.issue(
             "magic_link",

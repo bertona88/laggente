@@ -10,6 +10,12 @@ import { invitationTokenFromFragment, magicLinkTokenFromFragment } from "@/lib/m
 
 type AuthMode = "pilot_password" | "magic_link";
 
+type MagicLinkRequestResult = {
+  accepted: boolean;
+  message: string;
+  development_magic_link?: string | null;
+};
+
 export function LoginForm() {
   const navigate = useAppNavigate();
   const [mode, setMode] = useState<AuthMode | null>(null);
@@ -17,6 +23,7 @@ export function LoginForm() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const [requestMessage, setRequestMessage] = useState("");
   const [preferMagicLink, setPreferMagicLink] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -71,10 +78,11 @@ export function LoginForm() {
     setError(null);
     try {
       if (mode === "magic_link" || preferMagicLink) {
-        await apiRequest("/auth/magic-link/request", {
+        const result = await apiRequest<MagicLinkRequestResult>("/auth/magic-link/request", {
           method: "POST",
           body: JSON.stringify({ email }),
         });
+        setRequestMessage(result.message);
         setSent(true);
       } else {
         await apiRequest("/auth/pilot-login", {
@@ -114,9 +122,9 @@ export function LoginForm() {
           ) : sent ? (
             <div className="login-success" role="status">
               <span aria-hidden="true">✓</span>
-              <h2>Controlla la posta</h2>
-              <p>Abbiamo inviato un collegamento sicuro a <strong>{email}</strong>. È valido per un solo accesso.</p>
-              <button type="button" onClick={() => setSent(false)}>Usa un altro indirizzo</button>
+              <h2>Richiesta ricevuta</h2>
+              <p>Per <strong>{email}</strong>: {requestMessage}</p>
+              <button type="button" onClick={() => setSent(false)}>Riprova o usa un altro indirizzo</button>
             </div>
           ) : (
             <form onSubmit={onSubmit}>
@@ -158,7 +166,7 @@ export function LoginForm() {
                     setError(null);
                   }}
                 >
-                  {preferMagicLink ? "Usa la password del pilot" : "Non hai una password? Usa un magic link"}
+                  {preferMagicLink ? "Usa la password del pilot" : "Accesso su invito: usa un magic link"}
                 </button>
               )}
             </form>

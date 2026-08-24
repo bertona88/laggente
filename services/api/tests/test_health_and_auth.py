@@ -147,13 +147,32 @@ def test_magic_link_concurrent_consumption_issues_exactly_one_session(tmp_path):
         assert session_started_count == 1
 
 
-def test_password_backed_member_does_not_receive_a_magic_link_in_pilot_mode(client):
+def test_password_backed_member_can_recover_with_a_magic_link_in_pilot_mode(client):
     assert client.get("/api/v1/auth/mode").json() == {"mode": "pilot_password"}
     response = client.post(
         "/api/v1/auth/magic-link/request", json={"email": "mauro@laggente.com"}
     )
     assert response.status_code == 200
-    assert response.json()["development_magic_link"] is None
+    link = response.json()["development_magic_link"]
+    assert urlparse(link).path == "/login"
+    token = parse_qs(urlparse(link).fragment)["token"][0]
+    consumed = client.post("/api/v1/auth/magic-link/consume", json={"token": token})
+    assert consumed.status_code == 200
+
+
+def test_magic_link_request_does_not_claim_delivery_or_enumerate_unknown_members(client):
+    known = client.post(
+        "/api/v1/auth/magic-link/request", json={"email": "mauro@laggente.com"}
+    )
+    unknown = client.post(
+        "/api/v1/auth/magic-link/request", json={"email": "unknown@example.com"}
+    )
+
+    assert known.status_code == unknown.status_code == 200
+    assert known.json()["accepted"] is unknown.json()["accepted"] is True
+    assert known.json()["message"] == unknown.json()["message"]
+    assert "Se l'indirizzo è autorizzato" in known.json()["message"]
+    assert unknown.json()["development_magic_link"] is None
 
 
 def test_production_requires_transactional_email_for_professional_invitations():

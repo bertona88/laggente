@@ -61,7 +61,9 @@ Invitation authority is stored on the inviting member and does not propagate to 
 The invitation token has a distinct signed purpose from an ordinary login token. Consuming any
 version of a resent invitation invalidates its siblings. After acceptance, a passwordless invited
 professional uses the ordinary magic-link login flow, including while the seeded operator remains
-on pilot-password authentication.
+on pilot-password authentication. The seeded password-backed operator may also request an ordinary
+magic link as a recovery path; unknown addresses receive the same non-enumerating response without
+creating or sending a token.
 
 ## Runtime topology
 
