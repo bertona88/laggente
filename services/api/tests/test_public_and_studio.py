@@ -228,7 +228,7 @@ def test_draft_does_not_change_public_behavior_until_explicit_activation(profess
         json={"content": "Manteniamo questo ruolo.", "client_message_id": "role-author-test"},
     )
     assert studio_turn.status_code == 200
-    assert studio_turn.json()["messages"][0]["author_label"] == "Mauro Rossi — architetto"
+    assert studio_turn.json()["messages"][0]["author_label"] == "Mauro Bianchi — architetto"
 
 
 def test_text_conversation_cannot_be_disabled_by_tenant_configuration(professional_client):

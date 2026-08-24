@@ -13,6 +13,7 @@ import {
 import { ConversationPhoto } from "@/components/conversation-photo";
 import { MessageContent } from "@/components/message-markdown";
 import { InlineError, LoadingLine } from "@/components/status";
+import { useStudioSession } from "@/components/studio-shell";
 import { apiRequest, normalizeMessages, resolveMessageResponse } from "@/lib/api";
 import { createClientMessageAttemptTracker } from "@/lib/client-message-id";
 import { confirmConversationDeletion } from "@/lib/conversation-deletion";
@@ -21,12 +22,12 @@ import type { ConversationMessage, MemoryItem, StudioConversationDetail } from "
 import { startVisiblePolling } from "@/lib/visible-polling";
 import { isNearThreadBottom, shouldAutoScrollThread } from "@/lib/thread-scroll";
 
-function normalizeDetail(value: unknown, id: string): StudioConversationDetail {
+function normalizeDetail(value: unknown, id: string, fallbackSlug = ""): StudioConversationDetail {
   const object = (value || {}) as Record<string, unknown>;
   const conversation = (object.conversation && typeof object.conversation === "object" ? object.conversation : object) as Record<string, unknown>;
   return {
     id: String(conversation.id || id),
-    space_slug: String(conversation.space_slug || "spazio"),
+    space_slug: String(conversation.space_slug || fallbackSlug),
     messages: normalizeMessages(object.messages || conversation.messages),
     visitor_name: String(conversation.visitor_name || object.visitor_name || "") || null,
     summary: String(conversation.summary || object.summary || "") || null,
@@ -45,7 +46,7 @@ export function ThreadMessage({ message }: { message: ConversationMessage }) {
   const ai = message.author_type === "public_assistant";
   return (
     <motion.article layout initial={{ opacity: 0, y: 6 }} animate={{ opacity: message.pending ? 0.55 : 1, y: 0 }} className={`detail-message detail-message--${message.author_type}`} id={`message-${message.id}`}>
-      {(human || ai) && <span className={`speaker-mark speaker-mark--${human ? "human" : "ai"}`}>{human ? initials(message.author_name) : "AI"}</span>}
+      {(human || ai) && <span className={`speaker-mark speaker-mark--${human ? "human" : "ai"}`}>{human ? initials(message.author_name) || "P" : "AI"}</span>}
       <div>
         <header><strong>{message.author_name}</strong><time dateTime={message.created_at}>{formatTime(message.created_at)}</time></header>
         <ConversationPhoto attachment={message.attachment} surface="studio" />
@@ -92,6 +93,8 @@ function MemoryRow({ item, conversationId, onSaved }: { item: MemoryItem; conver
 }
 
 export function ConversationDetail({ conversationId }: { conversationId: string }) {
+  const { session } = useStudioSession();
+  const studioSpaceSlug = session?.space?.slug || "";
   const navigate = useAppNavigate();
   const reduceMotion = useReducedMotion();
   const [detail, setDetail] = useState<StudioConversationDetail | null>(null);
@@ -104,7 +107,6 @@ export function ConversationDetail({ conversationId }: { conversationId: string 
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [contextOpen, setContextOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [professionalName, setProfessionalName] = useState("Il professionista");
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const threadRef = useRef<HTMLDivElement>(null);
@@ -119,7 +121,7 @@ export function ConversationDetail({ conversationId }: { conversationId: string 
     }
     try {
       const result = await apiRequest<unknown>(`/studio/conversations/${encodeURIComponent(conversationId)}`);
-      const normalized = normalizeDetail(result, conversationId);
+      const normalized = normalizeDetail(result, conversationId, studioSpaceSlug);
       setDetail(normalized);
       setJoined(normalized.professional_present);
     } catch (reason) {
@@ -129,14 +131,9 @@ export function ConversationDetail({ conversationId }: { conversationId: string 
     } finally {
       if (!background) setLoading(false);
     }
-  }, [conversationId]);
+  }, [conversationId, studioSpaceSlug]);
 
   useEffect(() => { void load(); }, [load]);
-  useEffect(() => {
-    apiRequest<{ space?: { professional_name?: string } }>("/studio/space")
-      .then((result) => setProfessionalName(result.space?.professional_name || "Il professionista"))
-      .catch(() => undefined);
-  }, []);
   useEffect(() => startVisiblePolling(
     () => {
       if (sending || joinBusy || controlBusy) return;
@@ -162,7 +159,7 @@ export function ConversationDetail({ conversationId }: { conversationId: string 
     const content = input.trim();
     if (!content || sending || !detail) return;
     const clientMessageId = attemptTrackerRef.current.idFor(content);
-    const optimistic: ConversationMessage = { id: `pending-${clientMessageId}`, author_type: "professional", author_name: professionalName, content, created_at: new Date().toISOString(), pending: true };
+    const optimistic: ConversationMessage = { id: `pending-${clientMessageId}`, author_type: "professional", author_name: session?.member.display_name || "Professionista", content, created_at: new Date().toISOString(), pending: true };
     setDetail({ ...detail, messages: [...detail.messages, optimistic], professional_present: true, automatic_replies_enabled: false });
     setJoined(true);
     setInput("");
@@ -172,7 +169,7 @@ export function ConversationDetail({ conversationId }: { conversationId: string 
       const result = await apiRequest<unknown>(`/studio/conversations/${encodeURIComponent(conversationId)}/messages`, { method: "POST", body: JSON.stringify({ content, client_message_id: clientMessageId }) });
       const object = (result || {}) as Record<string, unknown>;
       if (object.conversation || object.memory_items || object.automatic_replies_enabled !== undefined) {
-        setDetail(normalizeDetail(result, conversationId));
+        setDetail(normalizeDetail(result, conversationId, studioSpaceSlug));
       } else {
         const returned = resolveMessageResponse(result) as ConversationMessage[];
         setDetail((current) => current ? { ...current, messages: [...current.messages.filter((message) => message.id !== optimistic.id), ...(returned.length ? returned : [{ ...optimistic, pending: false }])], professional_present: true, automatic_replies_enabled: false } : current);
@@ -206,7 +203,7 @@ export function ConversationDetail({ conversationId }: { conversationId: string 
     setError(null);
     try {
       const result = await apiRequest<unknown>(`/studio/conversations/${encodeURIComponent(conversationId)}/join`, { method: "POST" });
-      setDetail(normalizeDetail(result, conversationId));
+      setDetail(normalizeDetail(result, conversationId, studioSpaceSlug));
       setJoined(true);
       setTimeout(() => inputRef.current?.focus(), 50);
     } catch (reason) {
@@ -234,6 +231,9 @@ export function ConversationDetail({ conversationId }: { conversationId: string 
   if (loading) return <div className="detail-loading"><LoadingLine label="Apro la conversazione…" /></div>;
   if (!detail) return <div className="detail-loading">{error && <InlineError message={error} retry={load} />}</div>;
   const visitorName = detail.visitor_name || "Visitatore";
+  const professionalName = session?.member.display_name || "il professionista";
+  const professionalFirstName = professionalName.split(/\s+/)[0] || "il professionista";
+  const professionalInitials = initials(professionalName) || "P";
 
   return (
     <section className="conversation-detail">
@@ -242,7 +242,7 @@ export function ConversationDetail({ conversationId }: { conversationId: string 
         <div><p>Conversazione pubblica</p><h1>{visitorName}</h1><span>{detail.updated_at ? `Ultimo aggiornamento ${formatDateTime(detail.updated_at)}` : `Spazio di ${professionalName}`}</span></div>
         <button type="button" className="detail-context-toggle" onClick={() => setContextOpen(true)} aria-expanded={contextOpen} aria-controls="conversation-context"><SparkIcon /> Contesto</button>
         <div className={`assistant-control${detail.automatic_replies_enabled ? " is-on" : " is-paused"}`}>
-          <div><i /><span><strong>{detail.automatic_replies_enabled ? "Assistente attivo" : "Assistente in pausa"}</strong><small>{detail.automatic_replies_enabled ? "Può rispondere automaticamente" : `Risponde solo ${professionalName}`}</small></span></div>
+          <div><i /><span><strong>{detail.automatic_replies_enabled ? "Assistente attivo" : "Assistente in pausa"}</strong><small>{detail.automatic_replies_enabled ? "Può rispondere automaticamente" : `Risponde solo ${professionalFirstName}`}</small></span></div>
           <button type="button" disabled={controlBusy} onClick={() => void setAssistant(!detail.automatic_replies_enabled)}>
             {detail.automatic_replies_enabled ? <><PauseIcon /> Metti in pausa</> : <><PlayIcon /> Riattiva</>}
           </button>
@@ -265,17 +265,17 @@ export function ConversationDetail({ conversationId }: { conversationId: string 
           </div>
           {!joined && (
             <motion.div className="join-prompt" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-              <span className="speaker-mark speaker-mark--human">{initials(professionalName)}</span>
+              <span className="speaker-mark speaker-mark--human">{professionalInitials}</span>
               <div><strong>Vuoi entrare nella conversazione?</strong><p>Il tuo primo messaggio sarà firmato da te e metterà in pausa le risposte automatiche.</p></div>
-              <button type="button" disabled={joinBusy} onClick={() => void joinConversation()}>{joinBusy ? "Ingresso…" : `Entra come ${professionalName}`}</button>
+              <button type="button" disabled={joinBusy} onClick={() => void joinConversation()}>{joinBusy ? "Ingresso…" : `Entra come ${professionalFirstName}`}</button>
             </motion.div>
           )}
           <AnimatePresence>
             {joined && (
               <motion.form className="professional-composer" onSubmit={submit} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-                <div className="professional-composer__identity"><span>{initials(professionalName)}</span><strong>Stai scrivendo come {professionalName}</strong></div>
+                <div className="professional-composer__identity"><span>{professionalInitials}</span><strong>Stai scrivendo come {professionalName}</strong></div>
                 <textarea ref={inputRef} value={input} onChange={(event) => { attemptTrackerRef.current.invalidate(); setInput(event.target.value); }} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} rows={2} placeholder="Scrivi alla persona…" aria-label={`Messaggio di ${professionalName}`} />
-                <div><span>L’assistente andrà in pausa automaticamente.</span><button type="submit" disabled={sending || !input.trim()}>{sending ? "Invio…" : `Invia come ${professionalName}`}<SendIcon /></button></div>
+                <div><span>L’assistente andrà in pausa automaticamente.</span><button type="submit" disabled={sending || !input.trim()}>{sending ? "Invio…" : `Invia come ${professionalFirstName}`}<SendIcon /></button></div>
               </motion.form>
             )}
           </AnimatePresence>

@@ -10,12 +10,12 @@ describe("public space failure boundary", () => {
     window.localStorage.clear();
   });
 
-  it("does not leave the seeded Mauro fallback interactive when tenant resolution fails", async () => {
+  it("does not leave a tenant placeholder interactive when resolution fails", async () => {
     vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("API unavailable"));
 
     render(<Router><PublicSpace slug="mauro" /></Router>);
 
-    expect(await screen.findByText("Non riesco ad aprire questa conversazione.")).toBeInTheDocument();
+    expect(await screen.findByText("Non riesco ad aprire questo spazio.")).toBeInTheDocument();
     expect(screen.queryByLabelText("Il tuo messaggio")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Riprova" })).toBeInTheDocument();
   });

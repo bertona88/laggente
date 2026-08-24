@@ -59,6 +59,27 @@ def test_studio_instruction_uses_adaptive_correctable_elicitation():
     assert "bozza fino all'attivazione umana" in instructions
 
 
+def test_agent_mail_adds_tools_to_studio_without_creating_another_agent(settings):
+    enabled = settings.model_copy(
+        update={
+            "agent_mail_enabled": True,
+            "agent_mail_inbound_secret": "x" * 32,
+        }
+    )
+    service = AgentsAssistantService(enabled)
+    assert {tool.name for tool in service.studio_assistant.tools} == {
+        "inspect_active_space_configuration",
+        "list_public_conversations",
+        "inspect_public_conversation",
+        "propose_configuration_revision",
+        "propose_professional_email",
+        "list_professional_emails",
+        "inspect_professional_email",
+    }
+    assert service.public_assistant.tools == []
+    assert service.studio_assistant.handoffs == []
+
+
 def test_public_input_embeds_integrity_checked_private_image(settings):
     image_bytes = b"\x89PNG\r\n\x1a\n" + b"private-image"
     storage_key = "account/conversation/image.png"

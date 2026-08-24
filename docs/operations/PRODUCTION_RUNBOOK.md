@@ -39,6 +39,21 @@ zone; readiness reaches PostgreSQL and is not an unbounded public probe. Contain
 health checks use the loopback gateway directly, so this host-edge limit does not destabilize local
 Compose health.
 
+## Before sending a professional invitation
+
+The invitation UI is not a TLS readiness check. Before sending a live invitation:
+
+- confirm `RESEND_API_KEY` and `FROM_EMAIL` are configured and a delivery smoke has succeeded;
+- confirm the new migration is applied and the operator session reports invitation permission;
+- confirm wildcard DNS resolves a proposed slug to `116.203.123.0`;
+- confirm the active certificate covers `*.laggente.com`, or deliberately add the exact invited
+  slug to the named SAN lineage before the professional publishes;
+- verify a controlled non-Mauro host reaches the shared gateway without resolving another tenant.
+
+Do not publish an invited slug merely because the database flow succeeds. Without wildcard or
+exact SAN coverage, the browser must reject that hostname even though application routing is
+correct.
+
 ## Read logs without leaking secrets
 
 ```bash

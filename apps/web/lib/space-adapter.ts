@@ -1,25 +1,6 @@
 import type { ProfessionalSpace } from "@/lib/types";
 import { PRIVACY_NOTICE_VERSION } from "@/lib/privacy";
 
-export const mauroFallback: ProfessionalSpace = {
-  slug: "mauro",
-  professional_name: "Mauro Rossi",
-  professional_role: "Agente immobiliare",
-  agency: "Studio Mauro Rossi",
-  territory: "Roma Nord",
-  hero_image_url: "/images/laggente-hero.webp",
-  welcome_message:
-    "Ciao, sono LAGGENTE, l’assistente AI di Mauro. Posso ascoltare ciò che hai in mente, aiutarti a fare chiarezza e coinvolgere Mauro quando il suo giudizio può essere utile. Da dove vuoi partire?",
-  assistant_disclosure: "LAGGENTE — assistente AI di Mauro",
-  privacy_notice_version: PRIVACY_NOTICE_VERSION,
-  capabilities: { text: true, voice_notes: true, photographs: true },
-  suggested_prompts: [
-    "Sto pensando di vendere una casa",
-    "Vorrei capire da dove iniziare",
-    "Ho una situazione un po’ particolare",
-  ],
-};
-
 export function emptySpace(slug: string): ProfessionalSpace {
   return {
     slug,
@@ -43,7 +24,7 @@ export function normalizeSpace(value: unknown, slug: string): ProfessionalSpace 
   const identity = (configuration.identity && typeof configuration.identity === "object" ? configuration.identity : {}) as Record<string, unknown>;
   const presentation = (configuration.public && typeof configuration.public === "object" ? configuration.public : {}) as Record<string, unknown>;
   const capabilities = (configuration.capabilities && typeof configuration.capabilities === "object" ? configuration.capabilities : {}) as Record<string, unknown>;
-  const fallback = slug === "mauro" ? mauroFallback : emptySpace(slug);
+  const fallback = emptySpace(slug);
   return {
     ...fallback,
     ...candidate,

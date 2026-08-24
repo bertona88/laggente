@@ -3,7 +3,7 @@
 FastAPI service for LAGGENTE's application-owned coordination layer and exactly two OpenAI
 Agents SDK roles: the private Studio assistant and the public assistant. PostgreSQL stores
 tenant-scoped spaces, active/draft configuration revisions, conversations, immutable messages,
-correctable derived memory, attachments, and audit events.
+correctable derived memory, attachments, sealed professional email artifacts, and audit events.
 
 ## Local run
 
@@ -25,11 +25,20 @@ set it to `false` and run Alembic before starting the service.
 - `SESSION_SECRET` (at least 32 random characters)
 - `AUTH_MODE=pilot_password` with `PILOT_EMAIL` and a `PILOT_PASSWORD` of at least 14 characters,
   or `AUTH_MODE=magic_link` with `RESEND_API_KEY` and `FROM_EMAIL`
+- `RESEND_API_KEY` and `FROM_EMAIL` whenever professional invitations are used, even if the
+  seeded operator still uses `AUTH_MODE=pilot_password`
+- optional `INVITATION_TTL_SECONDS` (default seven days)
 - `OPENAI_API_KEY` and optional `OPENAI_MODEL` (default `gpt-5.6`)
 - `COOKIE_SECURE=true`
 - `AUTO_CREATE_SCHEMA=false`
 - `BASE_DOMAIN`, `APP_ORIGIN`, `CORS_ORIGINS`, and `TRUSTED_HOSTS`
 - `UPLOAD_DIR=/data/uploads`
+- Agent-native email is disabled by default. Activation requires `AGENT_MAIL_ENABLED=true`,
+  `AGENT_MAIL_PROVIDER=resend`, sender/reply domains, `RESEND_API_KEY`, and
+  `RESEND_WEBHOOK_SECRET`. The pilot uses the same server-side Resend key as magic-link delivery;
+  inbound raw-message retrieval requires full API access. The retained later SES path instead uses
+  `AGENT_MAIL_PROVIDER=ses`, a random `AGENT_MAIL_INBOUND_SECRET` of at least 32 characters, the
+  standard boto3 credential chain, and a dedicated IAM key in the API-only application secret file.
 
 The OpenAI key stays server-side. Model responses use the Responses API through the Agents SDK
 with provider storage and SDK tracing disabled. No model reasoning is persisted. For an authorized
@@ -42,11 +51,17 @@ replayed on later text turns.
 
 All product routes use `/api/v1`. The main groups are:
 
-- `/auth/*` — auth mode, pilot login, signed single-use magic links, session, logout;
+- `/auth/*` — auth mode, pilot login, purpose-bound single-use invitation and login magic links,
+  session, and logout;
 - `/public/{slug}` and `/public/conversations/*` — active public presentation and anonymous
   continuation-token conversations;
-- `/studio/*` — private Studio conversation, configuration proposal/activation, public
-  conversations, professional join, AI pause/resume, and memory correction;
+- `/studio/*` — authorized professional invitation, dormant-space slug claim, private Studio
+  conversation, configuration proposal/activation, public conversations, professional join, AI
+  pause/resume, memory correction, and explicit human authorization of sealed email drafts;
+- `/integrations/professional-email/resend` — signed Resend receiving webhook; the API retrieves the
+  original raw email, stores it as untrusted data, and never causes an automatic reply;
+- `/integrations/professional-email/inbound` — retained HMAC-authenticated SES/S3 relay ingestion
+  endpoint for the planned later provider switch;
 - `/public/conversations/{id}/attachments` and `/attachments/*` — limited private image/audio
   media with cookie-authorized same-origin content and server-side transcription;
 - `/healthz`, `/readyz`, `/version` — operations endpoints (also exposed under `/api/v1`).
@@ -54,6 +69,16 @@ All product routes use `/api/v1`. The main groups are:
 Public conversation transport is conventional REST for this release. App-owned PostgreSQL
 records are the durable source of truth, so a future ChatKit transport can implement its store
 contract without creating a second chat database.
+
+## Invited professional lifecycle
+
+`POST /studio/invitations` is available only to a member with `can_invite=true`. It creates a new
+tenant and inactive space before sending the recipient a purpose-bound invitation link. The
+recipient talks to Studio while the space is private, claims a globally unique slug through
+`PATCH /studio/space/slug`, and activates a draft through the ordinary revision endpoint. First
+activation marks the space published and makes the shared public routes resolve it. Invited
+members do not inherit invitation permission and can request ordinary login magic links after the
+invitation has been consumed.
 
 ## Pilot capacity and abuse ceilings
 
@@ -70,6 +95,7 @@ controls, not tenant-configurable assistant behavior, lead stages, or a real-est
 | New public conversations per space | 60 in a rolling hour |
 | Unengaged public conversations per space | 60; an item with no visitor/professional message, professional participation, or bound attachment expires after one hour and is pruned when another conversation is opened |
 | Studio public-conversation inbox | Offset pages of 1–100 conversations; older pages remain reachable |
+| Professional email authorization | 10 human-authorized attempts per member in a rolling hour |
 
 The Studio inbox page size bounds one request; it does not delete or hide older reachable pages.
 The API enforces `CONVERSATION_RETENTION_DAYS` automatically after a five-minute startup grace and

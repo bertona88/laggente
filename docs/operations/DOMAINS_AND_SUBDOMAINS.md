@@ -120,6 +120,12 @@ sudo certbot renew --dry-run
 
 Do not activate another professional hostname until TLS covers it. A small named pilot can expand the SAN lineage deliberately. The target remains a wildcard certificate once renewal can be automated safely.
 
+The application can create, configure, and publish invited tenants without a DNS write or another
+deployment because the wildcard `A` record already routes every valid slug. Browser availability
+still depends on certificate coverage. Before invited professionals publish arbitrary live slugs,
+either complete the wildcard TLS plan below or add each approved slug to the named SAN lineage.
+A successful database activation does not prove TLS readiness.
+
 ## Wildcard TLS plan
 
 A wildcard certificate must cover both `laggente.com` and `*.laggente.com` and requires DNS-01. The Namecheap-compatible controlled procedure is:
@@ -151,7 +157,8 @@ Before serving the SPA, the container gateway also enforces the cookie-owning ca
 
 - `app.laggente.com/` redirects to `app.laggente.com/studio`;
 - `/login` and `/studio...` on the apex or `www` redirect to `app.laggente.com`;
-- `/mauro...` on any production host except `mauro.laggente.com` redirects to Mauro's host.
+- `/<valid-slug>...` on the apex, `www`, or Studio host redirects generically to
+  `<valid-slug>.laggente.com`, excluding reserved product paths.
 
 These redirects retain query arguments for navigation compatibility, while both nginx access-log
 formats continue to record only normalized `$uri` and never the arguments. Client routing remains a
@@ -192,6 +199,14 @@ mail
 send
 support
 staging
+studio
+login
+privacy
+terms
+spazio
+static
+assets
+blog
 ```
 
 Unknown, inactive, reserved, malformed, or multi-level hosts return a safe response. The professional Studio cookie is host-only for `app.laggente.com`; it is never scoped to `.laggente.com`.
@@ -204,7 +219,7 @@ curl -I https://www.laggente.com/
 curl -I https://app.laggente.com/
 curl -I https://mauro.laggente.com/
 curl -I 'https://laggente.com/studio?source=verification'
-curl -I 'https://app.laggente.com/mauro?source=verification'
+curl -I 'https://app.laggente.com/giulia?source=verification'
 curl --insecure -I https://does-not-exist.laggente.com/
 
 openssl s_client -connect laggente.com:443 -servername mauro.laggente.com </dev/null 2>/dev/null \
@@ -215,8 +230,8 @@ Expected outcomes:
 
 - apex, Studio, and Mauro hosts have valid HTTPS;
 - `www` redirects permanently to `https://laggente.com`;
-- canonical Studio and Mauro path redirects land on `app.laggente.com` and `mauro.laggente.com`
-  respectively while retaining the verification query argument;
+- canonical Studio and generic professional paths land on `app.laggente.com` and the slug-owned
+  professional host respectively while retaining the verification query argument;
 - the initial certificate includes the apex, `www`, `app`, and `mauro` SANs; after wildcard cutover it includes `DNS:*.laggente.com` and the apex SAN;
 - an unknown slug never falls into another nginx site or resolves tenant data; before wildcard TLS, its certificate mismatch prevents ordinary browser navigation;
 - no LAGGENTE container service is publicly reachable on `5432`, `8000`, or `45200`; the container
@@ -228,6 +243,7 @@ The canonical local fallback remains:
 
 ```text
 http://localhost:3000/mauro
+http://localhost:3000/giulia
 ```
 
 That port is the pinned Vite development server, not a production container port. The optional

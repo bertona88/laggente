@@ -6,6 +6,10 @@ repo_root=$(cd -- "$script_dir/.." && pwd)
 
 bash -n "$repo_root"/scripts/*.sh
 sh -n "$repo_root"/infra/backup/*.sh
+(
+    cd "$repo_root/infra/email-relay"
+    python3 -m unittest -q
+)
 
 bootstrap_script="$repo_root/scripts/bootstrap-server.sh"
 if ! grep -Eq '^[[:space:]]+slirp4netns[[:space:]]*\\$' "$bootstrap_script"; then
@@ -420,7 +424,18 @@ printf '%s\n' \
     'OPENAI_API_KEY=validation-openai-key' \
     'OPENAI_MODEL=gpt-5.6' \
     'RESEND_API_KEY=' \
+    'RESEND_WEBHOOK_SECRET=' \
     'FROM_EMAIL=' \
+    'AGENT_MAIL_ENABLED=false' \
+    'AGENT_MAIL_PROVIDER=capture' \
+    'AGENT_MAIL_FROM_DOMAIN=laggente.com' \
+    'AGENT_MAIL_REPLY_DOMAIN=inbound.laggente.com' \
+    'AGENT_MAIL_AWS_REGION=eu-south-1' \
+    'AGENT_MAIL_INBOUND_SECRET=' \
+    'AGENT_MAIL_MAX_INBOUND_BYTES=5242880' \
+    'AWS_ACCESS_KEY_ID=' \
+    'AWS_SECRET_ACCESS_KEY=' \
+    'AWS_SESSION_TOKEN=' \
     'UPLOAD_DIR=/data/uploads' \
     'MAX_UPLOAD_BYTES=10485760' \
     >"$combined_env"
@@ -446,6 +461,7 @@ file_mode() {
 }
 grep -q '^POSTGRES_PASSWORD=' "$database_env"
 grep -q '^OPENAI_API_KEY=' "$application_env"
+grep -q '^RESEND_WEBHOOK_SECRET=' "$application_env"
 for production_line in \
     'APP_ENV=production' \
     'BASE_DOMAIN=laggente.com' \
@@ -461,6 +477,7 @@ for production_line in \
 done
 grep -q '^CONVERSATION_RETENTION_DAYS=365$' "$application_env"
 grep -q '^PRIVACY_NOTICE_VERSION=2026-08-22[.]2$' "$application_env"
+grep -q '^AGENT_MAIL_ENABLED=false$' "$application_env"
 grep -q '^PRODUCT_POSITIONING_JSON={"audience":"Professionisti"' "$application_env"
 (
     # Exercise the same exact production-origin/host contract used by deploy and audit.
@@ -482,7 +499,7 @@ if (
     printf 'production application contract accepted an unsafe APP_ORIGIN\n' >&2
     exit 1
 fi
-if grep -Eq '^(OPENAI_API_KEY|SESSION_SECRET|PILOT_PASSWORD|RESEND_API_KEY)=' "$database_env"; then
+if grep -Eq '^(OPENAI_API_KEY|SESSION_SECRET|PILOT_PASSWORD|RESEND_API_KEY|RESEND_WEBHOOK_SECRET|AGENT_MAIL_INBOUND_SECRET|AWS_ACCESS_KEY_ID|AWS_SECRET_ACCESS_KEY|AWS_SESSION_TOKEN)=' "$database_env"; then
     printf 'generated database env crossed the application-secret boundary\n' >&2
     exit 1
 fi
@@ -581,7 +598,8 @@ if ! jq -e '
         and ($services[.].environment.OPENAI_API_KEY == null)
         and ($services[.].environment.SESSION_SECRET == null)
         and ($services[.].environment.PILOT_PASSWORD == null)
-        and ($services[.].environment.RESEND_API_KEY == null)))
+        and ($services[.].environment.RESEND_API_KEY == null)
+        and ($services[.].environment.RESEND_WEBHOOK_SECRET == null)))
     and ($services.api.environment.POSTGRES_PASSWORD != null)
     and ($services.api.environment.OPENAI_API_KEY != null)
     and ($services.api.environment.SESSION_SECRET != null)
@@ -592,6 +610,7 @@ if ! jq -e '
     and ($services.gateway.environment.SESSION_SECRET == null)
     and ($services.gateway.environment.PILOT_PASSWORD == null)
     and ($services.gateway.environment.RESEND_API_KEY == null)
+    and ($services.gateway.environment.RESEND_WEBHOOK_SECRET == null)
     and (($services.migrate.volumes // []) | length == 0)
 ' "$compose_json" >/dev/null; then
     printf 'resolved Compose configuration violates the service secret boundary\n' >&2
@@ -754,8 +773,11 @@ if [[ ${1:-} == --build ]]; then
         app.laggente.com '/?source=validation' \
         'https://app.laggente.com/studio?source=validation'
     require_gateway_location \
-        app.laggente.com '/mauro/conversazione?source=validation' \
-        'https://mauro.laggente.com/conversazione?source=validation'
+        app.laggente.com '/giulia/conversazione?source=validation' \
+        'https://giulia.laggente.com/conversazione?source=validation'
+    require_gateway_location \
+        laggente.com '/giulia?source=validation' \
+        'https://giulia.laggente.com/?source=validation'
     require_gateway_status mauro.laggente.com /mauro 200
 
     docker rm -f "$gateway_validation_container" >/dev/null

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useLocation } from "wouter";
 import { AppLink as Link, useAppNavigate } from "@/components/app-link";
@@ -8,6 +8,7 @@ import {
   LayersIcon,
   LogOutIcon,
   MenuIcon,
+  InviteIcon,
   NetworkIcon,
   StudioIcon,
 } from "@/components/icons";
@@ -15,6 +16,7 @@ import { Logo } from "@/components/logo";
 import { apiRequest, isUnauthorized } from "@/lib/api";
 import { initials } from "@/lib/format";
 import { publicSpaceHref, studioHref } from "@/lib/hosts";
+import type { StudioSession } from "@/lib/types";
 
 const navItems = [
   { href: "/studio", label: "Studio", icon: StudioIcon, exact: true },
@@ -23,40 +25,41 @@ const navItems = [
   { href: "/studio/spazio", label: "Spazio pubblico", icon: LayersIcon },
 ];
 
-interface SessionInfo {
-  professional_name?: string;
-  name?: string;
-  display_name?: string;
-  email?: string;
-  slug?: string;
-  space_slug?: string;
-  public_role?: string;
+interface StudioSessionContextValue {
+  session: StudioSession | null;
+  loading: boolean;
+  refreshSession: () => Promise<void>;
+}
+
+const StudioSessionContext = createContext<StudioSessionContextValue>({
+  session: null,
+  loading: true,
+  refreshSession: async () => undefined,
+});
+
+export function useStudioSession() {
+  return useContext(StudioSessionContext);
 }
 
 export function StudioShell({ children }: { children: React.ReactNode }) {
   const [pathname] = useLocation();
   const navigate = useAppNavigate();
-  const [session, setSession] = useState<SessionInfo>({});
+  const [session, setSession] = useState<StudioSession | null>(null);
+  const [sessionLoading, setSessionLoading] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
 
-  useEffect(() => {
-    Promise.all([
-      apiRequest<SessionInfo | { member?: SessionInfo }>("/auth/session"),
-      apiRequest<{ space?: SessionInfo }>("/studio/space"),
-    ])
-      .then(([auth, space]) => {
-        const member = "member" in auth && auth.member ? auth.member : auth as SessionInfo;
-        const resolvedSpace = space.space || {};
-        setSession({
-          ...member,
-          ...resolvedSpace,
-          space_slug: resolvedSpace.slug || resolvedSpace.space_slug,
-        });
-      })
-      .catch((error) => {
-        if (isUnauthorized(error)) navigate(studioHref("/login"), { replace: true });
-      });
+  const refreshSession = useCallback(async () => {
+    try {
+      setSession(await apiRequest<StudioSession>("/auth/session"));
+    } catch (error) {
+      if (isUnauthorized(error)) navigate(studioHref("/login"), { replace: true });
+      else throw error;
+    } finally {
+      setSessionLoading(false);
+    }
   }, [navigate]);
+
+  useEffect(() => { void refreshSession().catch(() => undefined); }, [refreshSession]);
 
   async function logout() {
     try {
@@ -66,7 +69,11 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const professionalName = session.professional_name || session.display_name || session.name || "Il professionista";
+  const professionalName = session?.member.display_name || "Il tuo Studio";
+  const space = session?.space;
+  const visibleNavItems = session?.member.can_invite
+    ? [...navItems, { href: "/studio/inviti", label: "Invita", icon: InviteIcon }]
+    : navItems;
   const nav = (
     <>
       <div className="studio-sidebar__brand">
@@ -75,7 +82,7 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
       </div>
       <nav className="studio-nav" aria-label="Studio">
         <p>Il tuo spazio</p>
-        {navItems.map((item) => {
+        {visibleNavItems.map((item) => {
           const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
           const Icon = item.icon;
           return (
@@ -86,19 +93,22 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
         })}
       </nav>
       <div className="studio-sidebar__public">
-        <span>Online ora</span>
-        <strong>{session.space_slug || "spazio"}.laggente.com</strong>
-        <Link href={publicSpaceHref(session.space_slug || "spazio")} target="_blank">Apri spazio pubblico ↗</Link>
+        <span>{space?.is_active ? "Online ora" : space?.slug_claimed ? "Indirizzo riservato" : "In preparazione"}</span>
+        <strong>{space?.slug_claimed ? `${space.slug}.laggente.com` : "Scegli il tuo indirizzo"}</strong>
+        {space?.is_active && space.slug_claimed
+          ? <Link href={publicSpaceHref(space.slug)} target="_blank">Apri spazio pubblico ↗</Link>
+          : <Link href="/studio">Completa lo spazio →</Link>}
       </div>
       <div className="studio-user">
         <span className="studio-user__avatar">{initials(professionalName)}</span>
-        <div><strong>{professionalName}</strong><span>{session.public_role || session.email || "Professionista"}</span></div>
+        <div><strong>{professionalName}</strong><span>{session?.member.email || "Accesso privato"}</span></div>
         <button type="button" onClick={() => void logout()} aria-label="Esci dallo Studio"><LogOutIcon /></button>
       </div>
     </>
   );
 
   return (
+    <StudioSessionContext.Provider value={{ session, loading: sessionLoading, refreshSession }}>
     <div className="studio-layout">
       <aside className="studio-sidebar">{nav}</aside>
       <header className="studio-mobile-header">
@@ -125,5 +135,6 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
       </AnimatePresence>
       <div className="studio-main">{children}</div>
     </div>
+    </StudioSessionContext.Provider>
   );
 }

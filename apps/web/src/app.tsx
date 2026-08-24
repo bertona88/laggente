@@ -4,6 +4,7 @@ import { AppLink } from "@/components/app-link";
 import { ConversationDetail } from "@/components/conversation-detail";
 import { ConversationInbox } from "@/components/conversation-inbox";
 import { LandingPage } from "@/components/landing-page";
+import { InviteProfessional } from "@/components/invite-professional";
 import { LoginForm } from "@/components/login-form";
 import { Logo } from "@/components/logo";
 import { PublicSpace } from "@/components/public-space";
@@ -11,11 +12,9 @@ import { RelationshipGraph } from "@/components/relationship-graph";
 import { SpaceRevisions } from "@/components/space-revisions";
 import { StudioShell } from "@/components/studio-shell";
 import { StudioWorkspace } from "@/components/studio-workspace";
-import { canonicalProductRedirect, tenantSlugFromHost } from "@/lib/tenant-routing";
+import { canonicalProductRedirect, isReservedTenantSlug, tenantSlugFromHost } from "@/lib/tenant-routing";
 import { PrivacyPage, TermsPage } from "@/src/legal-pages";
 import { useCanonicalUrl, useDocumentTitle, useVisualViewportHeight } from "@/src/use-app-frame";
-
-const RESERVED = new Set(["studio", "login", "privacy", "terms", "spazio", "api"]);
 
 export function documentTitleForRoute(location: string, tenantSlug: string | null) {
   if (location === "/privacy") return "Privacy";
@@ -26,12 +25,13 @@ export function documentTitleForRoute(location: string, tenantSlug: string | nul
   if (location.startsWith("/studio/conversazioni/")) return "Conversazione — Studio";
   if (location === "/studio/grafo") return "Grafo — Studio";
   if (location === "/studio/spazio") return "Spazio pubblico — Studio";
+  if (location === "/studio/inviti") return "Invita — Studio";
   const pathSlug = tenantSlug
     ? null
     : location.match(/^\/(?:spazio\/)?([a-z0-9]+(?:-[a-z0-9]+)*)\/?$/)?.[1];
   const slug = location === "/" && tenantSlug
     ? tenantSlug
-    : pathSlug && !RESERVED.has(pathSlug) ? pathSlug : null;
+    : pathSlug && !isReservedTenantSlug(pathSlug) ? pathSlug : null;
   if (slug) return `Spazio di ${slug.charAt(0).toLocaleUpperCase("it-IT")}${slug.slice(1)}`;
   return location === "/" ? "" : "Spazio non trovato";
 }
@@ -67,6 +67,7 @@ function StudioArea({ location }: { location: string }) {
   else if (location === "/studio/conversazioni") page = <ConversationInbox />;
   else if (location === "/studio/grafo") page = <RelationshipGraph />;
   else if (location === "/studio/spazio") page = <SpaceRevisions />;
+  else if (location === "/studio/inviti") page = <InviteProfessional />;
   else if (location === "/studio" || location === "/studio/") page = <StudioWorkspace />;
   else page = <NotFoundPage />;
   return <StudioShell>{page}</StudioShell>;
@@ -82,7 +83,7 @@ function LocalRoutes({ location }: { location: string }) {
   const internalSpace = location.match(/^\/spazio\/([a-z0-9]+(?:-[a-z0-9]+)*)\/?$/);
   if (internalSpace) return <PublicSpace slug={internalSpace[1]} />;
   const publicPath = location.match(/^\/([a-z0-9]+(?:-[a-z0-9]+)*)\/?$/);
-  if (publicPath && !RESERVED.has(publicPath[1])) return <PublicSpace slug={publicPath[1]} />;
+  if (publicPath && !isReservedTenantSlug(publicPath[1])) return <PublicSpace slug={publicPath[1]} />;
   return <NotFoundPage />;
 }
 

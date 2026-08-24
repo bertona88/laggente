@@ -49,6 +49,9 @@ export const StudioIcon = (props: IconProps) => (
 export const LayersIcon = (props: IconProps) => (
   <IconBase {...props}><path d="m12 3 9 5-9 5-9-5 9-5Z" /><path d="m3 12 9 5 9-5M3 16l9 5 9-5" /></IconBase>
 );
+export const InviteIcon = (props: IconProps) => (
+  <IconBase {...props}><circle cx="9" cy="8" r="4" /><path d="M3 21v-2a6 6 0 0 1 6-6c2 0 3.7.8 4.8 2M18 8v8M14 12h8" /></IconBase>
+);
 export const NetworkIcon = (props: IconProps) => (
   <IconBase {...props}>
     <circle cx="12" cy="5" r="2.5" />

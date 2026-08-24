@@ -2,13 +2,16 @@ import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { SendIcon, SparkIcon } from "@/components/icons";
 import { MessageContent } from "@/components/message-markdown";
+import { ProfessionalEmailProposal } from "@/components/professional-email-proposal";
 import { RevisionInspector } from "@/components/revision-inspector";
 import { InlineError, LoadingLine } from "@/components/status";
+import { useStudioSession } from "@/components/studio-shell";
 import { apiRequest, normalizeMessages } from "@/lib/api";
 import { createClientMessageAttemptTracker } from "@/lib/client-message-id";
 import { formatTime } from "@/lib/format";
+import { normalizeProfessionalEmail } from "@/lib/professional-email";
 import { normalizeRevision } from "@/lib/revisions";
-import type { ConfigRevision, ConversationMessage, StudioBootstrap } from "@/lib/types";
+import type { ConfigRevision, ConversationMessage, ProfessionalEmail, StudioBootstrap, StudioSpaceState } from "@/lib/types";
 
 function StudioMessage({ message }: { message: ConversationMessage }) {
   if (message.author_type === "system") return <div className="studio-system-event">{message.content}</div>;
@@ -32,20 +35,40 @@ function StudioMessage({ message }: { message: ConversationMessage }) {
 const starterPrompts = [
   "Ti racconto che lavoro faccio",
   "Vorrei rendere l’accoglienza più personale",
+  "Ti racconto il territorio in cui lavoro",
   "Fammi vedere come appare lo spazio oggi",
 ];
 
+export function suggestPublicSlug(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("it-IT")
+    .trim()
+    .split(/\s+/)[0]
+    ?.replace(/[^a-z0-9-]/g, "")
+    .replace(/^-+|-+$/g, "") || "";
+}
+
 export function StudioWorkspace() {
+  const { session, refreshSession } = useStudioSession();
   const reduceMotion = useReducedMotion();
   const [messages, setMessages] = useState<ConversationMessage[]>([]);
   const [proposed, setProposed] = useState<ConfigRevision | null>(null);
   const [active, setActive] = useState<ConfigRevision | null>(null);
+  const [spaceState, setSpaceState] = useState<StudioSpaceState | null>(null);
+  const [slugInput, setSlugInput] = useState("");
+  const [claimingSlug, setClaimingSlug] = useState(false);
+  const [slugMessage, setSlugMessage] = useState<string | null>(null);
+  const [email, setEmail] = useState<ProfessionalEmail | null>(null);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [authorizingEmail, setAuthorizingEmail] = useState(false);
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
   const attemptTrackerRef = useRef(createClientMessageAttemptTracker());
 
   const load = useCallback(async (background = false) => {
@@ -61,9 +84,17 @@ export function StudioWorkspace() {
       const spaceObject = (spaceData || {}) as StudioBootstrap & Record<string, unknown>;
       const messageObject = (messageData || {}) as Record<string, unknown>;
       const loadedMessages = normalizeMessages(messageObject.messages || messageObject.items || messageData);
+      const loadedSpace = (spaceObject.space && typeof spaceObject.space === "object" ? spaceObject.space : null) as StudioSpaceState | null;
+      const loadedDraft = normalizeRevision(spaceObject.latest_draft || spaceObject.proposed_revision);
       setMessages(loadedMessages.length ? loadedMessages : normalizeMessages(spaceObject.studio_messages));
-      setProposed(normalizeRevision(spaceObject.latest_draft || spaceObject.proposed_revision));
+      setSpaceState(loadedSpace);
+      setProposed(loadedDraft);
       setActive(normalizeRevision(spaceObject.active_revision));
+      if (loadedSpace?.slug_claimed) setSlugInput(loadedSpace.slug);
+      else if (loadedDraft?.preview?.professional_name) {
+        setSlugInput((current) => current || suggestPublicSlug(loadedDraft.preview?.professional_name || ""));
+      }
+      setEmail(normalizeProfessionalEmail(messageObject.latest_email));
     } catch (reason) {
       if (!background) {
         setError(reason instanceof Error ? reason.message : "Non è stato possibile aprire lo Studio.");
@@ -74,7 +105,7 @@ export function StudioWorkspace() {
   }, []);
 
   useEffect(() => { void load(); }, [load]);
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth" }); }, [messages, sending, reduceMotion]);
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth" }); }, [messages, email, sending, reduceMotion]);
 
   async function submit(value: string) {
     const content = value.trim();
@@ -83,7 +114,7 @@ export function StudioWorkspace() {
     const optimistic: ConversationMessage = {
       id: `pending-${clientMessageId}`,
       author_type: "professional",
-      author_name: "Tu",
+      author_name: session?.member.display_name || "Tu",
       content,
       created_at: new Date().toISOString(),
       pending: true,
@@ -100,6 +131,8 @@ export function StudioWorkspace() {
       const object = (value || {}) as Record<string, unknown>;
       const revision = normalizeRevision(object.proposed_revision || object.revision);
       if (revision) setProposed(revision);
+      const proposedEmail = normalizeProfessionalEmail(object.proposed_email);
+      if (proposedEmail) setEmail(proposedEmail);
       await load(true);
       attemptTrackerRef.current.complete(clientMessageId);
     } catch (reason) {
@@ -116,6 +149,51 @@ export function StudioWorkspace() {
     void submit(input);
   }
 
+  async function claimSlug(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!slugInput.trim() || claimingSlug) return;
+    setClaimingSlug(true);
+    setSlugMessage(null);
+    try {
+      const claimed = await apiRequest<StudioSpaceState>("/studio/space/slug", {
+        method: "PATCH",
+        body: JSON.stringify({ slug: slugInput.trim() }),
+      });
+      setSpaceState(claimed);
+      setSlugInput(claimed.slug);
+      setSlugMessage(`${claimed.slug}.laggente.com è riservato per te.`);
+      await refreshSession();
+    } catch (reason) {
+      setSlugMessage(reason instanceof Error ? reason.message : "Non è stato possibile riservare l’indirizzo.");
+    } finally {
+      setClaimingSlug(false);
+    }
+  }
+
+  async function authorizeEmail() {
+    if (!email || email.status !== "draft" || authorizingEmail) return;
+    setAuthorizingEmail(true);
+    setError(null);
+    try {
+      const result = await apiRequest<unknown>(`/studio/email/${email.id}/authorize`, {
+        method: "POST",
+      });
+      const updated = normalizeProfessionalEmail(result);
+      if (updated) setEmail(updated);
+      await load(true);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Non è stato possibile autorizzare l’email.");
+      await load(true);
+    } finally {
+      setAuthorizingEmail(false);
+    }
+  }
+
+  function requestEmailChange() {
+    if (!email) return;
+    setInput(`Vorrei modificare la bozza email per ${email.to_address}: `);
+    requestAnimationFrame(() => composerRef.current?.focus());
+  }
   return (
     <div className="studio-workspace">
       <section className="studio-conversation" aria-label="Conversazione con lo Studio LAGGENTE">
@@ -126,6 +204,33 @@ export function StudioWorkspace() {
             <button type="button" className="workspace-panel-toggle" onClick={() => setInspectorOpen(true)} aria-expanded={inspectorOpen} aria-controls="studio-revision-panel">Bozza{proposed ? " pronta" : ""}</button>
           </div>
         </header>
+        {spaceState && spaceState.onboarding_state !== "published" && (
+          <section className="studio-onboarding" aria-label="Preparazione dello spazio pubblico">
+            <div className="studio-onboarding__copy">
+              <p>Il tuo spazio sta prendendo forma</p>
+              <strong>{proposed ? "La prima bozza è pronta. Ora scegli il tuo indirizzo e controllala." : "Presentati allo Studio con parole tue: non serve compilare un profilo."}</strong>
+              <span>Diventerà pubblico soltanto quando attiverai esplicitamente una versione.</span>
+            </div>
+            <form onSubmit={claimSlug} className="slug-claim-form">
+              <label htmlFor="public-slug">Il tuo indirizzo pubblico</label>
+              <div>
+                <span>https://</span>
+                <input
+                  id="public-slug"
+                  value={slugInput}
+                  onChange={(event) => { setSlugInput(event.target.value); setSlugMessage(null); }}
+                  placeholder="giulia"
+                  autoComplete="off"
+                  disabled={claimingSlug}
+                />
+                <span>.laggente.com</span>
+              </div>
+              <button type="submit" disabled={!slugInput.trim() || claimingSlug}>{claimingSlug ? "Salvo…" : spaceState.slug_claimed ? "Aggiorna indirizzo" : "Riserva indirizzo"}</button>
+              {slugMessage && <small role="status">{slugMessage}</small>}
+              {spaceState.slug_claimed && !slugMessage && <small>{spaceState.slug}.laggente.com è riservato. Puoi correggerlo finché non pubblichi.</small>}
+            </form>
+          </section>
+        )}
         <div className="studio-thread" aria-live="polite" aria-busy={loading || sending}>
           {loading && <LoadingLine label="Riprendo la nostra conversazione…" />}
           {error && <InlineError message={error} retry={load} />}
@@ -137,6 +242,14 @@ export function StudioWorkspace() {
             </div>
           )}
           {messages.map((message) => <StudioMessage key={message.id} message={message} />)}
+          {email && email.direction === "outbound" && (
+            <ProfessionalEmailProposal
+              email={email}
+              busy={authorizingEmail}
+              onAuthorize={() => void authorizeEmail()}
+              onRequestChange={requestEmailChange}
+            />
+          )}
           {sending && <div className="studio-thinking" role="status"><span /><span /><span /> Lo Studio sta interpretando…</div>}
           <div ref={bottomRef} />
         </div>
@@ -145,6 +258,7 @@ export function StudioWorkspace() {
         )}
         <form className="studio-composer" onSubmit={onSubmit}>
           <textarea
+            ref={composerRef}
             value={input}
             onChange={(event) => {
               attemptTrackerRef.current.invalidate();
@@ -173,7 +287,7 @@ export function StudioWorkspace() {
         <RevisionInspector
           revision={proposed}
           activeRevision={active}
-          onActivated={(revision) => { setActive(revision); setProposed(null); setInspectorOpen(false); }}
+          onActivated={(revision) => { setActive(revision); setProposed(null); setInspectorOpen(false); void load(true); }}
         />
       </div>
     </div>

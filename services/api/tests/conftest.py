@@ -33,7 +33,10 @@ class FakeAssistantService:
                 memory_items=[
                     PublicMemoryProposal(
                         kind="signal",
-                        content="Una conversazione diretta con Mauro potrebbe essere utile.",
+                        content=(
+                            f"Una conversazione diretta con {kwargs['professional_name']} "
+                            "potrebbe essere utile."
+                        ),
                         source_message_ids=source,
                     )
                 ],
@@ -47,6 +50,7 @@ class FakeAssistantService:
             text="Ho capito. Posso preparare una bozza quando mi dici di procedere.",
             response_id="resp_test_studio",
             proposed_revision_id=None,
+            proposed_email_id=None,
         )
 
 

@@ -153,6 +153,39 @@ export interface ConfigRevision {
   preview?: Partial<ProfessionalSpace> | null;
 }
 
+export type ProfessionalEmailStatus =
+  | "draft"
+  | "sending"
+  | "sent"
+  | "delivery_delayed"
+  | "delivered"
+  | "bounced"
+  | "complained"
+  | "suppressed"
+  | "simulated"
+  | "failed"
+  | "superseded"
+  | "received";
+
+export interface ProfessionalEmail {
+  id: string;
+  direction: "outbound" | "inbound";
+  status: ProfessionalEmailStatus | string;
+  from_address: string;
+  to_address: string;
+  reply_to_address?: string | null;
+  subject: string;
+  body_text: string;
+  raw_sha256: string;
+  content_sha256: string;
+  provider?: string | null;
+  provider_message_id?: string | null;
+  authorized_at?: string | null;
+  sent_at?: string | null;
+  received_at?: string | null;
+  created_at: string;
+}
+
 export interface StudioBootstrap {
   professional_name: string;
   space_slug: string;
@@ -160,6 +193,37 @@ export interface StudioBootstrap {
   studio_messages: ConversationMessage[];
   active_revision?: ConfigRevision | null;
   proposed_revision?: ConfigRevision | null;
+  latest_email?: ProfessionalEmail | null;
+}
+
+export interface StudioMember {
+  id: string;
+  account_id: string;
+  email: string;
+  display_name: string;
+  role: string;
+  can_invite: boolean;
+}
+
+export interface StudioSpaceState {
+  id: string;
+  account_id: string;
+  slug: string;
+  professional_name: string;
+  agency?: string | null;
+  territory?: string | null;
+  public_role: string;
+  locale: string;
+  is_active: boolean;
+  slug_claimed: boolean;
+  onboarding_state: "invited" | "building" | "published" | string;
+  active_revision_id?: string | null;
+}
+
+export interface StudioSession {
+  authenticated: boolean;
+  member: StudioMember;
+  space: StudioSpaceState | null;
 }
 
 export interface ApiErrorBody {

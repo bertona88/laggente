@@ -11,13 +11,51 @@ from .models import Space
 
 
 SLUG_RE = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$")
-RESERVED_SLUGS = {"app", "api", "www", "admin", "mail", "static", "assets", "blog", "support"}
+RESERVED_SLUGS = {
+    "admin",
+    "api",
+    "app",
+    "assets",
+    "blog",
+    "login",
+    "mail",
+    "privacy",
+    "send",
+    "spazio",
+    "staging",
+    "static",
+    "status",
+    "studio",
+    "support",
+    "terms",
+    "www",
+}
 
 
 def normalize_slug(value: str) -> str:
     slug = value.strip().lower().rstrip(".")
     if not SLUG_RE.fullmatch(slug) or slug in RESERVED_SLUGS:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Spazio non trovato")
+    return slug
+
+
+def normalize_claimed_slug(value: str) -> str:
+    """Validate a professional-selected public username with an actionable Studio error."""
+
+    slug = value.strip().lower().rstrip(".")
+    if not SLUG_RE.fullmatch(slug):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=(
+                "Usa da 1 a 63 caratteri: lettere minuscole, numeri e trattini, "
+                "senza trattino all'inizio o alla fine"
+            ),
+        )
+    if slug in RESERVED_SLUGS:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Questo indirizzo è riservato a LAGGENTE",
+        )
     return slug
 
 
@@ -48,7 +86,14 @@ def require_public_space_host(request: Request, settings: Settings, space: Space
 
 def resolve_public_space(db: Session, slug: str) -> Space:
     normalized = normalize_slug(slug)
-    space = db.scalar(select(Space).where(Space.slug == normalized, Space.is_active.is_(True)))
+    space = db.scalar(
+        select(Space).where(
+            Space.slug == normalized,
+            Space.slug_claimed.is_(True),
+            Space.onboarding_state == "published",
+            Space.is_active.is_(True),
+        )
+    )
     if not space or not space.active_revision_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Spazio non trovato")
     return space

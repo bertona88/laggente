@@ -102,7 +102,11 @@ def authorize_public_conversation(
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Conversazione non trovata"
             )
-        if not space.is_active:
+        if (
+            not space.is_active
+            or not space.slug_claimed
+            or space.onboarding_state != "published"
+        ):
             # The valid token holder may still exercise deletion through the dedicated endpoint.
             raise HTTPException(
                 status_code=status.HTTP_410_GONE,
