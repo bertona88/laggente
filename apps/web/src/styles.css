@@ -89,10 +89,6 @@ img { max-width: 100%; }
 .landing-hero__actions { display: flex; align-items: center; gap: 20px; margin-top: 36px; }
 .landing-hero__studio-link { padding: 8px 0 6px; border-bottom: 1px solid rgba(248, 246, 239, .55); display: inline-flex; align-items: center; gap: 9px; color: rgba(248, 246, 239, .88); font-size: 12px; font-weight: 600; }
 .landing-hero__studio-link svg { width: 15px; }
-.landing-hero__address { width: min(440px, 35vw); position: absolute; z-index: 3; right: clamp(24px, 4vw, 72px); bottom: clamp(44px, 7vh, 80px); padding: 20px 0 18px; border-block: 1px solid rgba(248, 246, 239, .45); display: grid; gap: 7px; }
-.landing-hero__address span, .landing-hero__address small { font-size: 9px; letter-spacing: .12em; text-transform: uppercase; color: rgba(248, 246, 239, .68); }
-.landing-hero__address strong { font-family: var(--font-serif); font-size: clamp(27px, 2.8vw, 44px); font-weight: 400; line-height: 1; letter-spacing: -.035em; white-space: nowrap; }
-.landing-hero__address strong i { color: var(--olive-bright); font-style: normal; }
 
 .address-story { padding: clamp(100px, 12vw, 175px) clamp(24px, 6vw, 100px); }
 .address-story__intro { display: grid; grid-template-columns: minmax(180px, .75fr) 2fr; gap: clamp(45px, 8vw, 130px); align-items: start; padding-bottom: clamp(70px, 9vw, 120px); }
@@ -703,7 +699,6 @@ img { max-width: 100%; }
   .brand-header { grid-template-columns: 1fr auto; }
   .brand-nav { display: none; }
   .landing-hero__content { width: min(650px, calc(100% - 48px)); }
-  .landing-hero__address { width: min(360px, 34vw); }
   .public-return { grid-template-columns: .9fr 1.1fr; gap: 55px; }
   .studio-workspace { grid-template-columns: minmax(430px, 1.2fr) minmax(310px, .75fr); }
   .detail-layout { grid-template-columns: minmax(450px, 1.2fr) minmax(300px, .7fr); }
@@ -715,7 +710,6 @@ img { max-width: 100%; }
 }
 
 @media (max-width: 900px) {
-  .landing-hero__address { display: none; }
   .address-story__sequence { grid-template-columns: 1fr; }
   .address-story__sequence > article, .address-story__sequence > article:first-child, .address-story__sequence > article:last-child { padding: 42px 0; border-right: 0; border-bottom: 1px solid var(--line); }
   .address-story__sequence > article:last-child { border-bottom: 0; }
@@ -756,9 +750,6 @@ img { max-width: 100%; }
   .landing-hero__image { inset: -2%; }
   .landing-hero__image img { object-position: 60% center; }
   .landing-hero__veil { background: linear-gradient(90deg, rgba(11, 18, 14, .82), rgba(11, 18, 14, .26)), linear-gradient(0deg, rgba(11, 18, 14, .77), transparent 58%); }
-  .landing-hero__address { width: auto; padding: 13px 0; display: grid; top: 94px; right: 20px; bottom: auto; left: 20px; gap: 4px; }
-  .landing-hero__address strong { font-size: 25px; }
-  .landing-hero__address small { display: none; }
   .landing-hero__content { margin: auto 20px 46px; width: calc(100% - 40px); }
   .landing-hero__content h1 { margin-block: 18px 20px; font-size: clamp(45px, 14vw, 66px); }
   .landing-hero__lead { max-width: 100%; font-size: 17px; line-height: 1.42; }

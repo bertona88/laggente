@@ -11,10 +11,12 @@ describe("brand landing and crawl contract", () => {
     const header = readWebFile("components/brand-header.tsx");
     const legalPages = readWebFile("src/legal-pages.tsx");
 
-    expect(landing).toContain("Il tuo spazio professionale, a un indirizzo tutto tuo");
+    expect(landing).toContain("La gente incontra <em>l’agente.</em>");
     expect(landing).toContain("nome</i>.laggente.com");
     expect(landing).toContain("Nessun percorso a caselle");
-    expect(landing).toContain("Le persone non compilano");
+    expect(landing).toContain("La gente non compila");
+    expect(landing).toContain("Poi la gente incontra l’agente");
+    expect(`${header}\n${landing}`).toContain("Studio per professionisti");
     expect(landing).not.toContain("Il backend seleziona");
     expect(landing).toContain("Che lavoro fai?");
     expect(landing).toContain("Agenti immobiliari");

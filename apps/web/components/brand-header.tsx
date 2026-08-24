@@ -16,7 +16,7 @@ export function BrandHeader({ inverse = false }: { inverse?: boolean }) {
         <Link href="#due-lati">I due lati</Link>
       </nav>
       <Link className="brand-header__cta" href={studioHref("/login")}>
-        Accedi allo Studio <ArrowUpRightIcon />
+        Studio per professionisti <ArrowUpRightIcon />
       </Link>
       <button
         className="brand-header__menu"
@@ -41,7 +41,7 @@ export function BrandHeader({ inverse = false }: { inverse?: boolean }) {
             <Link href="#come-funziona" onClick={() => setOpen(false)}>Come funziona</Link>
             <Link href="#spazio-pubblico" onClick={() => setOpen(false)}>Lo spazio pubblico</Link>
             <Link href="#due-lati" onClick={() => setOpen(false)}>I due lati</Link>
-            <Link href={studioHref("/login")} onClick={() => setOpen(false)}>Accedi allo Studio</Link>
+            <Link href={studioHref("/login")} onClick={() => setOpen(false)}>Studio per professionisti</Link>
           </motion.nav>
         )}
       </AnimatePresence>

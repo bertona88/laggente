@@ -66,32 +66,22 @@ export function LandingPage() {
           style={{ opacity: textOpacity }}
         >
           <motion.p variants={reveal} transition={{ duration: 0.5 }} className="eyebrow eyebrow--light">
-            Il tuo spazio professionale, a un indirizzo tutto tuo
+            Uno spazio AI per chi lavora con la gente
           </motion.p>
           <motion.h1 variants={reveal} transition={{ duration: 0.65 }} id="hero-title">
-            Il tuo lavoro,<br /><em>in un luogo che ti somiglia.</em>
+            La gente incontra <em>l’agente.</em>
           </motion.h1>
           <motion.p variants={reveal} transition={{ duration: 0.55 }} className="landing-hero__lead">
-            Lo crei parlando con Studio. Le persone entrano dal tuo indirizzo, conversano con un assistente AI dichiarato e ritrovano sempre lo stesso filo. Tu puoi leggerlo, correggerlo o unirti.
+            Lo crei parlando con Studio. La gente entra dal tuo indirizzo, conversa con un assistente AI dichiarato e ritrova sempre lo stesso filo. Tu puoi leggerlo, correggerlo o unirti.
           </motion.p>
           <motion.div variants={reveal} transition={{ duration: 0.5 }} className="landing-hero__actions">
             <Link className="button button--paper" href="#come-funziona">
               Guarda come nasce <ArrowRightIcon />
             </Link>
             <Link className="landing-hero__studio-link" href={studioHref("/login")}>
-              Accedi allo Studio <ArrowUpRightIcon />
+              Studio per professionisti <ArrowUpRightIcon />
             </Link>
           </motion.div>
-        </motion.div>
-        <motion.div
-          className="landing-hero__address"
-          initial={{ opacity: 0, x: reduceMotion ? 0 : 32 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.75, delay: reduceMotion ? 0 : 0.65 }}
-        >
-          <span>Il tuo indirizzo pubblico</span>
-          <strong><i>nome</i>.laggente.com</strong>
-          <small>Una porta per le persone. Uno Studio privato per te.</small>
         </motion.div>
       </section>
 
@@ -124,7 +114,7 @@ export function LandingPage() {
               <p><span>Tu</span>{featuredVertical.example_answer}</p>
             </div>
             <h3>Comincia da ciò che fai davvero.</h3>
-            <p className="address-story__copy">Studio segue la conversazione: impara il tuo modo di lavorare, ciò che sai e come vuoi accogliere le persone.</p>
+            <p className="address-story__copy">Studio segue la conversazione: impara il tuo modo di lavorare, ciò che sai e come vuoi accogliere la gente.</p>
           </motion.article>
 
           <motion.article
@@ -158,7 +148,7 @@ export function LandingPage() {
               <small><b /> Aperto</small>
             </div>
             <h3>Lo attivi soltanto tu.</h3>
-            <p className="address-story__copy">Da quel momento il tuo indirizzo accoglie le persone con la presenza che hai costruito.</p>
+            <p className="address-story__copy">Da quel momento il tuo indirizzo accoglie la gente con la presenza che hai costruito.</p>
           </motion.article>
         </div>
       </section>
@@ -172,8 +162,8 @@ export function LandingPage() {
           transition={{ duration: 0.65 }}
         >
           <p className="section-index section-index--light">02 / Lo spazio pubblico</p>
-          <h2 id="public-return-title">Le persone non compilano.<br />Entrano.</h2>
-          <p>Possono scrivere, mandare una nota vocale o una fotografia. La conversazione resta al suo posto, così nessuno deve ricominciare da zero.</p>
+          <h2 id="public-return-title">La gente non compila.<br />Entra.</h2>
+          <p>La gente può scrivere, mandare una nota vocale o una fotografia. La conversazione resta al suo posto, così nessuno deve ricominciare da zero.</p>
           <div className="public-return__promise">
             <span>AI dichiarata</span>
             <span>Conversazioni persistenti</span>
@@ -224,9 +214,9 @@ export function LandingPage() {
             viewport={{ once: true, amount: 0.45 }}
             transition={{ duration: 0.55 }}
           >
-            <p className="eyebrow">Per le persone</p>
+            <p className="eyebrow">Per la gente</p>
             <h3><i>nome</i>.laggente.com</h3>
-            <p>Una porta pubblica, personale. Qui l’assistente accoglie, ricorda il contesto e rende facile trovarti.</p>
+            <p>Una porta pubblica, personale. Qui l’assistente accoglie chi arriva, ricorda il contesto e rende facile trovarti.</p>
             <span>Spazio pubblico</span>
           </motion.article>
           <div className="two-sides__continuity" aria-hidden="true">
@@ -261,9 +251,9 @@ export function LandingPage() {
 
       <section className="closing" aria-labelledby="closing-title">
         <p className="section-index">Pilot su invito</p>
-        <h2 id="closing-title">Il tuo indirizzo comincia<br />da una conversazione.</h2>
+        <h2 id="closing-title">Prima parli tu.<br />Poi la gente incontra l’agente.</h2>
         <div className="closing__actions">
-          <Link href={studioHref("/login")}>Accedi allo Studio <ArrowUpRightIcon /></Link>
+          <Link href={studioHref("/login")}>Studio per professionisti <ArrowUpRightIcon /></Link>
           <Link href="#come-funziona">Rivedi come funziona <ArrowRightIcon /></Link>
         </div>
       </section>
