@@ -8,17 +8,19 @@ The public assistant is not a separate chatbot project. It is the public express
 
 The pilot begins with Mauro, expands to five real-estate professionals, and is Italian-first (`it-IT`). Real estate is intentionally the highest-weighted commercial vertical and most prominent example. The initial context is conversations with people considering selling a property, but that context is a useful starting template rather than the identity of LAGGENTE, a universal questionnaire, CRM pipeline, or permanent ontology.
 
-The expansion path is controlled invitation, not public signup. A pilot member with invitation
-permission can invite an email address into a new account. That account and its space remain
-dormant and tenant-isolated until the recipient accepts the single-use link, teaches Studio who
-they are, claims a public username, and explicitly activates a first revision.
+The expansion path is open, email-verified signup. An unknown address receives a short-lived
+pre-tenant proof, and LAGGENTE creates the separate account and private Studio only after that
+single-use link is consumed. Existing professionals return through the same email form. Authorized
+members may still send curated invitations, but invitation permission is not required to begin.
+Every new space remains private and tenant-isolated until its professional teaches Studio who they
+are, claims a public username, and explicitly activates a first revision.
 
 ## The professional creates their space
 
 The professional enters LAGGENTE and:
 
-1. receives a personal invitation and opens its single-use magic link;
-2. enters a private, dormant Studio belonging to a newly created tenant;
+1. enters their email and opens its single-use verification link;
+2. enters a private Studio belonging to the tenant created after that verification;
 3. starts with the backend-owned open question “Che lavoro fai?” and creates a professional identity whose role and starting template follow from the answer;
 4. talks naturally about context, territory, work, experience, style, personality, knowledge, preferences, boundaries, and what they want people to experience;
 5. sees a first inspectable revision take shape as the Studio understands more;
@@ -109,6 +111,6 @@ LAGGENTE contains two conversational AI roles:
 
 Application code and persistent data coordinate identity, configuration, conversations, memory, files, email artifacts, permissions, activation, delivery authorization, and human participation. There is no third coordinating AI agent.
 
-The product is not a conventional CRM, mandatory lead workflow, native WhatsApp bot, property portal, automated valuation authority, transaction platform, multi-agent swarm, or infrastructure deployment per professional. Billing, public self-service signup or purchase, uncontrolled invitation propagation, address-book import, external contact enrichment, cross-professional network behavior, arbitrary tenant code, and customer-provided OpenAI keys are not part of this product now.
+The product is not a conventional CRM, mandatory lead workflow, native WhatsApp bot, property portal, automated valuation authority, transaction platform, multi-agent swarm, or infrastructure deployment per professional. Billing and purchase, uncontrolled invitation propagation, address-book import, external contact enrichment, cross-professional network behavior, arbitrary tenant code, and customer-provided OpenAI keys are not part of this product now.
 
 The experience we want is simple to recognize: a professional creates a public identity and subdomain, teaches the Studio who they are by talking, activates a space that genuinely reflects them, receives people through its public assistant, and privately understands or joins the resulting conversations without being turned into a data-entry operator.

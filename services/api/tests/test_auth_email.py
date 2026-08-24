@@ -22,7 +22,7 @@ def _settings(**updates) -> Settings:
 
 
 @pytest.mark.asyncio
-async def test_resend_sends_magic_links_and_invitations_with_html_and_text_fallbacks():
+async def test_resend_sends_login_signup_and_invitation_links_with_fallbacks():
     requests: list[dict] = []
 
     async def handler(request: httpx.Request) -> httpx.Response:
@@ -36,15 +36,17 @@ async def test_resend_sends_magic_links_and_invitations_with_html_and_text_fallb
         return httpx.Response(200, json={"id": f"email-{len(requests)}"})
 
     magic_link = 'https://app.laggente.com/login#token=abc&next="<studio>'
+    signup_link = "https://app.laggente.com/login#signup=new"
     invitation_link = "https://app.laggente.com/login#invite=def"
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
         sender = AuthEmailSender(_settings(), client=client)
         await sender.send_magic_link("mauro@example.com", magic_link)
+        await sender.send_signup_link("nuova@example.com", signup_link)
         await sender.send_professional_invitation(
             "giulia@example.com", invitation_link, "Mauro <LAGGENTE>"
         )
 
-    assert len(requests) == 2
+    assert len(requests) == 3
     assert requests[0]["authorization"] == "Bearer re_test_only"
     assert requests[0]["user_agent"] == "LAGGENTE/0.1.0-test"
     assert requests[0]["json"] == {
@@ -63,7 +65,12 @@ async def test_resend_sends_magic_links_and_invitations_with_html_and_text_fallb
             "Il link scade tra 15 minuti e può essere usato una sola volta."
         ),
     }
-    invitation = requests[1]["json"]
+    signup = requests[1]["json"]
+    assert signup["to"] == ["nuova@example.com"]
+    assert signup["subject"] == "Entra o crea il tuo spazio su LAGGENTE"
+    assert "Studio privato" in signup["html"]
+    assert signup_link in signup["text"]
+    invitation = requests[2]["json"]
     assert invitation["to"] == ["giulia@example.com"]
     assert invitation["subject"] == "Crea il tuo spazio su LAGGENTE"
     assert "Mauro &lt;LAGGENTE&gt;" in invitation["html"]

@@ -6,7 +6,11 @@ import { Logo } from "@/components/logo";
 import { InlineError, LoadingLine } from "@/components/status";
 import { apiRequest } from "@/lib/api";
 import { studioHref } from "@/lib/hosts";
-import { invitationTokenFromFragment, magicLinkTokenFromFragment } from "@/lib/magic-link";
+import {
+  invitationTokenFromFragment,
+  magicLinkTokenFromFragment,
+  signupTokenFromFragment,
+} from "@/lib/magic-link";
 
 type AuthMode = "pilot_password" | "magic_link";
 
@@ -24,7 +28,7 @@ export function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [requestMessage, setRequestMessage] = useState("");
-  const [preferMagicLink, setPreferMagicLink] = useState(false);
+  const [preferMagicLink, setPreferMagicLink] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -41,7 +45,8 @@ export function LoginForm() {
 
     async function prepareLogin() {
       const invitationToken = invitationTokenFromFragment(window.location.hash);
-      const token = invitationToken || magicLinkTokenFromFragment(window.location.hash);
+      const signupToken = signupTokenFromFragment(window.location.hash);
+      const token = invitationToken || signupToken || magicLinkTokenFromFragment(window.location.hash);
       if (!token) {
         await loadMode();
         return;
@@ -49,7 +54,12 @@ export function LoginForm() {
 
       setLoading(true);
       try {
-        await apiRequest(invitationToken ? "/auth/invitation/consume" : "/auth/magic-link/consume", {
+        const endpoint = invitationToken
+          ? "/auth/invitation/consume"
+          : signupToken
+            ? "/auth/signup/consume"
+            : "/auth/magic-link/consume";
+        await apiRequest(endpoint, {
           method: "POST",
           body: JSON.stringify({ token }),
         });
@@ -114,15 +124,17 @@ export function LoginForm() {
           transition={{ duration: 0.5 }}
         >
           <p className="eyebrow">Studio privato</p>
-          <h1>Bentornato.</h1>
-          <p className="login-form__intro">Entra nello spazio in cui insegni a LAGGENTE come rappresentarti.</p>
+          <h1>Entra. O comincia.</h1>
+          <p className="login-form__intro">
+            Un solo link: se hai già uno spazio, ci torni. Se sei nuovo, crei il tuo Studio privato.
+          </p>
 
           {!mode && !error ? (
             <LoadingLine label="Preparo il tuo accesso…" />
           ) : sent ? (
             <div className="login-success" role="status">
               <span aria-hidden="true">✓</span>
-              <h2>Richiesta ricevuta</h2>
+              <h2>Controlla la posta</h2>
               <p>Per <strong>{email}</strong>: {requestMessage}</p>
               <button type="button" onClick={() => setSent(false)}>Riprova o usa un altro indirizzo</button>
             </div>
@@ -154,7 +166,7 @@ export function LoginForm() {
               )}
               {error && <InlineError message={error} />}
               <button className="button button--ink button--wide" type="submit" disabled={loading}>
-                {loading ? "Accesso in corso…" : mode === "magic_link" || preferMagicLink ? "Ricevi il link di accesso" : "Entra nello Studio"}
+                {loading ? "Accesso in corso…" : mode === "magic_link" || preferMagicLink ? "Entra o crea il tuo spazio" : "Entra nello Studio"}
                 {!loading && <ArrowRightIcon />}
               </button>
               {mode === "pilot_password" && (
@@ -166,12 +178,12 @@ export function LoginForm() {
                     setError(null);
                   }}
                 >
-                  {preferMagicLink ? "Usa la password del pilot" : "Accesso su invito: usa un magic link"}
+                  {preferMagicLink ? "Usa la password del pilot" : "Entra o crea uno spazio con l’email"}
                 </button>
               )}
             </form>
           )}
-          <div className="login-form__security"><LockIcon /><span>Accesso riservato. La sessione dello Studio non viene condivisa con gli spazi pubblici.</span></div>
+          <div className="login-form__security"><LockIcon /><span>Il tuo Studio resta privato finché non scegli tu di attivare lo spazio pubblico.</span></div>
         </motion.div>
         <footer>Continuando accetti le <Link href="/terms">condizioni d’uso</Link> e l’<Link href="/privacy">informativa privacy</Link>.</footer>
       </section>

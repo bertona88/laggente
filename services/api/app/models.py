@@ -182,6 +182,23 @@ class MagicLink(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
 
 
+class SignupLink(Base):
+    """Pre-tenant proof that a professional controls an email address.
+
+    No account is created until this purpose-bound link is consumed. This keeps automated signup
+    requests from allocating tenant data while retaining single-use and expiry enforcement.
+    """
+
+    __tablename__ = "signup_links"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    email: Mapped[str] = mapped_column(String(320), index=True, nullable=False)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    requested_ip_hash: Mapped[str | None] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+
 class Attachment(Base):
     __tablename__ = "attachments"
     __table_args__ = (Index("ix_attachment_account_conversation", "account_id", "conversation_id"),)

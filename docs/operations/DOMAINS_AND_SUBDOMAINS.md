@@ -120,9 +120,9 @@ sudo certbot renew --dry-run
 
 Do not activate another professional hostname until TLS covers it. A small named pilot can expand the SAN lineage deliberately. The target remains a wildcard certificate once renewal can be automated safely.
 
-The application can create, configure, and publish invited tenants without a DNS write or another
+The application can create, configure, and publish verified tenants without a DNS write or another
 deployment because the wildcard `A` record already routes every valid slug. Browser availability
-still depends on certificate coverage. Before invited professionals publish arbitrary live slugs,
+still depends on certificate coverage. Before professionals publish arbitrary live slugs,
 either complete the wildcard TLS plan below or add each approved slug to the named SAN lineage.
 A successful database activation does not prove TLS readiness.
 

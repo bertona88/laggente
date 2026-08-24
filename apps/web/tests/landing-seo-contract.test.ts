@@ -17,7 +17,8 @@ describe("brand landing and crawl contract", () => {
     expect(landing).toContain("decidi quando aprirlo");
     expect(landing).toContain("La gente non compila");
     expect(landing).toContain("Poi la gente incontra l’agente");
-    expect(`${header}\n${landing}`).toContain("Studio per professionisti");
+    expect(`${header}\n${landing}`).toContain("Crea il tuo spazio");
+    expect(landing).toContain("Aperto ai professionisti");
     expect(landing).not.toContain("Il backend seleziona");
     expect(landing).toContain("Che lavoro fai?");
     expect(landing).toContain("Agenti immobiliari");

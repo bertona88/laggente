@@ -81,8 +81,7 @@ class MagicLinkRequest(BaseModel):
 class MagicLinkRequestOut(BaseModel):
     accepted: bool = True
     message: str = (
-        "Se l'indirizzo è autorizzato, riceverai un link di accesso. "
-        "Se è il tuo primo accesso, usa il link personale dell'invito. "
+        "Abbiamo inviato un link per entrare o creare il tuo Studio. "
         "Controlla anche la cartella Spam."
     )
     development_magic_link: str | None = None

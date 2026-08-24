@@ -30,13 +30,14 @@ The product foundation can specialize to different professions. The commercial p
 - `app.laggente.com` — the private Studio;
 - `<slug>.laggente.com` — the public personal space, beginning with `mauro.laggente.com`.
 
-Expansion is invitation-only during the pilot. A member with the platform invitation permission
-enters one email address. LAGGENTE creates a separate dormant account and sends a single-use magic
-link. The invited professional introduces themselves to Studio in natural Italian, reserves an
-available slug, reviews the generated revision, and activates it. That first activation—not a code
-change, deployment, or per-professional environment file—opens the public subdomain.
+Entry is email-first and open to professionals. LAGGENTE sends a single-use verification link and
+creates no tenant until that link is consumed. The verified professional then enters a separate,
+private Studio, introduces themselves in natural Italian, reserves an available slug, reviews the
+generated revision, and activates it. Existing members return through the same email form. Curated
+Studio invitations remain available, but they are no longer a prerequisite. First activation—not a
+code change, deployment, or per-professional environment file—opens the public subdomain.
 
-The experience begins with the professional, not the visitor. Each invited professional creates
+The experience begins with the professional, not the visitor. Each professional creates
 their identity, then Studio begins with the backend-owned question “Che lavoro fai?” and adapts its
 examples and starting template to the answer. The professional chooses the public slug that becomes
 their subdomain and talks with Studio about territory, work, style, knowledge, preferences, and the
@@ -108,11 +109,12 @@ The agent-native email application path is implemented behind the production-saf
 separately in the [email activation runbook](docs/operations/AGENT_NATIVE_EMAIL.md); source code by
 itself is never proof of the current production state.
 
-The implemented pilot can provision additional professional spaces end to end through an
-authorized Studio invitation. Dormant invited tenants cannot resolve publicly; slug selection is
-globally checked and first publication requires both a claimed slug and an explicitly activated
-configuration. Shared Studio, public-space, conversation, media, and takeover code reads the
-resolved tenant and contains no Mauro-specific runtime fallback.
+The implemented pilot can provision additional professional spaces through verified self-service
+email entry or an authorized Studio invitation. Unknown addresses receive a short-lived pre-tenant
+proof; the account and private Studio are created only after verification. Unpublished tenants
+cannot resolve publicly; slug selection is globally checked and first publication requires both a
+claimed slug and an explicitly activated configuration. Shared Studio, public-space, conversation,
+media, and takeover code reads the resolved tenant and contains no Mauro-specific runtime fallback.
 
 The Studio also exposes a bounded `/studio/grafo` view: it connects the
 professional to existing conversations and to backend-weighted, correctable sets derived from them.
@@ -123,8 +125,8 @@ not part of the implemented runtime or persistence contract. See
 
 ## Current status
 
-- Product blueprint: profession-agnostic invited multi-tenant proof 0.4.
-- Seeded pilot professional: Mauro; additional professionals join by controlled invitation.
+- Product blueprint: profession-agnostic open-entry multi-tenant proof 0.5.
+- Seeded pilot professional: Mauro; additional professionals verify an email or use a curated invitation.
 - Product audience: human professionals whose work depends on relationships, competence, and trust.
 - First weighted vertical and pilot cohort: five real-estate professionals.
 - Initial real-estate template: conversations with people considering selling a property.

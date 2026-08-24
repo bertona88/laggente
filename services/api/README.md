@@ -51,8 +51,8 @@ replayed on later text turns.
 
 All product routes use `/api/v1`. The main groups are:
 
-- `/auth/*` — auth mode, pilot login, purpose-bound single-use invitation and login magic links,
-  session, and logout;
+- `/auth/*` — auth mode, pilot login, purpose-bound single-use signup, invitation, and login
+  links, session, and logout;
 - `/public/{slug}` and `/public/conversations/*` — active public presentation and anonymous
   continuation-token conversations;
 - `/studio/*` — authorized professional invitation, dormant-space slug claim, private Studio
@@ -70,7 +70,13 @@ Public conversation transport is conventional REST for this release. App-owned P
 records are the durable source of truth, so a future ChatKit transport can implement its store
 contract without creating a second chat database.
 
-## Invited professional lifecycle
+## Professional entry lifecycle
+
+`POST /auth/magic-link/request` is the single email-first entry point. Existing members receive an
+ordinary login link. Unknown addresses receive an expiring pre-tenant signup proof; the API creates
+the separate account, inactive space, and private Studio only after `POST /auth/signup/consume`
+verifies that proof. Consuming one link invalidates its siblings. New members do not inherit
+invitation permission, and nothing resolves publicly before an explicit first activation.
 
 `POST /studio/invitations` is available only to a member with `can_invite=true`. It creates a new
 tenant and inactive space before sending the recipient a purpose-bound invitation link. The
@@ -93,6 +99,7 @@ controls, not tenant-configurable assistant behavior, lead stages, or a real-est
 | Audio transcriptions per account | 12 in a rolling hour |
 | Model-backed public-assistant turns per space | 60 in a rolling hour |
 | New public conversations per space | 60 in a rolling hour |
+| Professional email entry | 8 requests per IP in 15 minutes, 3 per address in one hour, and 60 new-address requests per API process in one hour |
 | Unengaged public conversations per space | 60; an item with no visitor/professional message, professional participation, or bound attachment expires after one hour and is pruned when another conversation is opened |
 | Studio public-conversation inbox | Offset pages of 1–100 conversations; older pages remain reachable |
 | Professional email authorization | 10 human-authorized attempts per member in a rolling hour |
@@ -108,3 +115,4 @@ conversation: the worker, and safely the next upload, delete its row and unlink 
 payload. Bound attachment records remain subject to the per-conversation count. Durable-byte
 ceilings apply to retained image payloads. Rate-limited requests fail with a retryable HTTP 429;
 storage and attachment-count conflicts fail without accepting another durable upload.
+Expired pre-tenant signup proofs are removed one day after they cease to be usable.
