@@ -12,7 +12,8 @@ export function BrandHeader({ inverse = false }: { inverse?: boolean }) {
       <Logo inverse={inverse} />
       <nav className="brand-nav" aria-label="Navigazione principale">
         <Link href="#come-funziona">Come funziona</Link>
-        <Link href="#controllo">Sotto il tuo controllo</Link>
+        <Link href="#spazio-pubblico">Lo spazio pubblico</Link>
+        <Link href="#due-lati">I due lati</Link>
       </nav>
       <Link className="brand-header__cta" href={studioHref("/login")}>
         Accedi allo Studio <ArrowUpRightIcon />
@@ -38,7 +39,8 @@ export function BrandHeader({ inverse = false }: { inverse?: boolean }) {
             exit={{ opacity: 0, y: -12 }}
           >
             <Link href="#come-funziona" onClick={() => setOpen(false)}>Come funziona</Link>
-            <Link href="#controllo" onClick={() => setOpen(false)}>Sotto il tuo controllo</Link>
+            <Link href="#spazio-pubblico" onClick={() => setOpen(false)}>Lo spazio pubblico</Link>
+            <Link href="#due-lati" onClick={() => setOpen(false)}>I due lati</Link>
             <Link href={studioHref("/login")} onClick={() => setOpen(false)}>Accedi allo Studio</Link>
           </motion.nav>
         )}
