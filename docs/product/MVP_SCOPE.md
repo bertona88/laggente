@@ -23,6 +23,14 @@ The professional enters LAGGENTE and:
 
 The Studio may ask useful questions, but onboarding is not a disguised form and does not require every professional to answer the same fields in the same order. The conversation can move toward what is distinctive or important for that person.
 
+In the implemented pilot, the Studio follows a server-owned adaptive elicitation policy. At each
+turn it chooses one main move: reflect, ask one high-value question, synthesize, or prepare an
+authorized proposal. Questions follow the professional's last answer, favor concrete episodes and
+real choices, and stop when the Studio already has enough understanding to be useful. The policy
+does not create a hidden completeness score or psychological profile; it distinguishes what the
+professional said from what the Studio inferred and makes material inference correctable before it
+enters a configuration proposal.
+
 After publication, the Studio remains the primary way to evolve the space. The professional can keep talking, correct the Studio's interpretation, add knowledge, change tone or behavior, recover an earlier revision, and activate a new one without deploying code.
 
 ## A living configuration, not a cramped schema

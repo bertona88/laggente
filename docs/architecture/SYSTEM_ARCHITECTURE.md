@@ -107,6 +107,13 @@ uses the declared work to specialize the configuration. Weighted verticals are s
 not a classifier that forces every professional into the first template. The Studio does not impose
 a real-estate methodology and does not generate arbitrary application code, scripts, or tenant HTML in the MVP.
 
+The current adaptive elicitation behavior is an application-owned Studio instruction policy, not a
+new service or AI role. The Studio uses the durable conversation history to choose one useful move
+per turn, asks at most one question, distinguishes explicit statements from tentative inference,
+and stops probing when it can synthesize or propose something concrete. No latent score or separate
+professional-profile database is introduced. Durable public meaning still enters the existing
+document-shaped revision path and remains inactive until explicit professional activation.
+
 ### Public assistant
 
 The public assistant talks with visitors using only the active configuration of the resolved professional space. It can converse naturally, use approved knowledge, maintain correctable memory, work with enabled tools, and invite the professional to participate.

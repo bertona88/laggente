@@ -2,10 +2,17 @@ from __future__ import annotations
 
 import base64
 import hashlib
+from types import SimpleNamespace
 
 import pytest
 
-from app.assistants import AssistantUnavailable, AgentsAssistantService, PublicImageInput
+from app.assistants import (
+    AssistantUnavailable,
+    AgentsAssistantService,
+    PublicImageInput,
+    StudioRunContext,
+    _studio_instructions,
+)
 from app.models import Message
 
 
@@ -26,6 +33,30 @@ def test_exactly_two_bounded_agent_definitions(settings):
     assert service.public_assistant.model_settings.store is False
     assert service.product_positioning.opening_question == "Che lavoro fai?"
     assert service.product_positioning.featured_verticals[0].id == "real_estate_it"
+
+
+def test_studio_instruction_uses_adaptive_correctable_elicitation():
+    context = StudioRunContext(
+        account_id="account",
+        space_id="space",
+        member_id="member",
+        product_positioning={
+            "opening_question": "Qual è il tuo lavoro?",
+            "featured_verticals": [],
+        },
+    )
+
+    instructions = _studio_instructions(SimpleNamespace(context=context), None)
+
+    assert "Qual è il tuo lavoro?" in instructions
+    assert "non è raccogliere più dati possibile" in instructions
+    assert "domanda a maggior valore" in instructions
+    assert "fanne una sola alla volta" in instructions
+    assert "preferisci un episodio concreto" in instructions
+    assert "Mantieni distinta l'evidenza esplicita dalle tue inferenze" in instructions
+    assert "Non creare punteggi nascosti" in instructions
+    assert "Smetti di fare domande" in instructions
+    assert "bozza fino all'attivazione umana" in instructions
 
 
 def test_public_input_embeds_integrity_checked_private_image(settings):

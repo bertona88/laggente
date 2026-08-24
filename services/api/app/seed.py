@@ -137,7 +137,8 @@ def seed_demo_data(db: Session, settings: Settings) -> None:
                     "Ciao Mauro. Questo è il tuo Studio privato: qui possiamo modellare insieme "
                     "il modo in cui il tuo spazio accoglie le persone. Le modifiche restano in "
                     "bozza finché non decidi esplicitamente di attivarle. Il template immobiliare "
-                    "è il punto di partenza del pilot, non un limite di LAGGENTE."
+                    "è il punto di partenza del pilot, non un limite di LAGGENTE. Qual è un episodio "
+                    "recente in cui il tuo modo di lavorare ha fatto davvero la differenza?"
                 ),
             ),
             Message(
