@@ -95,8 +95,8 @@ export function LandingPage() {
         >
           <p className="section-index">01 / Come nasce il tuo spazio</p>
           <div>
-            <h2 id="address-story-title">Lo racconti.<br />Lo vedi. Lo apri.</h2>
-            <p>Nessun percorso a caselle. Parti da una conversazione privata e arrivi a un luogo pubblico che porta il tuo nome.</p>
+            <h2 id="address-story-title">Modella il tuo stile.<br />Chattando.</h2>
+            <p>Racconta a Studio come lavori e come vuoi accogliere la gente. La conversazione diventa il tuo spazio pubblico: tu lo rivedi, lo correggi e decidi quando aprirlo.</p>
           </div>
         </motion.div>
 

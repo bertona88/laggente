@@ -13,7 +13,8 @@ describe("brand landing and crawl contract", () => {
 
     expect(landing).toContain("La gente incontra <em>l’agente.</em>");
     expect(landing).toContain("nome</i>.laggente.com");
-    expect(landing).toContain("Nessun percorso a caselle");
+    expect(landing).toContain("Modella il tuo stile");
+    expect(landing).toContain("decidi quando aprirlo");
     expect(landing).toContain("La gente non compila");
     expect(landing).toContain("Poi la gente incontra l’agente");
     expect(`${header}\n${landing}`).toContain("Studio per professionisti");
