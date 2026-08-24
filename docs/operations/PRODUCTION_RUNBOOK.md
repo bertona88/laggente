@@ -33,6 +33,8 @@ Expected:
 - the most recent backup checksum passes;
 - disk and memory have operating margin;
 - public apex, Studio, and Mauro hosts respond over valid HTTPS.
+- `acme-dns.service` and `certbot.timer` are active, public delegation resolves, and the active
+  certificate contains both `laggente.com` and `*.laggente.com`.
 
 The public `/api/health`, `/api/healthz`, and `/api/readyz` routes use the existing modest API rate
 zone; readiness reaches PostgreSQL and is not an unbounded public probe. Container and deployment
@@ -47,13 +49,11 @@ The entry UI is not a TLS readiness check. Before enabling live signup or sendin
 - confirm the signup-link migration is applied and expired pre-tenant proofs are being pruned;
 - for curated invitations, confirm the operator session reports invitation permission;
 - confirm wildcard DNS resolves a proposed slug to `116.203.123.0`;
-- confirm the active certificate covers `*.laggente.com`, or deliberately add the exact invited
-  slug to the named SAN lineage before the professional publishes;
+- confirm the active certificate covers `*.laggente.com`;
 - verify a controlled non-Mauro host reaches the shared gateway without resolving another tenant.
 
-Do not publish a new slug merely because the database flow succeeds. Without wildcard or
-exact SAN coverage, the browser must reject that hostname even though application routing is
-correct.
+Do not publish a new slug merely because the database flow succeeds. A missing wildcard SAN means
+the open signup release is operationally incomplete even when application routing is correct.
 
 ## Read logs without leaking secrets
 
@@ -124,11 +124,35 @@ sudo nginx -t
 sudo systemctl status nginx --no-pager
 sudo journalctl -u nginx --since '30 min ago' --no-pager
 sudo certbot certificates
+sudo systemctl status acme-dns certbot.timer --no-pager
+dig +short A auth.laggente.com @1.1.1.1
+dig +short NS auth.laggente.com @1.1.1.1
+dig +short CNAME _acme-challenge.laggente.com @1.1.1.1
 dig +short A laggente.com
 dig +short A mauro.laggente.com
 ```
 
 Run `systemctl reload nginx` only after `nginx -t` succeeds and a host-config change actually requires it.
+
+### Wildcard renewal unhealthy
+
+The Namecheap account credential is not part of renewal and must not be copied to the server. Check
+the narrowly delegated path instead:
+
+```bash
+sudo systemctl status acme-dns --no-pager
+sudo journalctl -u acme-dns --since '30 min ago' --no-pager
+curl -fsS http://127.0.0.1:5399/health
+sudo stat -c '%U:%G %a %n' /etc/letsencrypt/laggente-acme-dns.json
+sudo certbot renew --dry-run --cert-name laggente-wildcard
+```
+
+Expected credential ownership is `root:root 600`; never print the file. The registration endpoint
+must remain disabled. If the SQLite database is damaged, stop `acme-dns.service`, restore
+`/var/backups/laggente-acme-dns/registration.db` to `/var/lib/acme-dns/acme-dns.db` with owner and
+group `acme_dns`, mode `600`, restart the service, and repeat the public DNS plus dry-run checks.
+Do not change the `_acme-challenge` CNAME or use the broad Namecheap credential unless the limited
+registration itself must be deliberately replaced.
 
 ### Backup unhealthy
 

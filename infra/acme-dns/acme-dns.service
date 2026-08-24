@@ -1,0 +1,39 @@
+[Unit]
+Description=LAGGENTE limited authoritative DNS for ACME challenges
+Documentation=https://github.com/acme-dns/acme-dns
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=acme_dns
+Group=acme_dns
+WorkingDirectory=/var/lib/acme-dns
+ExecStart=/usr/local/bin/acme-dns -c /etc/acme-dns/config.cfg
+Restart=on-failure
+RestartSec=5s
+UMask=0077
+
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+NoNewPrivileges=true
+PrivateDevices=true
+PrivateTmp=true
+ProtectClock=true
+ProtectControlGroups=true
+ProtectHome=true
+ProtectHostname=true
+ProtectKernelLogs=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/acme-dns
+RestrictAddressFamilies=AF_INET AF_UNIX
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+SystemCallArchitectures=native
+
+[Install]
+WantedBy=multi-user.target

@@ -8,6 +8,7 @@ source "$script_dir/production-lib.sh"
 configure_docker_client
 require_repo
 require_command jq
+require_command dig
 current_env="$laggente_releases_dir/current.env"
 [[ -e "$current_env" ]] || die "no active production release"
 
@@ -51,6 +52,16 @@ curl --fail --silent --show-error --header 'Host: laggente.com' \
     "http://127.0.0.1:$laggente_loopback_port/api/readyz" >/dev/null
 printf 'loopback gateway health/readiness: healthy\n'
 
+systemctl is-active --quiet acme-dns.service || die "acme-dns.service is not active"
+systemctl is-active --quiet certbot.timer || die "certbot.timer is not active"
+auth_ns=$(dig +short NS auth.laggente.com @1.1.1.1 | sed -n '1p')
+auth_a=$(dig +short A auth.laggente.com @1.1.1.1 | sed -n '1p')
+[[ ${auth_ns%.} == auth.laggente.com ]] || \
+    die "public auth.laggente.com NS delegation is missing"
+[[ "$auth_a" == 116.203.123.0 ]] || \
+    die "public auth.laggente.com A does not resolve to the Hetzner server"
+printf 'ACME DNS delegation/service and Certbot timer: healthy\n'
+
 for public_check in \
     'https://laggente.com/ 200' \
     'https://app.laggente.com/ 308' \
@@ -63,7 +74,14 @@ for public_check in \
 done
 
 if command -v openssl >/dev/null 2>&1; then
-    expiry=$(echo | openssl s_client -servername laggente.com -connect laggente.com:443 2>/dev/null | \
-        openssl x509 -noout -enddate)
-    printf 'TLS %s\n' "$expiry"
+    certificate_text=$(openssl s_client \
+        -servername tls-probe.laggente.com \
+        -connect laggente.com:443 </dev/null 2>/dev/null | \
+        openssl x509 -noout -enddate -ext subjectAltName)
+    grep -Fq 'DNS:laggente.com' <<<"$certificate_text" || \
+        die "active certificate is missing the laggente.com SAN"
+    grep -Fq 'DNS:*.laggente.com' <<<"$certificate_text" || \
+        die "active certificate is missing the *.laggente.com SAN"
+    printf 'TLS wildcard lineage: valid for apex and professional subdomains\n'
+    grep -F 'notAfter=' <<<"$certificate_text"
 fi

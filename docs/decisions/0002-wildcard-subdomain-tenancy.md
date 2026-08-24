@@ -34,3 +34,6 @@ The hostname is not a security boundary. Every tenant-owned query, tool call, fi
 ## Local and preview behavior
 
 Maintain `laggente.com/<slug>` as a development and preview fallback. Test production hostname resolution separately using controlled host headers or a loopback wildcard domain.
+
+The implemented narrow DNS-01 renewal boundary is recorded separately in
+[ADR-0005](0005-delegated-acme-dns-wildcard-tls.md).

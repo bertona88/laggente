@@ -10,6 +10,65 @@ sh -n "$repo_root"/infra/backup/*.sh
     cd "$repo_root/infra/email-relay"
     python3 -m unittest -q
 )
+bash -n "$repo_root"/infra/acme-dns/*.sh
+for python_file in \
+    "$repo_root/infra/acme-dns/laggente-acme-dns-auth.py" \
+    "$repo_root/scripts/configure-namecheap-acme-delegation.py"; do
+    python3 -c 'from pathlib import Path; import sys; compile(Path(sys.argv[1]).read_text(), sys.argv[1], "exec")' \
+        "$python_file"
+done
+python3 -c '
+import runpy
+import sys
+namespace = runpy.run_path(sys.argv[1])
+compile(namespace["REMOTE_RUNNER"], "<remote-namecheap-runner>", "exec")
+' "$repo_root/scripts/configure-namecheap-acme-delegation.py"
+
+acme_dns_config="$repo_root/infra/acme-dns/config.cfg"
+acme_dns_service="$repo_root/infra/acme-dns/acme-dns.service"
+for acme_dns_contract in \
+    'listen = "116.203.123.0:53"' \
+    'domain = "auth.laggente.com"' \
+    'engine = "sqlite"' \
+    'ip = "127.0.0.1"' \
+    'disable_registration = true' \
+    'port = "5399"'; do
+    if ! grep -Fq "$acme_dns_contract" "$acme_dns_config"; then
+        printf 'acme-dns config is missing: %s\n' "$acme_dns_contract" >&2
+        exit 1
+    fi
+done
+for service_contract in \
+    'User=acme_dns' \
+    'AmbientCapabilities=CAP_NET_BIND_SERVICE' \
+    'NoNewPrivileges=true' \
+    'ProtectSystem=strict' \
+    'ReadWritePaths=/var/lib/acme-dns'; do
+    if ! grep -Fq "$service_contract" "$acme_dns_service"; then
+        printf 'acme-dns service is missing: %s\n' "$service_contract" >&2
+        exit 1
+    fi
+done
+if grep -R -E 'NAMECHEAP_(API_KEY|USERNAME)[[:space:]]*=' \
+    "$repo_root/infra/acme-dns" "$repo_root/scripts"; then
+    printf 'tracked infrastructure contains a Namecheap credential assignment\n' >&2
+    exit 1
+fi
+if [[ $(grep -Fc '/etc/letsencrypt/live/laggente-wildcard/' \
+    "$repo_root/infra/nginx/laggente.conf") -ne 4 ]]; then
+    printf 'host nginx is not consistently pinned to the wildcard certificate lineage\n' >&2
+    exit 1
+fi
+if ! grep -Fq "acme_dns_sha256=ff7aa309fb916012fc08dc7bd992c329b3930705ecb04161e57a5d910e80e9f0" \
+    "$repo_root/scripts/install-acme-dns.sh"; then
+    printf 'acme-dns installer is missing the pinned artifact digest\n' >&2
+    exit 1
+fi
+if ! grep -Fq -- '--domains '\''*.laggente.com'\''' \
+    "$repo_root/scripts/issue-wildcard-certificate.sh"; then
+    printf 'wildcard certificate issuer is missing the wildcard domain\n' >&2
+    exit 1
+fi
 
 bootstrap_script="$repo_root/scripts/bootstrap-server.sh"
 if ! grep -Eq '^[[:space:]]+slirp4netns[[:space:]]*\\$' "$bootstrap_script"; then
