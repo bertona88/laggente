@@ -33,6 +33,7 @@ function StudioMessage({ message }: { message: ConversationMessage }) {
 }
 
 const starterPrompts = [
+  "Ti racconto che lavoro faccio",
   "Vorrei rendere l’accoglienza più personale",
   "Ti racconto il territorio in cui lavoro",
   "Fammi vedere come appare lo spazio oggi",
@@ -237,7 +238,7 @@ export function StudioWorkspace() {
             <div className="studio-empty">
               <span><SparkIcon /></span>
               <h2>Parlami del professionista che vuoi essere qui.</h2>
-              <p>Possiamo partire dal tuo territorio, dal modo in cui ricevi le persone o da qualcosa che non vuoi delegare.</p>
+              <p>Partiamo da “Che lavoro fai?”, poi dal modo in cui ricevi le persone o da qualcosa che non vuoi delegare.</p>
             </div>
           )}
           {messages.map((message) => <StudioMessage key={message.id} message={message} />)}

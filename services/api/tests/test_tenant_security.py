@@ -84,6 +84,12 @@ def test_cross_account_conversation_and_revision_access_is_denied(professional_c
     )
     assert public_denied.status_code == 404
 
+    graph = client.get("/api/v1/studio/relationship-graph")
+    assert graph.status_code == 200
+    assert conversation_id not in {
+        node.get("conversation_id") for node in graph.json()["nodes"]
+    }
+
 
 def test_auth_email_is_globally_unique_before_tenant_context(client):
     with database.SessionLocal() as db:

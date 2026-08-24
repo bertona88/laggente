@@ -4,10 +4,10 @@ This file governs work performed by Codex and other coding agents in this reposi
 
 ## Product invariant
 
-LAGGENTE is a personal agentic space for a human real-estate professional. Its simplest complete shape is:
+LAGGENTE is a personal agentic space for a human professional. Its simplest complete shape is:
 
 ```text
-real-estate professional ↔ private Studio assistant
+human professional ↔ private Studio assistant
                               ↕
                     shared persistent space
                               ↕
@@ -16,7 +16,9 @@ visitor ↔ public assistant ↔ human professional when they join
 
 There are two conversational AI roles and one ordinary application coordination layer. Do not invent a third coordinating agent or an accidental multi-agent swarm.
 
-The first commercial template helps Mauro receive people who may be considering selling a property. It is a starting configuration for the pilot, not a universal sales pipeline, mandatory questionnaire, or permanent product ontology.
+The product foundation is profession-agnostic. The Studio learns what the professional does before specializing the space. The first and highest-weighted commercial template helps Mauro receive people who may be considering selling a property. It is a prominent starting configuration for the pilot, not the identity of LAGGENTE, a universal sales pipeline, a mandatory questionnaire, or a permanent product ontology.
+
+Product positioning, the opening Studio question, and ordered/weighted vertical examples are backend-owned configuration. Frontends render that contract and must not hardcode real estate as the universal fallback. A tenant's active configuration remains authoritative for their public role and behavior.
 
 LAGGENTE is not a CRM that makes the professional maintain leads, stages, fields, and statuses. Conversations are primary. The system may derive correctable memory, summaries, signals, and suggested next actions from those conversations without turning that derived material into administrative work for the professional.
 
@@ -59,6 +61,8 @@ CRM concepts merely because they may be useful later.
 - Keep persistent conversations and messages as primary records.
 - Treat memory, summaries, signals, and suggested opportunities as derived and correctable unless a later requirement proves that they need independent lifecycles.
 - Do not introduce a conventional CRM pipeline or speculative lead taxonomy into the MVP.
+- A tenant-private relationship graph may derive bounded, correctable sets from that tenant's own conversations and inspectable memory. It is a navigation view over primary records, not proof of identity, a hidden score, or a CRM lifecycle.
+- Do not introduce address-book import, external contact enrichment, or cross-account clustering without an explicit authorized data source, consent/privacy design, and a decision that expands scope.
 - Keep professional space configuration document-shaped and extensible inside a typed platform-owned envelope. Do not force identity, knowledge, style, examples, or ways of working into a closed onboarding schema merely because fixed fields are easier to implement.
 - Tenant configuration can shape content, behavior, presentation, memory preferences, and available capabilities, but cannot override platform identity, safety, privacy, permissions, or human control.
 - Changes proposed by the private Studio assistant do not affect the public assistant until the professional explicitly activates them.

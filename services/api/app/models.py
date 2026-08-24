@@ -67,7 +67,7 @@ class Space(Base, TimestampMixin):
     professional_name: Mapped[str] = mapped_column(String(200), nullable=False)
     agency: Mapped[str | None] = mapped_column(String(200))
     territory: Mapped[str | None] = mapped_column(String(300))
-    public_role: Mapped[str] = mapped_column(String(100), default="agente immobiliare", nullable=False)
+    public_role: Mapped[str] = mapped_column(String(100), default="professionista", nullable=False)
     locale: Mapped[str] = mapped_column(String(16), default="it-IT", nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     slug_claimed: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)

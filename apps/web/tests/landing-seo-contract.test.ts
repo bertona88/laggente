@@ -6,13 +6,16 @@ const webRoot = path.resolve(import.meta.dirname, "..");
 const readWebFile = (relativePath: string) => readFileSync(path.join(webRoot, relativePath), "utf8");
 
 describe("brand landing and crawl contract", () => {
-  it("targets real-estate professionals without leaking the seeded pilot identity", () => {
+  it("keeps the base profession-agnostic while featuring real estate first", () => {
     const landing = readWebFile("components/landing-page.tsx");
     const header = readWebFile("components/brand-header.tsx");
     const legalPages = readWebFile("src/legal-pages.tsx");
 
-    expect(landing).toContain("Assistente AI per agenti immobiliari");
-    expect(landing).toContain("spazio digitale personale per professionisti immobiliari");
+    expect(landing).toContain("Uno spazio AI per chi lavora con le persone");
+    expect(landing).toContain("spazio digitale personale per professionisti");
+    expect(landing).toContain("Che lavoro fai?");
+    expect(landing).toContain("Agenti immobiliari");
+    expect(landing).toContain("/product/positioning");
     expect(`${header}\n${landing}\n${legalPages}`).not.toContain("Mauro");
     expect(`${header}\n${landing}`).not.toContain('publicSpaceHref("mauro")');
   });
@@ -22,7 +25,7 @@ describe("brand landing and crawl contract", () => {
     const robots = readWebFile("public/robots.txt");
     const sitemap = readWebFile("public/sitemap.xml");
 
-    expect(index).toContain("<title>Assistente AI per agenti immobiliari | LAGGENTE</title>");
+    expect(index).toContain("<title>Uno spazio AI per professionisti | LAGGENTE</title>");
     expect(index).toContain('<link rel="canonical" href="https://laggente.com/" />');
     expect(robots).toContain("Sitemap: https://laggente.com/sitemap.xml");
     expect(sitemap.match(/<loc>/g)).toHaveLength(1);

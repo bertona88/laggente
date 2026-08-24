@@ -25,6 +25,8 @@ from ..models import (
     Space,
     utcnow,
 )
+from ..positioning import load_product_positioning
+from ..relationship_graph import build_relationship_graph
 from ..retention import delete_conversation_data, purge_expired_conversations
 from ..schemas import (
     MAX_CONFIGURATION_DOCUMENT_BYTES,
@@ -35,6 +37,7 @@ from ..schemas import (
     MemoryUpdate,
     MessageCreate,
     ProfessionalEmailOut,
+    RelationshipGraphOut,
     RevisionCreate,
     RevisionOut,
     SlugAvailabilityOut,
@@ -129,6 +132,18 @@ def _owned_public_conversation(
     if not conversation:
         raise HTTPException(status_code=404, detail="Conversazione non trovata")
     return conversation
+
+
+def _owned_space_role(db: Session, context: ProfessionalContext, space_id: str) -> str:
+    role = db.scalar(
+        select(Space.public_role).where(
+            Space.id == space_id,
+            Space.account_id == context.account_id,
+        )
+    )
+    if not role:
+        raise HTTPException(status_code=404, detail="Spazio non trovato")
+    return role
 
 
 def _professional_detail(db: Session, settings: Settings, conversation: Conversation) -> dict:
@@ -240,6 +255,19 @@ def claim_space_slug(
         db.rollback()
         raise HTTPException(status_code=409, detail="Questo indirizzo è già stato scelto")
     return SpaceOut.model_validate(space)
+
+
+@router.get("/relationship-graph", response_model=RelationshipGraphOut)
+def get_relationship_graph(
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(runtime_settings),
+    context: ProfessionalContext = Depends(current_professional),
+) -> RelationshipGraphOut:
+    return build_relationship_graph(
+        db,
+        space=professional_space(db, context),
+        positioning=load_product_positioning(settings.product_positioning_json),
+    )
 
 
 @router.get("/config/revisions", response_model=list[RevisionOut])
@@ -516,7 +544,7 @@ async def post_studio_message(
                 account_id=context.account_id,
                 conversation_id=conversation.id,
                 author_type="professional",
-                author_label=f"{context.member.display_name} — agente immobiliare",
+                author_label=f"{member.display_name} — {space.public_role}",
                 content=body.content,
                 client_message_id=body.client_message_id,
                 assistant_reply_state="pending",
@@ -811,7 +839,10 @@ def post_professional_message(
         account_id=context.account_id,
         conversation_id=conversation.id,
         author_type="professional",
-        author_label=f"{context.member.display_name} — agente immobiliare",
+        author_label=(
+            f"{context.member.display_name} — "
+            f"{_owned_space_role(db, context, conversation.space_id)}"
+        ),
         content=body.content,
         client_message_id=body.client_message_id,
     )

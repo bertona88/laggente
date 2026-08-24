@@ -9,6 +9,7 @@ import {
   LogOutIcon,
   MenuIcon,
   InviteIcon,
+  NetworkIcon,
   StudioIcon,
 } from "@/components/icons";
 import { Logo } from "@/components/logo";
@@ -20,6 +21,7 @@ import type { StudioSession } from "@/lib/types";
 const navItems = [
   { href: "/studio", label: "Studio", icon: StudioIcon, exact: true },
   { href: "/studio/conversazioni", label: "Conversazioni", icon: ConversationIcon },
+  { href: "/studio/grafo", label: "Grafo", icon: NetworkIcon },
   { href: "/studio/spazio", label: "Spazio pubblico", icon: LayersIcon },
 ];
 

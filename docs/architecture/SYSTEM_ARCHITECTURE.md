@@ -17,6 +17,11 @@ defined by repository and operations policy.
 
 All MVP user-facing surfaces default to Italian (`it-IT`).
 
+The public `GET /api/v1/product/positioning` contract exposes the backend-owned opening Studio
+question and ordered, weighted vertical examples. The apex renders that contract; changing market
+emphasis does not require embedding a profession in frontend code. A tenant's active configuration,
+not product positioning, remains authoritative for their public identity and assistant behavior.
+
 ## Core product topology
 
 ```text
@@ -128,7 +133,17 @@ The Studio talks with an authenticated professional. Through typed, server-autho
 - sealed professional email proposals and tenant-scoped correspondence inspection when the
   platform capability is enabled.
 
-The Studio does not impose a real-estate methodology and does not generate arbitrary application code, scripts, or tenant HTML in the MVP.
+If the profession is not yet known, the Studio begins from the backend-owned opening question and
+uses the declared work to specialize the configuration. Weighted verticals are starting priorities,
+not a classifier that forces every professional into the first template. The Studio does not impose
+a real-estate methodology and does not generate arbitrary application code, scripts, or tenant HTML in the MVP.
+
+The current adaptive elicitation behavior is an application-owned Studio instruction policy, not a
+new service or AI role. The Studio uses the durable conversation history to choose one useful move
+per turn, asks at most one question, distinguishes explicit statements from tentative inference,
+and stops probing when it can synthesize or propose something concrete. No latent score or separate
+professional-profile database is introduced. Durable public meaning still enters the existing
+document-shaped revision path and remains inactive until explicit professional activation.
 
 ### Public assistant
 
@@ -205,7 +220,7 @@ The Studio may extend the configuration document as new meaning emerges from con
 
 The meta-prompting loop is therefore concrete product behavior: Studio conversation → evolving space configuration → professional preview and activation → composed public-assistant behavior. It is not a general-purpose prompt generator built independently of the space it is meant to create.
 
-Do not normalize every possible professional preference into a dedicated table, build a universal onboarding field set, or treat the current seller template as the configuration schema.
+Do not normalize every possible professional preference into a dedicated table, build a universal onboarding field set, or treat the current seller template as the configuration schema. Product-level vertical weights may be tuned in backend configuration; tenant identity and behavior still require a proposed, explicitly activated space revision.
 
 ## Conversation and memory model
 
@@ -214,6 +229,26 @@ Conversation is primary. A persistent thread contains participants, messages, at
 Memory is derived from conversation content. It may contain facts, preferences, open questions, summaries, signals, and suggested next actions. Every derived item must retain enough provenance to show where it came from and must be correctable without rewriting the original message history.
 
 An `opportunity` is initially a generated view or signal that a conversation may deserve professional attention. Do not create a universal sales lifecycle until real usage proves that it exists.
+
+### Tenant-private relationship graph
+
+`GET /api/v1/studio/relationship-graph` is an authenticated, tenant-scoped projection. It reads a
+bounded number of the current space's public conversations, human-authored messages, and non-dismissed
+memory. It returns three node types:
+
+- `professional` — the center owned by the authenticated space;
+- `person` — a pseudonymous navigation node linked to one primary conversation;
+- `set` — a derived grouping whose terms and weights come from backend product positioning.
+
+Conversation edges are primary. Set-membership edges are derived and must remain visually and
+semantically distinguishable. The server caps conversations, nodes, and edges; the client shows a
+bounded centered neighborhood, supports search and recentering, and links person nodes back to their
+conversation. This projection has no independent persistence or lifecycle. Corrected and dismissed
+memory affect later calculations, while original messages remain unchanged.
+
+The endpoint enforces `account_id` and `space_id` before calculating topology. It does not read an
+address book, enrich contacts, compare accounts, prove identity from graph position, or authorize any
+new AI role. The existing application coordination layer computes the projection deterministically.
 
 ## Minimum persistent model
 

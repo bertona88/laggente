@@ -22,7 +22,7 @@ class APIModel(BaseModel):
 class IdentityConfig(BaseModel):
     model_config = ConfigDict(extra="allow")
     name: str = Field(min_length=1, max_length=200)
-    role: str = Field(default="agente immobiliare", max_length=100)
+    role: str = Field(min_length=1, max_length=100)
     agency: str | None = Field(default=None, max_length=200)
     territory: str | None = Field(default=None, max_length=300)
 
@@ -286,6 +286,40 @@ class PublicSpaceOut(BaseModel):
     ai_label: str
     privacy_notice_version: str
     configuration: dict[str, Any]
+
+
+class RelationshipGraphNode(BaseModel):
+    id: str
+    type: Literal["professional", "person", "set"]
+    label: str
+    summary: str
+    conversation_id: str | None = None
+    member_count: int = 0
+    weight: int = 1
+    origin: Literal["primary", "derived"]
+
+
+class RelationshipGraphEdge(BaseModel):
+    id: str
+    source: str
+    target: str
+    relation: Literal["conversation", "member_of"]
+    weight: int = 1
+
+
+class RelationshipGraphProfile(BaseModel):
+    vertical_id: str | None = None
+    vertical_label: str | None = None
+    template_id: str | None = None
+    source: Literal["backend_positioning", "generic"]
+
+
+class RelationshipGraphOut(BaseModel):
+    center_id: str
+    nodes: list[RelationshipGraphNode]
+    edges: list[RelationshipGraphEdge]
+    profile: RelationshipGraphProfile
+    bounds: dict[str, int]
 
 
 class PublicConversationCreate(BaseModel):

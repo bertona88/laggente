@@ -4,7 +4,9 @@
 
 > **LAGGENTE is where la gente meets l'agente.**
 
-LAGGENTE gives every human real-estate professional a living digital space. The professional shapes that space by talking with a private Studio assistant. People enter the public side and speak with another assistant that knows the professional's active configuration, remembers the conversation, and can bring the professional into the same thread.
+LAGGENTE gives a human professional a living digital space. The professional shapes that space by talking with a private Studio assistant. People enter the public side and speak with another assistant that knows the professional's active configuration, remembers the conversation, and can bring the professional into the same thread.
+
+The base product is not tied to one profession. A new relationship begins with “Che lavoro fai?” and becomes specific from the professional's answer. Commercially, LAGGENTE is intentionally weighted toward Italian real-estate agents first; that priority selects the first examples and template, not the permanent identity of the product.
 
 The product is deliberately simple to explain:
 
@@ -22,7 +24,7 @@ LAGGENTE does contain two chatbot-like interfaces. That is not something to disg
 
 ### Private Studio assistant
 
-The professional explains how they work and what they want their public space to become. The Studio can propose and apply authorized changes to content, behavior, tone, presentation, memory preferences, and available capabilities. It begins from useful templates but does not impose its own real-estate method.
+The professional explains how they work and what they want their public space to become. The Studio can propose and apply authorized changes to content, behavior, tone, presentation, memory preferences, and available capabilities. It begins from useful templates but does not impose a profession, a real-estate method, or a generic method that erases the person's actual work.
 
 The Studio must not reduce that conversation to a closed professional-profile schema. Professional meaning remains extensible and document-shaped inside platform-owned boundaries for identity, permissions, activation, safety, and executable capabilities.
 
@@ -65,9 +67,22 @@ An opportunity is therefore not the starting point of the model. It is one usefu
 
 If real usage later proves that opportunities need their own lifecycle, that lifecycle can be introduced from evidence rather than invented in advance.
 
-## The first commercial template
+## A graph for seeing relationships
 
-The pilot starts with Mauro and conversations with people considering selling a property. LAGGENTE should help Mauro receive those people well, remember what matters, answer from approved knowledge, and participate when useful.
+The private Studio can render a bounded relationship graph over material the professional already
+owns in LAGGENTE. The professional is connected to people through their public conversations; people
+can also connect to derived, correctable sets such as a shared situation, subject, or territory. The
+graph is a way to move through conversation context, not a declaration of who a person is.
+
+Real estate receives the first backend-weighted set vocabulary — for example selling intent,
+inheritance, valuation, shared ownership, timing, and territory. Those weights are tunable without a
+frontend release. They nominate useful views; topology and weight never turn an interpretation into a
+fact. Every person node resolves back to the primary conversation, and corrected or dismissed memory
+changes the next graph calculation.
+
+## The first weighted commercial vertical
+
+The pilot starts with Mauro and conversations with people considering selling a property. Real estate is the highest-weighted vertical in backend positioning, so it remains prominent on the brand surface and receives the first deep template. LAGGENTE should help Mauro receive those people well, remember what matters, answer from approved knowledge, and participate when useful.
 
 This initial seller template gives the space a credible starting point. It may suggest topics such as the property, motivation, timing, ownership, contact preference, and interest in a valuation. It never forces a fixed order or requires every conversation to become a dossier.
 
@@ -83,15 +98,23 @@ The professional does not receive a conversation only after a formal handoff. Th
 
 The first real product is Italian. Interface language, seeded examples, notifications, conversational behavior, dates, addresses, and acceptance testing use `it-IT` from the beginning.
 
-Technical documentation and code identifiers may remain in English. In code, `professional` means the human real-estate professional; avoid using the bare word `agent` when it could mean either the human profession or an AI agent.
+Technical documentation and code identifiers may remain in English. In code, `professional` means the human professional; avoid using the bare word `agent` when it could mean either a human role or an AI agent.
 
 ## Expansion path
 
-1. One configurable personal space and one strong seller-oriented starting template.
-2. More professional-created configurations for buyers, rentals, visits, follow-up, voice, calendar, and messaging channels.
+1. One profession-agnostic personal space with real estate as the first weighted vertical and one strong seller-oriented starting template.
+2. More real-estate configurations for buyers, rentals, visits and follow-up, alongside evidence-backed templates for other professions.
 3. Connections to external systems when real work proves that they are useful.
 4. A network of professional spaces that can coordinate with explicit permissions.
-5. Broader real-estate processes in which people express intentions conversationally while named humans and institutions retain responsibility.
+5. Broader professional processes in which people express intentions conversationally while named humans and institutions retain responsibility.
+
+## Discovering the next verticals
+
+The tenant-private graph can reveal which sets are actually useful within a professional's work. A
+later, separate discovery project may analyze an explicitly authorized relationship network to find
+coherent sets of professionals and decide where to invest in the next template. It must not silently
+import address books, score private contacts, share tenant data, or create a hidden CRM. External
+contact networks and cross-account analysis are not authorized by the MVP graph.
 
 ## Product principles
 

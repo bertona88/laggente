@@ -32,6 +32,55 @@ export interface ProfessionalSpace {
   active_revision_id?: string | null;
 }
 
+export interface FeaturedVertical {
+  id: string;
+  label: string;
+  weight: number;
+  status: "pilot" | "example" | "available";
+  template_id?: string | null;
+  example_answer: string;
+  headline: string;
+  description: string;
+}
+
+export interface ProductPositioning {
+  audience: string;
+  opening_question: string;
+  featured_verticals: FeaturedVertical[];
+}
+
+export interface RelationshipGraphNode {
+  id: string;
+  type: "professional" | "person" | "set";
+  label: string;
+  summary: string;
+  conversation_id?: string | null;
+  member_count: number;
+  weight: number;
+  origin: "primary" | "derived";
+}
+
+export interface RelationshipGraphEdge {
+  id: string;
+  source: string;
+  target: string;
+  relation: "conversation" | "member_of";
+  weight: number;
+}
+
+export interface RelationshipGraph {
+  center_id: string;
+  nodes: RelationshipGraphNode[];
+  edges: RelationshipGraphEdge[];
+  profile: {
+    vertical_id?: string | null;
+    vertical_label?: string | null;
+    template_id?: string | null;
+    source: "backend_positioning" | "generic";
+  };
+  bounds: Record<string, number>;
+}
+
 export interface ConversationMessage {
   id: string;
   author_type: AuthorType;

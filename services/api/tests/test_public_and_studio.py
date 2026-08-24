@@ -202,6 +202,7 @@ def test_draft_does_not_change_public_behavior_until_explicit_activation(profess
     original_welcome = document["public"]["welcome"]
     document["public"]["welcome"] = "Una nuova accoglienza ancora in bozza."
     document["identity"]["name"] = "Mauro Bianchi"
+    document["identity"]["role"] = "architetto"
     draft = client.post(
         "/api/v1/studio/config/revisions",
         json={"document": document, "rationale": "Test della separazione bozza/attiva"},
@@ -215,12 +216,19 @@ def test_draft_does_not_change_public_behavior_until_explicit_activation(profess
     after = client.get("/api/v1/public/mauro").json()
     assert after["configuration"]["public"]["welcome"] == "Una nuova accoglienza ancora in bozza."
     assert after["professional_name"] == "Mauro Bianchi"
+    assert after["public_role"] == "architetto"
     assert after["ai_label"] == "LAGGENTE — assistente AI di Mauro Bianchi"
     created = client.post("/api/v1/public/mauro/conversations", json={})
     assert created.status_code == 200
     welcome = created.json()["messages"][0]
     assert welcome["content"] == "Una nuova accoglienza ancora in bozza."
     assert welcome["author_label"] == "LAGGENTE — assistente AI di Mauro Bianchi"
+    studio_turn = client.post(
+        "/api/v1/studio/messages",
+        json={"content": "Manteniamo questo ruolo.", "client_message_id": "role-author-test"},
+    )
+    assert studio_turn.status_code == 200
+    assert studio_turn.json()["messages"][0]["author_label"] == "Mauro Bianchi — architetto"
 
 
 def test_text_conversation_cannot_be_disabled_by_tenant_configuration(professional_client):

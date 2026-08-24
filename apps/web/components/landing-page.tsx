@@ -1,14 +1,31 @@
 import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AppLink as Link } from "@/components/app-link";
 import { ArrowRightIcon, ArrowUpRightIcon, ConversationIcon, SparkIcon } from "@/components/icons";
 import { BrandHeader } from "@/components/brand-header";
 import { Logo } from "@/components/logo";
 import { studioHref } from "@/lib/hosts";
+import { apiRequest } from "@/lib/api";
+import type { ProductPositioning } from "@/lib/types";
 
 const reveal = {
   hidden: { opacity: 0, y: 18 },
   visible: { opacity: 1, y: 0 },
+};
+
+const fallbackPositioning: ProductPositioning = {
+  audience: "Professionisti che lavorano attraverso relazioni, competenza e fiducia, a partire dagli agenti immobiliari.",
+  opening_question: "Che lavoro fai?",
+  featured_verticals: [{
+    id: "real_estate_it",
+    label: "Agenti immobiliari",
+    weight: 100,
+    status: "pilot",
+    template_id: "seller_it_v1",
+    example_answer: "Sono un agente immobiliare.",
+    headline: "Partiamo dagli agenti immobiliari.",
+    description: "È il primo settore che stiamo rendendo concreto: un template italiano per accogliere chi sta valutando di vendere, senza trasformare la conversazione in un questionario o in una pipeline.",
+  }],
 };
 
 export function LandingPage() {
@@ -18,6 +35,15 @@ export function LandingPage() {
   const imageY = useTransform(scrollYProgress, [0, 1], [0, reduceMotion ? 0 : 72]);
   const imageScale = useTransform(scrollYProgress, [0, 1], [1.025, reduceMotion ? 1.025 : 1.075]);
   const textOpacity = useTransform(scrollYProgress, [0, 0.75], [1, reduceMotion ? 1 : 0.25]);
+  const [positioning, setPositioning] = useState(fallbackPositioning);
+
+  useEffect(() => {
+    apiRequest<ProductPositioning>("/product/positioning")
+      .then(setPositioning)
+      .catch(() => undefined);
+  }, []);
+
+  const featuredVertical = positioning.featured_verticals[0] ?? fallbackPositioning.featured_verticals[0]!;
 
   return (
     <main className="landing">
@@ -40,13 +66,13 @@ export function LandingPage() {
           style={{ opacity: textOpacity }}
         >
           <motion.p variants={reveal} transition={{ duration: 0.5 }} className="eyebrow eyebrow--light">
-            Assistente AI per agenti immobiliari
+            Uno spazio AI per chi lavora con le persone
           </motion.p>
           <motion.h1 variants={reveal} transition={{ duration: 0.65 }} id="hero-title">
             La gente incontra <em>l’agente.</em>
           </motion.h1>
           <motion.p variants={reveal} transition={{ duration: 0.55 }} className="landing-hero__lead">
-            LAGGENTE è lo spazio digitale personale per professionisti immobiliari: accoglie le persone, mantiene il filo e ti coinvolge quando il tuo giudizio conta.
+            LAGGENTE è lo spazio digitale personale per professionisti: impara come lavori, accoglie le persone, mantiene il filo e ti coinvolge quando il tuo giudizio conta.
           </motion.p>
           <motion.div variants={reveal} transition={{ duration: 0.5 }} className="landing-hero__actions">
             <Link className="button button--paper" href="#come-funziona">
@@ -76,7 +102,7 @@ export function LandingPage() {
             <span className="manifesto__number">I</span>
             <div>
               <h3>Il professionista parla</h3>
-              <p>Nel suo Studio privato racconta territorio, metodo e modo di accogliere. Lo spazio prende forma senza una gabbia di campi.</p>
+              <p>Lo Studio parte da una domanda semplice — “{positioning.opening_question}” — poi impara metodo, conoscenza e modo di accogliere senza una gabbia di campi.</p>
             </div>
           </article>
           <article>
@@ -136,8 +162,28 @@ export function LandingPage() {
         </motion.div>
       </section>
 
+      <section className="featured-vertical" aria-labelledby="featured-vertical-title">
+        <div className="featured-vertical__conversation" aria-label="Esempio di specializzazione dello Studio">
+          <p><span>Studio</span>{positioning.opening_question}</p>
+          <p><span>Tu</span>{featuredVertical.example_answer}</p>
+          <small>Il backend seleziona e ordina i template di partenza.</small>
+        </div>
+        <motion.div
+          className="featured-vertical__content"
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.35 }}
+          transition={{ duration: 0.65 }}
+        >
+          <p className="section-index">04 / Primo settore · {featuredVertical.label}</p>
+          <h2 id="featured-vertical-title">{featuredVertical.headline}</h2>
+          <p>{featuredVertical.description}</p>
+          <div><i />Template del pilot, non confine del prodotto</div>
+        </motion.div>
+      </section>
+
       <section className="closing" aria-labelledby="closing-title">
-        <p className="section-index">04 / Per professionisti immobiliari</p>
+        <p className="section-index">05 / Per chi lavora con le persone</p>
         <h2 id="closing-title">Il tuo spazio,<br />aperto.</h2>
         <div className="closing__actions">
           <Link href={studioHref("/login")}>Accedi allo Studio <ArrowUpRightIcon /></Link>

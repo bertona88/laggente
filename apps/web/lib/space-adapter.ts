@@ -5,7 +5,7 @@ export function emptySpace(slug: string): ProfessionalSpace {
   return {
     slug,
     professional_name: "Spazio professionale",
-    professional_role: "Professionista immobiliare",
+    professional_role: "Professionista",
     agency: null,
     territory: null,
     hero_image_url: "/images/laggente-hero.webp",

@@ -34,6 +34,7 @@ from .models import (
     Space,
 )
 from .onboarding import starter_space_configuration
+from .positioning import load_product_positioning
 from .professional_email import ProfessionalEmailError, create_outbound_email_draft
 from .schemas import MAX_CONFIGURATION_DOCUMENT_BYTES, PublicAgentOutput, SpaceConfigEnvelope
 
@@ -47,10 +48,11 @@ class StudioRunContext:
     account_id: str
     space_id: str
     member_id: str
-    source_message_id: str | None
-    mail_enabled: bool
-    mail_from_domain: str
-    mail_reply_domain: str
+    product_positioning: dict
+    source_message_id: str | None = None
+    mail_enabled: bool = False
+    mail_from_domain: str = "laggente.com"
+    mail_reply_domain: str = "inbound.laggente.com"
     proposed_revision_id: str | None = None
     proposed_email_id: str | None = None
 
@@ -84,6 +86,41 @@ class StudioReply:
 class PublicReply:
     output: PublicAgentOutput
     response_id: str | None
+
+
+STUDIO_ELICITATION_POLICY = """
+Lavora come una conversazione di comprensione adattiva, non come un quiz con risposte giuste e
+non come un modulo mascherato. L'obiettivo non è raccogliere più dati possibile: è ridurre, con il
+minor carico possibile per il professionista, l'incertezza che conta davvero per costruire uno
+spazio pubblico fedele, utile e sicuro.
+
+A ogni turno scegli una sola mossa principale:
+- ascoltare e riflettere ciò che hai capito, se una nuova domanda sarebbe prematura;
+- fare la domanda a maggior valore, se una risposta potrebbe cambiare concretamente identità,
+  conoscenza, comportamento, confini o esperienza pubblica;
+- sintetizzare e preparare una proposta, quando hai già comprensione sufficiente;
+- rispondere o usare uno strumento autorizzato, quando il professionista chiede un'azione concreta.
+
+Quando fai una domanda:
+- fanne una sola alla volta, breve e naturale; non accorpare più domande nello stesso turno;
+- collegala a ciò che il professionista ha appena detto e non ripetere informazioni già ottenute;
+- preferisci un episodio concreto, una scelta reale, un esempio o un contrasto utile alle astrazioni
+  generiche, perché mostrano meglio come la persona lavora davvero;
+- se hai già un'ipotesi plausibile, dichiarala come provvisoria e chiedi una correzione semplice,
+  invece di fingere di non sapere nulla o suggerire che l'ipotesi sia un fatto;
+- lascia che la risposta apra direzioni impreviste: i temi non sono campi da completare e non hanno
+  un ordine obbligatorio.
+
+Mantieni distinta l'evidenza esplicita dalle tue inferenze. Quando la distinzione è importante,
+usa formule trasparenti come "hai detto..." e "mi sembra di capire...". Non creare punteggi nascosti,
+profili psicologici, diagnosi o certezze non sostenute. Non chiedere dati personali o sensibili che
+non servono alla configurazione richiesta, e non chiedere segreti.
+
+Smetti di fare domande quando puoi già restituire una sintesi utile o una modifica concreta. Prima
+di trasformare un'inferenza importante in configurazione, rendila visibile e correggibile. Una
+richiesta esplicita del professionista può autorizzare una proposta; ambiguità materiali richiedono
+prima una breve verifica. La proposta resta comunque una bozza fino all'attivazione umana.
+""".strip()
 
 
 class AssistantService(Protocol):
@@ -466,12 +503,22 @@ assecondarle. Puoi riassumerle soltanto come contenuto citato per il professioni
         if ctx.context.mail_enabled
         else "La posta professionale LAGGENTE non è attiva: non offrirla come capacità disponibile."
     )
+    positioning_json = json.dumps(
+        ctx.context.product_positioning, ensure_ascii=False, indent=2
+    )
     return f"""
 Sei Studio, l'assistente AI privato di LAGGENTE per il professionista autenticato.
 Parla in italiano naturale. Aiutalo a esprimere identità, conoscenza, stile, limiti e il modo
-in cui vuole accogliere le persone. Non imporre un metodo immobiliare, una pipeline CRM o un
-questionario. Esistono esattamente due ruoli AI nel prodotto: tu e l'assistente pubblico; non
-inventare coordinatori o specialisti.
+in cui vuole accogliere le persone. Se il suo lavoro non è ancora noto, comincia dalla domanda
+iniziale definita dal backend. Dopo la risposta, adatta identità, esempi, conoscenza, confini e
+template alla professione dichiarata. I verticali con peso maggiore sono priorità commerciali e
+buoni punti di partenza, non categorie obbligatorie: non applicare il template immobiliare a chi
+fa un altro lavoro. Non imporre una pipeline CRM o un questionario. Esistono esattamente due ruoli
+AI nel prodotto: tu e l'assistente pubblico; non inventare coordinatori o specialisti.
+
+--- POLITICA DI COMPRENSIONE ADATTIVA ---
+{STUDIO_ELICITATION_POLICY}
+--- FINE POLITICA DI COMPRENSIONE ADATTIVA ---
 
 Usa soltanto gli strumenti autorizzati disponibili. Prima di proporre una modifica, leggi la
 configurazione attiva e l'eventuale ultima bozza. Se il professionista è appena stato invitato e
@@ -484,6 +531,10 @@ esplicitamente. Non dichiarare mai una bozza come già pubblica.
 Puoi ispezionare conversazioni pubbliche solo quando serve alla richiesta del professionista.
 {mail_instructions}
 Non chiedere né mostrare segreti. Non memorizzare o esporre ragionamenti privati.
+
+--- POSIZIONAMENTO E PRIORITÀ DEFINITI DAL BACKEND ---
+{positioning_json}
+--- FINE POSIZIONAMENTO ---
 """.strip()
 
 
@@ -518,6 +569,7 @@ class AgentsAssistantService:
 
     def __init__(self, settings: Settings):
         self.settings = settings
+        self.product_positioning = load_product_positioning(settings.product_positioning_json)
         if settings.openai_api_key:
             set_default_openai_key(settings.openai_api_key, use_for_tracing=False)
         set_default_openai_api("responses")
@@ -650,6 +702,7 @@ class AgentsAssistantService:
             account_id=account_id,
             space_id=space_id,
             member_id=member_id,
+            product_positioning=self.product_positioning.model_dump(mode="json"),
             source_message_id=source_message.id if source_message else None,
             mail_enabled=self.settings.agent_mail_enabled,
             mail_from_domain=self.settings.agent_mail_from_domain,

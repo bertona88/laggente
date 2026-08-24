@@ -420,6 +420,7 @@ printf '%s\n' \
     'PILOT_NAME=Mauro Rossi' \
     'SEED_DEMO=true' \
     'AUTO_CREATE_SCHEMA=true' \
+    'PRODUCT_POSITIONING_JSON={"audience":"Professionisti","opening_question":"Che lavoro fai?","featured_verticals":[{"id":"real_estate_it","label":"Agenti immobiliari","weight":100,"status":"pilot","template_id":"seller_it_v1","example_answer":"Sono un agente immobiliare.","headline":"Partiamo dagli agenti immobiliari.","description":"Primo settore del pilot."}]}' \
     'OPENAI_API_KEY=validation-openai-key' \
     'OPENAI_MODEL=gpt-5.6' \
     'RESEND_API_KEY=' \
@@ -477,6 +478,7 @@ done
 grep -q '^CONVERSATION_RETENTION_DAYS=365$' "$application_env"
 grep -q '^PRIVACY_NOTICE_VERSION=2026-08-22[.]2$' "$application_env"
 grep -q '^AGENT_MAIL_ENABLED=false$' "$application_env"
+grep -q '^PRODUCT_POSITIONING_JSON={"audience":"Professionisti"' "$application_env"
 (
     # Exercise the same exact production-origin/host contract used by deploy and audit.
     # shellcheck source=production-lib.sh

@@ -6,6 +6,8 @@ from pathlib import Path
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from .positioning import load_product_positioning
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -41,6 +43,7 @@ class Settings(BaseSettings):
     pilot_email: str = Field(default="mauro@laggente.com", alias="PILOT_EMAIL")
     pilot_password: str | None = Field(default=None, alias="PILOT_PASSWORD")
     pilot_name: str = Field(default="Mauro Rossi", alias="PILOT_NAME")
+    product_positioning_json: str | None = Field(default=None, alias="PRODUCT_POSITIONING_JSON")
     seed_demo: bool = Field(default=True, alias="SEED_DEMO")
     auto_create_schema: bool = Field(default=True, alias="AUTO_CREATE_SCHEMA")
     openai_api_key: str | None = Field(default=None, alias="OPENAI_API_KEY")
@@ -136,6 +139,9 @@ class Settings(BaseSettings):
         return "__Host-laggente_visitor" if self.cookie_secure else "laggente_visitor"
 
     def validate_runtime(self) -> None:
+        # Product focus is backend-owned and must fail closed before serving inconsistent copy or
+        # assistant guidance. Operators can change weights and examples without rebuilding the SPA.
+        load_product_positioning(self.product_positioning_json)
         if self.agent_mail_enabled:
             if self.agent_mail_provider not in {"capture", "resend", "ses"}:
                 raise RuntimeError("AGENT_MAIL_PROVIDER must be capture, resend, or ses")
