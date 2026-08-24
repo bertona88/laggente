@@ -34,13 +34,13 @@ export function TermsPage() {
       <article>
         <p className="section-index">Pilot LAGGENTE</p>
         <h1>Una conversazione, non una consulenza automatica.</h1>
-        <p className="legal-page__lead">LAGGENTE aiuta a iniziare e continuare una conversazione con un professionista immobiliare. L’assistente AI non sostituisce il giudizio del professionista.</p>
+        <p className="legal-page__lead">LAGGENTE aiuta a iniziare e continuare una conversazione con un professionista. L’assistente AI non sostituisce il suo giudizio.</p>
         <h2>Identità trasparente</h2>
-        <p>L’assistente dichiara sempre di essere un sistema di intelligenza artificiale. Non può assumere impegni, confermare appuntamenti, produrre valutazioni immobiliari o parlare come se fosse il professionista.</p>
+        <p>L’assistente dichiara sempre di essere un sistema di intelligenza artificiale. Non può assumere impegni, confermare appuntamenti, sostituire una valutazione professionale o parlare come se fosse il professionista.</p>
         <h2>Uso responsabile</h2>
         <p>Condividi soltanto informazioni pertinenti. Non caricare documenti d’identità, dati di pagamento o materiali di terzi senza averne il diritto.</p>
         <h2>Risposte e verifiche</h2>
-        <p>Le risposte dell’AI possono essere incomplete o inesatte. Le decisioni immobiliari, legali, fiscali o economiche richiedono una verifica con professionisti qualificati.</p>
+        <p>Le risposte dell’AI possono essere incomplete o inesatte. Le decisioni professionali, legali, fiscali, sanitarie o economiche richiedono una verifica con persone qualificate.</p>
         <p className="legal-page__notice">Queste condizioni sintetiche accompagnano il pilot e saranno sostituite dalle condizioni complete prima dell’apertura pubblica.</p>
       </article>
     </main>

@@ -100,6 +100,7 @@ def seed_demo_data(db: Session, settings: Settings) -> None:
         professional_name=settings.pilot_name,
         agency="Mauro Immobiliare",
         territory="Roma Nord",
+        public_role="agente immobiliare",
     )
     db.add(space)
     db.flush()
@@ -135,7 +136,9 @@ def seed_demo_data(db: Session, settings: Settings) -> None:
                 content=(
                     "Ciao Mauro. Questo è il tuo Studio privato: qui possiamo modellare insieme "
                     "il modo in cui il tuo spazio accoglie le persone. Le modifiche restano in "
-                    "bozza finché non decidi esplicitamente di attivarle."
+                    "bozza finché non decidi esplicitamente di attivarle. Il template immobiliare "
+                    "è il punto di partenza del pilot, non un limite di LAGGENTE. Qual è un episodio "
+                    "recente in cui il tuo modo di lavorare ha fatto davvero la differenza?"
                 ),
             ),
             Message(

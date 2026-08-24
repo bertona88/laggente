@@ -16,7 +16,7 @@ import { InlineError, LoadingLine } from "@/components/status";
 import { apiRequest, normalizeMessages, resolveMessageResponse } from "@/lib/api";
 import { createClientMessageAttemptTracker } from "@/lib/client-message-id";
 import { confirmConversationDeletion } from "@/lib/conversation-deletion";
-import { formatDateTime, formatTime } from "@/lib/format";
+import { formatDateTime, formatTime, initials } from "@/lib/format";
 import type { ConversationMessage, MemoryItem, StudioConversationDetail } from "@/lib/types";
 import { startVisiblePolling } from "@/lib/visible-polling";
 import { isNearThreadBottom, shouldAutoScrollThread } from "@/lib/thread-scroll";
@@ -26,7 +26,7 @@ function normalizeDetail(value: unknown, id: string): StudioConversationDetail {
   const conversation = (object.conversation && typeof object.conversation === "object" ? object.conversation : object) as Record<string, unknown>;
   return {
     id: String(conversation.id || id),
-    space_slug: String(conversation.space_slug || "mauro"),
+    space_slug: String(conversation.space_slug || "spazio"),
     messages: normalizeMessages(object.messages || conversation.messages),
     visitor_name: String(conversation.visitor_name || object.visitor_name || "") || null,
     summary: String(conversation.summary || object.summary || "") || null,
@@ -45,7 +45,7 @@ export function ThreadMessage({ message }: { message: ConversationMessage }) {
   const ai = message.author_type === "public_assistant";
   return (
     <motion.article layout initial={{ opacity: 0, y: 6 }} animate={{ opacity: message.pending ? 0.55 : 1, y: 0 }} className={`detail-message detail-message--${message.author_type}`} id={`message-${message.id}`}>
-      {(human || ai) && <span className={`speaker-mark speaker-mark--${human ? "human" : "ai"}`}>{human ? "M" : "AI"}</span>}
+      {(human || ai) && <span className={`speaker-mark speaker-mark--${human ? "human" : "ai"}`}>{human ? initials(message.author_name) : "AI"}</span>}
       <div>
         <header><strong>{message.author_name}</strong><time dateTime={message.created_at}>{formatTime(message.created_at)}</time></header>
         <ConversationPhoto attachment={message.attachment} surface="studio" />
@@ -104,6 +104,7 @@ export function ConversationDetail({ conversationId }: { conversationId: string 
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [contextOpen, setContextOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [professionalName, setProfessionalName] = useState("Il professionista");
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const threadRef = useRef<HTMLDivElement>(null);
@@ -131,6 +132,11 @@ export function ConversationDetail({ conversationId }: { conversationId: string 
   }, [conversationId]);
 
   useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    apiRequest<{ space?: { professional_name?: string } }>("/studio/space")
+      .then((result) => setProfessionalName(result.space?.professional_name || "Il professionista"))
+      .catch(() => undefined);
+  }, []);
   useEffect(() => startVisiblePolling(
     () => {
       if (sending || joinBusy || controlBusy) return;
@@ -156,7 +162,7 @@ export function ConversationDetail({ conversationId }: { conversationId: string 
     const content = input.trim();
     if (!content || sending || !detail) return;
     const clientMessageId = attemptTrackerRef.current.idFor(content);
-    const optimistic: ConversationMessage = { id: `pending-${clientMessageId}`, author_type: "professional", author_name: "Mauro Rossi", content, created_at: new Date().toISOString(), pending: true };
+    const optimistic: ConversationMessage = { id: `pending-${clientMessageId}`, author_type: "professional", author_name: professionalName, content, created_at: new Date().toISOString(), pending: true };
     setDetail({ ...detail, messages: [...detail.messages, optimistic], professional_present: true, automatic_replies_enabled: false });
     setJoined(true);
     setInput("");
@@ -233,10 +239,10 @@ export function ConversationDetail({ conversationId }: { conversationId: string 
     <section className="conversation-detail">
       <header className="detail-header">
         <Link href="/studio/conversazioni" aria-label="Torna alle conversazioni"><ArrowLeftIcon /></Link>
-        <div><p>Conversazione pubblica</p><h1>{visitorName}</h1><span>{detail.updated_at ? `Ultimo aggiornamento ${formatDateTime(detail.updated_at)}` : "Spazio di Mauro"}</span></div>
+        <div><p>Conversazione pubblica</p><h1>{visitorName}</h1><span>{detail.updated_at ? `Ultimo aggiornamento ${formatDateTime(detail.updated_at)}` : `Spazio di ${professionalName}`}</span></div>
         <button type="button" className="detail-context-toggle" onClick={() => setContextOpen(true)} aria-expanded={contextOpen} aria-controls="conversation-context"><SparkIcon /> Contesto</button>
         <div className={`assistant-control${detail.automatic_replies_enabled ? " is-on" : " is-paused"}`}>
-          <div><i /><span><strong>{detail.automatic_replies_enabled ? "Assistente attivo" : "Assistente in pausa"}</strong><small>{detail.automatic_replies_enabled ? "Può rispondere automaticamente" : "Risponde solo Mauro"}</small></span></div>
+          <div><i /><span><strong>{detail.automatic_replies_enabled ? "Assistente attivo" : "Assistente in pausa"}</strong><small>{detail.automatic_replies_enabled ? "Può rispondere automaticamente" : `Risponde solo ${professionalName}`}</small></span></div>
           <button type="button" disabled={controlBusy} onClick={() => void setAssistant(!detail.automatic_replies_enabled)}>
             {detail.automatic_replies_enabled ? <><PauseIcon /> Metti in pausa</> : <><PlayIcon /> Riattiva</>}
           </button>
@@ -259,17 +265,17 @@ export function ConversationDetail({ conversationId }: { conversationId: string 
           </div>
           {!joined && (
             <motion.div className="join-prompt" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-              <span className="speaker-mark speaker-mark--human">M</span>
+              <span className="speaker-mark speaker-mark--human">{initials(professionalName)}</span>
               <div><strong>Vuoi entrare nella conversazione?</strong><p>Il tuo primo messaggio sarà firmato da te e metterà in pausa le risposte automatiche.</p></div>
-              <button type="button" disabled={joinBusy} onClick={() => void joinConversation()}>{joinBusy ? "Ingresso…" : "Entra come Mauro"}</button>
+              <button type="button" disabled={joinBusy} onClick={() => void joinConversation()}>{joinBusy ? "Ingresso…" : `Entra come ${professionalName}`}</button>
             </motion.div>
           )}
           <AnimatePresence>
             {joined && (
               <motion.form className="professional-composer" onSubmit={submit} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-                <div className="professional-composer__identity"><span>M</span><strong>Stai scrivendo come Mauro Rossi</strong></div>
-                <textarea ref={inputRef} value={input} onChange={(event) => { attemptTrackerRef.current.invalidate(); setInput(event.target.value); }} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} rows={2} placeholder="Scrivi alla persona…" aria-label="Messaggio di Mauro" />
-                <div><span>L’assistente andrà in pausa automaticamente.</span><button type="submit" disabled={sending || !input.trim()}>{sending ? "Invio…" : "Invia come Mauro"}<SendIcon /></button></div>
+                <div className="professional-composer__identity"><span>{initials(professionalName)}</span><strong>Stai scrivendo come {professionalName}</strong></div>
+                <textarea ref={inputRef} value={input} onChange={(event) => { attemptTrackerRef.current.invalidate(); setInput(event.target.value); }} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} rows={2} placeholder="Scrivi alla persona…" aria-label={`Messaggio di ${professionalName}`} />
+                <div><span>L’assistente andrà in pausa automaticamente.</span><button type="submit" disabled={sending || !input.trim()}>{sending ? "Invio…" : `Invia come ${professionalName}`}<SendIcon /></button></div>
               </motion.form>
             )}
           </AnimatePresence>

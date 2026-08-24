@@ -23,7 +23,7 @@ export function PublicMiniPreview({ revision, fallbackName = "il professionista"
     <div className="mini-preview" aria-label="Anteprima dello spazio pubblico">
       <div className="mini-preview__visual">
         <img src={preview.hero_image_url || "/images/laggente-hero.webp"} alt="" />
-        <div><span>{preview.territory || "Roma Nord"}</span><strong>{name}</strong><small>{preview.professional_role || "Agente immobiliare"}</small></div>
+        <div><span>{preview.territory || "Il tuo territorio"}</span><strong>{name}</strong><small>{preview.professional_role || "Professionista"}</small></div>
       </div>
       <div className="mini-preview__chat">
         <p><i>AI</i><strong>LAGGENTE — assistente AI di {name}</strong></p>
