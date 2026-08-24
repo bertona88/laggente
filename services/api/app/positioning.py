@@ -92,7 +92,11 @@ DEFAULT_PRODUCT_POSITIONING = {
             "weight": 100,
             "status": "pilot",
             "template_id": "seller_it_v1",
-            "example_answer": "Sono un agente immobiliare.",
+            "example_answer": (
+                "Sono un agente immobiliare a Roma Nord. Prima di valutare un immobile "
+                "controllo titolo di provenienza, conformità urbanistica e catastale, APE, "
+                "occupazione e vincoli."
+            ),
             "headline": "Partiamo dagli agenti immobiliari.",
             "description": (
                 "È il primo settore che stiamo rendendo concreto: un template italiano per "

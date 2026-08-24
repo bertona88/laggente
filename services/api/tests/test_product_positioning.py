@@ -17,6 +17,7 @@ def test_public_positioning_is_generic_with_real_estate_weighted_first(client):
     assert "Professionisti" in body["audience"]
     assert body["featured_verticals"][0]["id"] == "real_estate_it"
     assert body["featured_verticals"][0]["template_id"] == "seller_it_v1"
+    assert "conformità urbanistica e catastale" in body["featured_verticals"][0]["example_answer"]
     assert "graph_sets" not in body["featured_verticals"][0]
 
 
