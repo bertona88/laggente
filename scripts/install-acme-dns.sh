@@ -36,6 +36,18 @@ cleanup() {
 }
 trap cleanup EXIT HUP INT TERM
 
+wait_for_health() {
+    for _ in {1..20}; do
+        if curl --fail --silent --max-time 2 \
+            http://127.0.0.1:5399/health >/dev/null 2>&1; then
+            return 0
+        fi
+        sleep 0.5
+    done
+    printf 'acme-dns health endpoint did not become ready\n' >&2
+    return 1
+}
+
 curl --fail --silent --show-error --location \
     --output "$install_tmp/$acme_dns_archive" "$acme_dns_url"
 printf '%s  %s\n' "$acme_dns_sha256" "$install_tmp/$acme_dns_archive" | sha256sum --check --status
@@ -69,13 +81,7 @@ if [[ ! -s "$credentials_path" ]]; then
     install -m 0640 -o root -g acme_dns "$registration_config" "$config_path"
     systemctl enable --now acme-dns.service
 
-    for _ in {1..20}; do
-        if curl --fail --silent --show-error --max-time 2 \
-            http://127.0.0.1:5399/health >/dev/null; then
-            break
-        fi
-        sleep 0.5
-    done
+    wait_for_health
     curl --fail --silent --show-error \
         --header 'Content-Type: application/json' \
         --data '{"allowfrom":["127.0.0.1/32"]}' \
@@ -100,9 +106,9 @@ install -m 0640 -o root -g acme_dns \
     "$repo_root/infra/acme-dns/config.cfg" "$config_path"
 systemctl enable acme-dns.service
 systemctl restart acme-dns.service
-curl --fail --silent --show-error --max-time 5 \
-    http://127.0.0.1:5399/health >/dev/null
+wait_for_health
 registration_status=$(curl --silent --output /dev/null --write-out '%{http_code}' \
+    --max-time 5 \
     --header 'Content-Type: application/json' --data '{}' \
     http://127.0.0.1:5399/register)
 if [[ "$registration_status" != 404 ]]; then
@@ -115,8 +121,7 @@ if [[ ! -s "$registration_backup" ]]; then
     install -m 0600 -o root -g root \
         /var/lib/acme-dns/acme-dns.db "$registration_backup"
     systemctl start acme-dns.service
-    curl --fail --silent --show-error --max-time 5 \
-        http://127.0.0.1:5399/health >/dev/null
+    wait_for_health
 fi
 
 fulldomain=$(jq -r '.fulldomain' "$credentials_path")
