@@ -11,8 +11,8 @@ from ..config import Settings
 from ..database import get_db
 from ..dependencies import ProfessionalContext, current_professional, runtime_settings
 from ..email import EmailDeliveryError
-from ..models import Account, Conversation, Event, MagicLink, Member, Message, Space
-from ..onboarding import pending_space_slug
+from ..models import Account, Event, MagicLink, Member, Space
+from ..onboarding import provision_private_professional_space
 from ..rate_limit import client_ip
 from ..schemas import ProfessionalInvitationCreate, ProfessionalInvitationOut
 from ..security import TokenSigner, hash_ip, hash_token
@@ -76,54 +76,14 @@ async def invite_professional(
             raise HTTPException(status_code=409, detail="Invito non disponibile")
     else:
         invitation_status = "sent"
-        target_account = Account(name="Spazio professionale in preparazione")
-        db.add(target_account)
-        db.flush()
-        target_member = Member(
-            account_id=target_account.id,
+        provisioned = provision_private_professional_space(
+            db,
             email=email,
-            display_name="Professionista invitato",
-            role="professional",
-            password_hash=None,
-            is_active=True,
-            can_invite=False,
-        )
-        db.add(target_member)
-        target_space = Space(
-            account_id=target_account.id,
-            slug=pending_space_slug(),
-            professional_name="Professionista invitato",
-            agency=None,
-            territory=None,
-            public_role="agente immobiliare",
-            locale="it-IT",
-            is_active=False,
-            slug_claimed=False,
             onboarding_state="invited",
         )
-        db.add(target_space)
-        db.flush()
-        studio = Conversation(
-            account_id=target_account.id,
-            space_id=target_space.id,
-            kind="studio",
-            title="Costruiamo il tuo spazio",
-        )
-        db.add(studio)
-        db.flush()
-        db.add(
-            Message(
-                account_id=target_account.id,
-                conversation_id=studio.id,
-                author_type="studio_assistant",
-                author_label="Studio — assistente AI",
-                content=(
-                    "Ti diamo il benvenuto nel tuo Studio privato. Raccontami chi sei, dove "
-                    "lavori e che esperienza vuoi creare per le persone: preparerò una prima "
-                    "bozza, ma nulla diventerà pubblico finché non la attiverai tu."
-                ),
-            )
-        )
+        target_account = provisioned.account
+        target_member = provisioned.member
+        target_space = provisioned.space
 
     expires_at = datetime.now(UTC) + timedelta(seconds=settings.invitation_ttl_seconds)
     token = TokenSigner(settings.session_secret).issue(

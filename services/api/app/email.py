@@ -66,6 +66,28 @@ class AuthEmailSender:
             ),
         )
 
+    async def send_signup_link(self, recipient: str, signup_link: str) -> None:
+        safe_link = html.escape(signup_link, quote=True)
+        await self._send(
+            recipient,
+            "Entra o crea il tuo spazio su LAGGENTE",
+            (
+                "<p>Usa questo link per entrare in LAGGENTE.</p>"
+                "<p>Se è il tuo primo accesso, creeremo il tuo Studio privato soltanto dopo "
+                "che avrai verificato l'indirizzo.</p>"
+                f'<p><a href="{safe_link}">Entra in LAGGENTE</a></p>'
+                "<p>Il link scade tra 15 minuti e può essere usato una sola volta. "
+                "Nulla diventa pubblico senza una tua attivazione esplicita.</p>"
+            ),
+            (
+                "Usa questo link per entrare in LAGGENTE:\n\n"
+                f"{signup_link}\n\n"
+                "Se è il tuo primo accesso, creeremo il tuo Studio privato soltanto dopo "
+                "che avrai verificato l'indirizzo. Il link scade tra 15 minuti e può essere "
+                "usato una sola volta. Nulla diventa pubblico senza una tua attivazione esplicita."
+            ),
+        )
+
     async def send_professional_invitation(
         self, recipient: str, invitation_link: str, inviter_name: str
     ) -> None:

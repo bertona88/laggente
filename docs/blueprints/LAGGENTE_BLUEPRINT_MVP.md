@@ -1,10 +1,10 @@
 # LAGGENTE
 
-## Profession-agnostic product blueprint 0.4
+## Profession-agnostic product blueprint 0.5
 
 **Status:** Current MVP blueprint
-**Date:** 2026-08-23
-**Supersedes:** Agentic product blueprint 0.3
+**Date:** 2026-08-24
+**Supersedes:** Profession-agnostic product blueprint 0.4
 
 ---
 
@@ -92,11 +92,13 @@ Indicative URL: `app.laggente.com`
 
 The Studio is the first product experience. The professional signs in, creates their professional identity, chooses an available username that becomes their public subdomain, and shapes the public space through conversation rather than a settings maze.
 
-During the pilot, entry is invitation-only. A member with explicit platform invitation permission
-can send a new professional a single-use magic link. The application creates a dormant tenant
-before the link is opened, so the recipient enters their own private Studio immediately. The
-invitation permission does not propagate to invited members, and the dormant space cannot resolve
-publicly until its recipient claims a slug and activates a first revision.
+Entry is open and email-first. A new professional requests a short-lived, single-use verification
+link; no tenant exists until the recipient proves control of the address by consuming it. LAGGENTE
+then creates an isolated private Studio and inactive placeholder space. A returning professional
+uses the same form to receive an ordinary login link. Members with explicit platform invitation
+permission may still send curated invitations, but that permission does not propagate and is no
+longer required to start. No new space resolves publicly until its professional claims a slug and
+activates a first revision.
 
 When the work is not yet known, the Studio begins with “Che lavoro fai?”. It then asks useful questions about the professional's context, territory, work, style, knowledge, preferences, and desired visitor experience. It follows the conversation rather than forcing every professional through the same onboarding fields or order.
 
@@ -417,8 +419,8 @@ This blueprint is a product specification, not legal advice.
 The product begins on the professional side and becomes real through the public side:
 
 1. Mauro remains the seeded first tenant and signs in through the configured secure pilot method.
-2. A pilot member with invitation permission enters Giulia's email address in Studio.
-3. LAGGENTE creates a separate dormant account, member, private Studio thread, and inactive space, then sends Giulia a signed single-use invitation link.
+2. Giulia enters her email address and LAGGENTE sends a signed, single-use verification link without creating a tenant.
+3. Giulia opens the link; only then does LAGGENTE create her separate account, member, private Studio thread, and inactive space.
 4. Giulia opens the link and says naturally: “Sono Giulia Bianchi, lavoro principalmente a Milano Porta Romana…”
 5. The Italian Studio turns that conversation into an extensible first draft without reducing Giulia to a fixed form or publishing anything silently.
 6. Giulia chooses the available username `giulia`, reserving `giulia.laggente.com` globally.
@@ -428,11 +430,11 @@ The product begins on the professional side and becomes real through the public 
 10. A visitor starts a natural, persistent Italian conversation without creating an account.
 11. The resulting conversation and derived, correctable context are privately available only to Giulia's account.
 12. Giulia can join the same thread as a visible human; automatic AI replies pause when she writes and can be explicitly re-enabled.
-13. After the invitation has been consumed, Giulia can return through an ordinary magic-link login without receiving another invitation.
+13. Giulia returns through the same email form and receives an ordinary magic-link login.
 
 The experience is successful when these facts are obvious without a technical explanation:
 
-- a new professional received an invitation and created a genuinely separate space by talking;
+- a new professional verified an email and created a genuinely separate space by talking;
 - the public assistant changed because that professional activated a configuration revision;
 - Giulia's configuration could express what mattered without becoming a rigid professional profile;
 - `giulia.laggente.com` required no Giulia-specific code, deployment, DNS record, or application configuration;
@@ -465,7 +467,7 @@ The initial commercial signal remains qualified valuation appointments per profe
 
 ## 19. What this product is not trying to be
 
-- billing and public self-service signup;
+- billing and paid checkout;
 - native WhatsApp integration;
 - property portals and search;
 - automated valuation presented as certainty;

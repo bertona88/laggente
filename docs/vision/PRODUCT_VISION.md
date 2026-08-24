@@ -18,6 +18,11 @@ The shared space is the product. It contains the professional's identity and kno
 
 The experience begins with the professional creating that space. They choose their public identity and subdomain, then teach the private Studio who they are and what the space should become through open conversation. The public assistant is the resulting space in use, not a generic visitor chatbot built before the professional side.
 
+Professional entry is open and email-first. An unknown address receives a short-lived, single-use
+verification link; LAGGENTE creates the private tenant only when the link is consumed. Existing
+professionals return through the same form. No public hostname resolves until the professional
+claims a slug and explicitly activates a configuration revision.
+
 ## Two conversational assistants
 
 LAGGENTE does contain two chatbot-like interfaces. That is not something to disguise.

@@ -113,7 +113,9 @@ def test_invite_build_publish_and_operate_a_second_tenant(client, app):
         "/api/v1/auth/magic-link/request", json={"email": "giulia@example.com"}
     )
     assert premature_login.status_code == 200
-    assert premature_login.json()["development_magic_link"] is None
+    assert _fragment_token(
+        premature_login.json()["development_magic_link"], "signup"
+    )
 
     with database.SessionLocal() as db:
         mauro = db.scalar(select(Member).where(Member.email == "mauro@laggente.com"))

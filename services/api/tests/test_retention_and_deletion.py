@@ -7,8 +7,12 @@ from pathlib import Path
 from sqlalchemy import func, select
 
 from app import database
-from app.models import Attachment, Conversation, Event, MemoryItem, Message, utcnow
-from app.retention import delete_conversation_data, purge_all_expired_conversations
+from app.models import Attachment, Conversation, Event, MemoryItem, Message, SignupLink, utcnow
+from app.retention import (
+    delete_conversation_data,
+    purge_all_expired_conversations,
+    purge_expired_signup_links,
+)
 
 
 PNG = b"\x89PNG\r\n\x1a\n" + b"p" * 24
@@ -167,6 +171,33 @@ def test_automatic_retention_cycle_applies_policy_without_an_authenticated_reque
             )
         )
         assert outcome is not None
+
+
+def test_expired_pre_tenant_signup_proofs_are_purged_after_one_day(client):
+    now = utcnow()
+    with database.SessionLocal() as db:
+        expired = SignupLink(
+            email="expired@example.com",
+            token_hash="e" * 64,
+            expires_at=now - timedelta(days=1, seconds=1),
+        )
+        current = SignupLink(
+            email="current@example.com",
+            token_hash="c" * 64,
+            expires_at=now - timedelta(hours=23),
+        )
+        db.add_all([expired, current])
+        db.commit()
+        expired_id = expired.id
+        current_id = current.id
+
+    with database.SessionLocal() as db:
+        deleted = purge_expired_signup_links(db, now=now)
+
+    assert deleted == 1
+    with database.SessionLocal() as db:
+        assert db.get(SignupLink, expired_id) is None
+        assert db.get(SignupLink, current_id) is not None
 
 
 def test_retention_rechecks_cutoff_after_lock_before_deleting(client):

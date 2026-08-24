@@ -26,6 +26,7 @@ from .retention import (
     discard_stale_transcription_reservations,
     discard_stale_unbound_attachments,
     purge_all_expired_conversations,
+    purge_expired_signup_links,
 )
 from .routes import attachments, auth, invitations, product, professional_mail, public, studio
 from .schemas import VersionOut
@@ -57,14 +58,20 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
         retention_stop = asyncio.Event()
 
-        def run_retention_cycle() -> tuple[int, int, int]:
+        def run_retention_cycle() -> tuple[int, int, int, int]:
             with database.SessionLocal() as db:
                 stale_audio = discard_stale_transcription_reservations(db)
                 stale_attachments = discard_stale_unbound_attachments(db, runtime_settings)
+                expired_signup_links = purge_expired_signup_links(db)
                 expired_conversations = len(
                     purge_all_expired_conversations(db, runtime_settings)
                 )
-                return expired_conversations, stale_audio, stale_attachments
+                return (
+                    expired_conversations,
+                    stale_audio,
+                    stale_attachments,
+                    expired_signup_links,
+                )
 
         async def retention_worker() -> None:
             try:
@@ -76,16 +83,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 pass
             while not retention_stop.is_set():
                 try:
-                    deleted, stale_audio, stale_attachments = await asyncio.to_thread(
-                        run_retention_cycle
+                    deleted, stale_audio, stale_attachments, expired_signup_links = (
+                        await asyncio.to_thread(run_retention_cycle)
                     )
-                    if deleted or stale_audio or stale_attachments:
+                    if deleted or stale_audio or stale_attachments or expired_signup_links:
                         logger.info(
                             "automatic retention deleted %s conversations, %s stale audio "
-                            "reservations, and %s abandoned attachments",
+                            "reservations, %s abandoned attachments, and %s expired signup links",
                             deleted,
                             stale_audio,
                             stale_attachments,
+                            expired_signup_links,
                         )
                 except Exception:
                     # A transient database/filesystem failure must be visible but must not take the

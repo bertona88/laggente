@@ -79,7 +79,7 @@ export function LandingPage() {
               Guarda come nasce <ArrowRightIcon />
             </Link>
             <Link className="landing-hero__studio-link" href={studioHref("/login")}>
-              Studio per professionisti <ArrowUpRightIcon />
+              Crea il tuo spazio <ArrowUpRightIcon />
             </Link>
           </motion.div>
         </motion.div>
@@ -251,10 +251,10 @@ export function LandingPage() {
       </section>
 
       <section className="closing" aria-labelledby="closing-title">
-        <p className="section-index">Pilot su invito</p>
+        <p className="section-index">Aperto ai professionisti</p>
         <h2 id="closing-title">Prima parli tu.<br />Poi la gente incontra l’agente.</h2>
         <div className="closing__actions">
-          <Link href={studioHref("/login")}>Studio per professionisti <ArrowUpRightIcon /></Link>
+          <Link href={studioHref("/login")}>Crea il tuo spazio <ArrowUpRightIcon /></Link>
           <Link href="#come-funziona">Rivedi come funziona <ArrowRightIcon /></Link>
         </div>
       </section>

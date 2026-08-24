@@ -4,14 +4,15 @@ from datetime import UTC, datetime, timedelta
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from sqlalchemy import select, update
+from sqlalchemy import select, text, update
 from sqlalchemy.orm import Session
 
 from ..config import Settings
 from ..database import get_db
 from ..dependencies import current_professional, runtime_settings
 from ..email import EmailDeliveryError
-from ..models import Event, MagicLink, Member, Space, utcnow
+from ..models import Event, MagicLink, Member, SignupLink, Space, new_id, utcnow
+from ..onboarding import provision_private_professional_space
 from ..rate_limit import client_ip
 from ..schemas import (
     MagicLinkConsume,
@@ -60,19 +61,19 @@ async def request_magic_link(
     db: Session = Depends(get_db),
     settings: Settings = Depends(runtime_settings),
 ) -> MagicLinkRequestOut:
+    email = str(body.email).strip().lower()
     request.app.state.rate_limiter.check(
         f"magic:{client_ip(request)}", limit=8, window_seconds=15 * 60
     )
+    request.app.state.rate_limiter.check(
+        f"magic-email:{hash_token(email)}", limit=3, window_seconds=60 * 60
+    )
     member = db.scalar(
-        select(Member).where(Member.email == body.email.lower(), Member.is_active.is_(True))
+        select(Member).where(Member.email == email, Member.is_active.is_(True))
     )
     development_link = None
-    # An unaccepted invitation must still use its purpose-bound token. Unknown or not-yet-accepted
-    # addresses receive the same response without a login token so this endpoint cannot enumerate
-    # members. An authorized password-backed pilot member may still use a magic link for recovery.
     member_space = _member_space(db, member) if member else None
-    invitation_accepted = not member_space or member_space.onboarding_state != "invited"
-    if member and invitation_accepted:
+    if member and member_space and member_space.onboarding_state != "invited":
         signer = TokenSigner(settings.session_secret)
         token = signer.issue(
             "magic_link",
@@ -98,7 +99,144 @@ async def request_magic_link(
             raise HTTPException(status_code=503, detail="Invio email temporaneamente non disponibile")
         if not settings.is_production:
             development_link = magic_link
+    elif not member or (member_space and member_space.onboarding_state == "invited"):
+        # Unknown addresses receive a pre-tenant proof, not an account. Existing invited members
+        # can use the same self-service entry path without asking the original inviter to resend.
+        request.app.state.rate_limiter.check(
+            "signup:new", limit=60, window_seconds=60 * 60
+        )
+        signup_link_id = new_id()
+        token = TokenSigner(settings.session_secret).issue(
+            "professional_signup",
+            settings.magic_link_ttl_seconds,
+            signup_link_id=signup_link_id,
+        )
+        record = SignupLink(
+            id=signup_link_id,
+            email=email,
+            token_hash=hash_token(token),
+            expires_at=datetime.now(UTC) + timedelta(seconds=settings.magic_link_ttl_seconds),
+            requested_ip_hash=hash_ip(client_ip(request), settings.session_secret),
+        )
+        db.add(record)
+        db.commit()
+        signup_link = f"{settings.app_origin.rstrip('/')}/login#signup={quote(token)}"
+        try:
+            await request.app.state.email_sender.send_signup_link(email, signup_link)
+        except EmailDeliveryError:
+            raise HTTPException(status_code=503, detail="Invio email temporaneamente non disponibile")
+        if not settings.is_production:
+            development_link = signup_link
     return MagicLinkRequestOut(development_magic_link=development_link)
+
+
+@router.post("/signup/consume", response_model=SessionOut)
+def consume_professional_signup(
+    body: MagicLinkConsume,
+    response: Response,
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(runtime_settings),
+) -> SessionOut:
+    try:
+        claims = TokenSigner(settings.session_secret).verify(body.token, "professional_signup")
+    except TokenError:
+        raise HTTPException(status_code=401, detail="Link non valido o scaduto")
+    signup_link_id = claims.get("signup_link_id")
+    consumed_at = utcnow()
+    signup_link = db.scalar(
+        select(SignupLink).where(
+            SignupLink.id == signup_link_id,
+            SignupLink.token_hash == hash_token(body.token),
+        )
+    )
+    if not signup_link:
+        raise HTTPException(status_code=401, detail="Link non valido o scaduto")
+    if db.get_bind().dialect.name == "postgresql":
+        # Serialize every consume for one email before touching any sibling link. Without this,
+        # two different valid links could race while both still observe no member. The account
+        # uniqueness constraint remains the backstop; this lock makes the user-facing outcome
+        # deterministic on the production database.
+        db.execute(
+            text("SELECT pg_advisory_xact_lock(hashtextextended(:email, 0))"),
+            {"email": signup_link.email},
+        )
+    consume_result = db.execute(
+        update(SignupLink)
+        .where(
+            SignupLink.id == signup_link.id,
+            SignupLink.token_hash == hash_token(body.token),
+            SignupLink.consumed_at.is_(None),
+            SignupLink.expires_at > consumed_at,
+        )
+        .values(consumed_at=consumed_at)
+        .execution_options(synchronize_session=False)
+    )
+    if consume_result.rowcount != 1:
+        db.rollback()
+        raise HTTPException(status_code=401, detail="Link non valido, scaduto o già usato")
+
+    member = db.scalar(
+        select(Member).where(Member.email == signup_link.email).with_for_update()
+    )
+    created_account = member is None
+    if member:
+        if not member.is_active:
+            db.rollback()
+            raise HTTPException(status_code=401, detail="Accesso non disponibile")
+        space = _member_space(db, member)
+        if not space:
+            db.rollback()
+            raise HTTPException(status_code=401, detail="Accesso non disponibile")
+        if space.onboarding_state == "invited":
+            space.onboarding_state = "building"
+            db.execute(
+                update(MagicLink)
+                .where(
+                    MagicLink.member_id == member.id,
+                    MagicLink.account_id == member.account_id,
+                    MagicLink.purpose == "professional_invitation",
+                    MagicLink.consumed_at.is_(None),
+                )
+                .values(consumed_at=consumed_at)
+                .execution_options(synchronize_session=False)
+            )
+    else:
+        provisioned = provision_private_professional_space(
+            db,
+            email=signup_link.email,
+            onboarding_state="building",
+        )
+        member = provisioned.member
+        space = provisioned.space
+
+    # Consuming one verified link invalidates every sibling issued for the same address.
+    db.execute(
+        update(SignupLink)
+        .where(
+            SignupLink.email == signup_link.email,
+            SignupLink.consumed_at.is_(None),
+        )
+        .values(consumed_at=consumed_at)
+        .execution_options(synchronize_session=False)
+    )
+    db.add(
+        Event(
+            account_id=member.account_id,
+            space_id=space.id,
+            actor_type="professional",
+            actor_id=member.id,
+            event_type="professional_signup_completed",
+            payload={
+                "created_account": created_account,
+                "onboarding_state": space.onboarding_state,
+            },
+        )
+    )
+    db.commit()
+    set_session_cookie(
+        response, settings, issue_session_token(settings, member.id, member.account_id)
+    )
+    return _session_out(db, member)
 
 
 @router.post("/magic-link/consume", response_model=SessionOut)

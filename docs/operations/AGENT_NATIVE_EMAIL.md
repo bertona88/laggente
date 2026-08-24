@@ -34,9 +34,9 @@ passed. Use the dated record below and refresh it after every release.
   `accesso@laggente.com` reached the controlled recipient.
 
 Deployment, migrations, public smoke checks, and provider configuration are accepted. Complete
-human product acceptance still requires an explicitly selected invitation recipient and a
-controlled onboarding magic-link plus sealed Studio outbound/reply round trip; do not create a
-disposable production tenant merely to make that claim.
+human product acceptance still requires a controlled open-signup or invitation link plus a sealed
+Studio outbound/reply round trip; do not consume a disposable production signup merely to make
+that claim.
 
 ## Target flow
 
@@ -82,9 +82,9 @@ tool call, or automatic reply.
 
 Resend automatically suppresses addresses after a hard bounce or complaint across the account's
 region. The signed delivery events update the matching sealed professional artifact and add a
-tenant-scoped Studio notice without retrying or asking an assistant to act. Transactional login and
-invitation emails are not professional artifacts; Resend's suppression list remains authoritative
-for those addresses.
+tenant-scoped Studio notice without retrying or asking an assistant to act. Transactional login,
+signup, and invitation emails are not professional artifacts; Resend's suppression list remains
+authoritative for those addresses.
 
 1. Inspect the email event and the account-level suppression entry in Resend.
 2. Do not retry an ambiguous failure or remove a suppression merely to force delivery.

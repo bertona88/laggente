@@ -12,7 +12,7 @@ from app import database
 from app.config import Settings
 from app.database import Base
 from app.main import create_app
-from app.models import Event
+from app.models import Event, Member
 
 
 def test_health_readiness_and_version(client):
@@ -160,7 +160,7 @@ def test_password_backed_member_can_recover_with_a_magic_link_in_pilot_mode(clie
     assert consumed.status_code == 200
 
 
-def test_magic_link_request_does_not_claim_delivery_or_enumerate_unknown_members(client):
+def test_magic_link_request_serves_existing_members_and_new_professionals(client):
     known = client.post(
         "/api/v1/auth/magic-link/request", json={"email": "mauro@laggente.com"}
     )
@@ -171,11 +171,16 @@ def test_magic_link_request_does_not_claim_delivery_or_enumerate_unknown_members
     assert known.status_code == unknown.status_code == 200
     assert known.json()["accepted"] is unknown.json()["accepted"] is True
     assert known.json()["message"] == unknown.json()["message"]
-    assert "Se l'indirizzo è autorizzato" in known.json()["message"]
-    assert unknown.json()["development_magic_link"] is None
+    assert "entrare o creare" in known.json()["message"]
+    assert parse_qs(urlparse(known.json()["development_magic_link"]).fragment)["token"]
+    assert parse_qs(urlparse(unknown.json()["development_magic_link"]).fragment)["signup"]
+    with database.SessionLocal() as db:
+        assert db.scalar(
+            select(func.count(Member.id)).where(Member.email == "unknown@example.com")
+        ) == 0
 
 
-def test_production_requires_transactional_email_for_professional_invitations():
+def test_production_requires_transactional_email_for_professional_access():
     settings = Settings(
         _env_file=None,
         APP_ENV="production",
@@ -187,7 +192,7 @@ def test_production_requires_transactional_email_for_professional_invitations():
         RESEND_API_KEY=None,
         FROM_EMAIL=None,
     )
-    with pytest.raises(RuntimeError, match="professional invitations"):
+    with pytest.raises(RuntimeError, match="professional email access"):
         settings.validate_runtime()
 
 

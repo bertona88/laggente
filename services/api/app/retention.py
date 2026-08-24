@@ -9,11 +9,12 @@ from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from .config import Settings
-from .models import Attachment, Conversation, Event, MemoryItem, Message, utcnow
+from .models import Attachment, Conversation, Event, MemoryItem, Message, SignupLink, utcnow
 
 
 STALE_TRANSCRIPTION_RESERVATION_TTL = timedelta(minutes=30)
 STALE_UNBOUND_ATTACHMENT_TTL = timedelta(hours=1)
+EXPIRED_SIGNUP_LINK_RETENTION = timedelta(days=1)
 
 
 @dataclass(frozen=True)
@@ -23,6 +24,21 @@ class DeletionResult:
     memories_deleted: int
     attachments_deleted: int
     files_deleted: int
+
+
+def purge_expired_signup_links(
+    db: Session,
+    *,
+    now: datetime | None = None,
+    commit: bool = True,
+) -> int:
+    """Remove pre-tenant email proofs shortly after they can no longer be used."""
+
+    cutoff = (now or utcnow()) - EXPIRED_SIGNUP_LINK_RETENTION
+    result = db.execute(delete(SignupLink).where(SignupLink.expires_at < cutoff))
+    if commit:
+        db.commit()
+    return result.rowcount or 0
 
 
 def _conversation_ref(settings: Settings, conversation_id: str) -> str:

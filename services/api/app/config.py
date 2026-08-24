@@ -170,7 +170,7 @@ class Settings(BaseSettings):
                 raise RuntimeError("AUTO_CREATE_SCHEMA must be false in production; use Alembic")
             if not self.resend_api_key or not self.from_email:
                 raise RuntimeError(
-                    "RESEND_API_KEY and FROM_EMAIL are required for professional invitations"
+                    "RESEND_API_KEY and FROM_EMAIL are required for professional email access"
                 )
             if self.auth_mode == "pilot_password":
                 if not self.pilot_password or len(self.pilot_password) < 14:

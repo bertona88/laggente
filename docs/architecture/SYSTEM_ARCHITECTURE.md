@@ -41,14 +41,15 @@ The professional may also join the public conversation directly.
 
 The coordination layer is ordinary application code and persistent data. It is not a third AI agent.
 
-## Invited tenant lifecycle
+## Professional entry lifecycle
 
-Pilot expansion is a deterministic application lifecycle around the same two assistants:
+Professional entry is a deterministic application lifecycle around the same two assistants:
 
 | State | Durable result | Public resolution |
 | --- | --- | --- |
+| `email_requested` | A short-lived pre-tenant signup proof exists for an unverified address; no account, member, conversation, or space exists | Denied |
 | `invited` | A permitted pilot member has created a new account, non-inviting member, private Studio thread, and placeholder space; a purpose-bound single-use link has been sent | Denied |
-| `building` | The recipient accepted the invitation and can talk to Studio, accumulate private draft revisions, and claim one globally unique slug | Denied |
+| `building` | The professional verified an open-signup link or accepted an invitation and can talk to Studio, accumulate private draft revisions, and claim one globally unique slug | Denied |
 | `published` | The professional explicitly activated a revision; identity is projected onto the space and the claimed slug is active | Allowed |
 
 The placeholder slug exists only to satisfy the compact current schema and is never claimed or
@@ -57,13 +58,12 @@ introduce themselves and receive a draft before choosing an address, but first a
 rejected until an address has been claimed. Activating the first revision atomically switches the
 space to `published`; it does not create DNS, TLS, containers, source files, or tenant code.
 
-Invitation authority is stored on the inviting member and does not propagate to a new member.
-The invitation token has a distinct signed purpose from an ordinary login token. Consuming any
-version of a resent invitation invalidates its siblings. After acceptance, a passwordless invited
-professional uses the ordinary magic-link login flow, including while the seeded operator remains
-on pilot-password authentication. The seeded password-backed operator may also request an ordinary
-magic link as a recovery path; unknown addresses receive the same non-enumerating response without
-creating or sending a token.
+Open signup stores only an expiring email proof until the recipient consumes it. Consumption creates
+the tenant in `building`, invalidates sibling proofs, and starts a host-only Studio session. Existing
+members receive the ordinary login purpose instead. Invitation authority remains stored on an
+inviting member and does not propagate to a new member; curated invitation tokens retain a distinct
+purpose and consuming one invalidates its siblings. Signup, invitation, and login fragments never
+reach reverse-proxy or application request logs.
 
 ## Runtime topology
 
@@ -183,6 +183,7 @@ tenant configuration:
 | Audio transcription | 12 attempts per account in a rolling hour |
 | Public-assistant model use | 60 model-backed turns per space in a rolling hour |
 | Conversation creation | 60 new public conversations per space in a rolling hour |
+| Professional email entry | 8 requests per IP in 15 minutes, 3 per address in one hour, and 60 new-address requests per API process in one hour |
 | Empty-conversation pressure | At most 60 unengaged public conversations per space; conversations without a visitor/professional message, professional participation, or a bound attachment expire after one hour and are pruned on a subsequent creation attempt |
 | Studio inbox projection | Cursorless offset pages of 1–100 conversations; the client can retrieve older pages |
 | Professional email authorization | 10 attempts per authenticated member in a rolling hour |
@@ -266,6 +267,7 @@ new AI role. The existing application coordination layer computes the projection
 | `memory_items` | Correctable, provenance-linked interpretations derived from conversations |
 | `events` | Audit trail for authentication, configuration, assistant failures, media, memory correction, and speaker control |
 | `magic_links` | Purpose-bound, expiring, single-use invitation and Studio authentication records |
+| `signup_links` | Short-lived, single-use pre-tenant email proofs; expired rows are automatically removed |
 | `professional_emails` | Immutable raw email artifacts and application-owned delivery/receipt state |
 
 This table describes the current application-owned persistence boundary, not a permanent command
@@ -322,9 +324,10 @@ The hostname is a routing input, never the security boundary.
 - Incoming email bodies are untrusted input; receipt only stores and announces them, without a
   model call, tool execution, or automatic reply.
 - Professional sessions use host-only cookies for `app.laggente.com`, not cookies shared with tenant subdomains.
-- Only members with explicit `can_invite` permission may create another account; invited members do not inherit it.
-- An invited account is tenant-isolated immediately and cannot resolve through its placeholder or claimed hostname before first activation.
-- Invitation tokens and login tokens use different signed purposes and durable record purposes.
+- Unknown addresses cannot create tenant data until a purpose-bound email proof is consumed.
+- Only members with explicit `can_invite` permission may send curated invitations; invited and self-service members do not inherit it.
+- Every unpublished account is tenant-isolated immediately and cannot resolve through its placeholder or claimed hostname before first activation.
+- Signup, invitation, and login tokens use distinct signed and durable purposes.
 - An anonymous continuation token grants access only to its own public conversation and is revocable.
 - AI and human authorship is explicit and audited.
 - Raw audio is deleted after transcription by default unless an explicit retained-audio policy applies.
