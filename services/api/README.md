@@ -47,6 +47,12 @@ size, and digest, then includes its bytes as a Base64 `input_image` with `detail
 same-origin attachment URL is never exposed to the model provider, and historical images are not
 replayed on later text turns.
 
+The private Studio assistant has a hosted web-search tool for explicit professional requests.
+Search results are treated as untrusted evidence and their URL annotations are persisted as
+clickable Markdown citations. Search queries must exclude private Studio material, visitor data,
+email bodies, credentials, and secrets. The public assistant has no web-search tool and remains
+bounded to the active tenant configuration.
+
 ## HTTP contract
 
 All product routes use `/api/v1`. The main groups are:
