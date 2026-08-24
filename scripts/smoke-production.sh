@@ -68,7 +68,7 @@ if grep -Eqi '^x-robots-tag:' <<<"$security_headers"; then
 fi
 
 non_index_headers=$(curl --silent --show-error --head --max-time 15 \
-    "$base_url/not-an-index-route")
+    "$base_url/privacy/not-an-index-route")
 pilot_headers=$(curl --silent --show-error --head --max-time 15 "$pilot_url/")
 for protected_headers in "$non_index_headers" "$pilot_headers"; do
     if ! grep -Eqi '^x-robots-tag:[[:space:]]*noindex,[[:space:]]*nofollow' \

@@ -19,19 +19,24 @@ passed. Use the dated record below and refresh it after every release.
 
 ## Live pilot record — 2026-08-23
 
-- production release `0f67020072bbb4e69c4c7d99b46ca82fab2096be` runs the agent-native email
-  migration with `AGENT_MAIL_PROVIDER=resend` and `AGENT_MAIL_ENABLED=true`;
-- pre-migration backup `20260823T234116Z` and post-release backup `20260823T234452Z` completed;
+- production release `24a4b41b2f1738d6613623e590e8275cc6b4638b` runs both the agent-native
+  email and invited-professional onboarding migrations, with `AGENT_MAIL_PROVIDER=resend` and
+  `AGENT_MAIL_ENABLED=true`;
+- pre-migration backup `20260824T002401Z` and post-release backup `20260824T002711Z` completed and
+  passed the repository audit;
 - the `laggente.com` sending domain is verified; the restricted server secret file contains the
   Resend API key and webhook signing secret;
-- webhook `c82233db-e4ee-4db6-8aa7-c09808a5f2d2` is enabled for `email.received` at the production
-  endpoint, and an unsigned request is rejected with HTTP 401;
+- webhook `c82233db-e4ee-4db6-8aa7-c09808a5f2d2` is enabled at the production endpoint for
+  `email.received`, `email.delivered`, `email.delivery_delayed`, `email.bounced`,
+  `email.complained`, `email.failed`, and `email.suppressed`; an unsigned request is rejected with
+  HTTP 401;
 - provider-only delivery `c8e3c230-18b2-4b35-a706-c55d0180f11d` from
   `accesso@laggente.com` reached the controlled recipient.
 
-This is not yet complete product acceptance. The sealed Studio outbound/reply round trip, signed
-inbound retrieval, delivery-event subscriptions, suppression handling drill, and live onboarding
-magic-link flow remain to be exercised after the integrating branch is deployed.
+Deployment, migrations, public smoke checks, and provider configuration are accepted. Complete
+human product acceptance still requires an explicitly selected invitation recipient and a
+controlled onboarding magic-link plus sealed Studio outbound/reply round trip; do not create a
+disposable production tenant merely to make that claim.
 
 ## Target flow
 
