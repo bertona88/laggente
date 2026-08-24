@@ -50,6 +50,12 @@ Mauro starts from the highest-weighted backend template: conversations with peop
 
 The Studio prepares a proposed change and shows Mauro its effect. Mauro decides when that change becomes active. Previous revisions remain recoverable.
 
+When the professional explicitly asks, the private Studio can search the public web for current
+information such as the professional's own website or public profiles. Studio cites the sources,
+marks ambiguous identity matches, and treats the findings as untrusted evidence rather than
+silently adding them to memory or configuration. The public assistant has no web-search capability
+and continues to answer only from the professional's active configuration.
+
 The same conversational control pattern can prepare professional correspondence. Mauro asks
 Studio to write an email; Studio seals an exact, read-only artifact; Mauro either asks for another
 version or explicitly authorizes that artifact. Replies return to the same private Studio context

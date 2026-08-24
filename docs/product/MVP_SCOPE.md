@@ -39,6 +39,13 @@ does not create a hidden completeness score or psychological profile; it disting
 professional said from what the Studio inferred and makes material inference correctable before it
 enters a configuration proposal.
 
+The professional may explicitly ask Studio to search public web sources, including for their own
+website and professional profiles. Search does not run automatically during onboarding. Studio
+uses only the minimum public identifiers supplied for that search, displays source links, and
+flags ambiguous or conflicting matches. Web findings are untrusted evidence: they do not become
+memory, knowledge, or configuration until the professional confirms them, and any resulting
+configuration change still follows the ordinary proposal and activation path.
+
 After publication, the Studio remains the primary way to evolve the space. The professional can keep talking, correct the Studio's interpretation, add knowledge, change tone or behavior, recover an earlier revision, and activate a new one without deploying code.
 
 ## A living configuration, not a cramped schema
@@ -62,7 +69,11 @@ Inside that stable envelope, professional meaning should be allowed to evolve. V
 
 When the professional activates a space, the personal subdomain becomes its public expression. It contains the professional's name, role, portrait, territory, selected public information, and a prominent conversation with an assistant that clearly identifies itself as AI.
 
-The public assistant uses only the active configuration of that professional's space. A change discussed privately does not affect visitors until the professional activates it. This lets the product test the Studio's understanding through observable public behavior: what the assistant says, what it knows, how it speaks, what it notices, what it refuses to invent, and when it brings the professional closer.
+The public assistant uses only the active configuration of that professional's space and has no
+web-search capability. A change discussed privately does not affect visitors until the
+professional activates it. This lets the product test the Studio's understanding through
+observable public behavior: what the assistant says, what it knows, how it speaks, what it
+notices, what it refuses to invent, and when it brings the professional closer.
 
 A visitor can begin without creating an account, converse naturally in Italian, return to the same persistent conversation, and eventually use supported voice notes and private photographs. The assistant follows the visitor's intent rather than marching through a qualification script.
 

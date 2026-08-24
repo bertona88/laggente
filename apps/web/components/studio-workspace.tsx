@@ -32,12 +32,18 @@ function StudioMessage({ message }: { message: ConversationMessage }) {
   );
 }
 
-const starterPrompts = [
+export const studioStarterPrompts = [
   "Ti racconto che lavoro faccio",
+  "Cerca cosa si trova già su di me online",
+  "Trova il mio sito e i miei profili professionali",
   "Vorrei rendere l’accoglienza più personale",
   "Ti racconto il territorio in cui lavoro",
   "Fammi vedere come appare lo spazio oggi",
 ];
+
+export function shouldShowStudioStarterPrompts(messages: ConversationMessage[]) {
+  return !messages.some((message) => message.author_type === "professional");
+}
 
 export function suggestPublicSlug(value: string) {
   return value
@@ -253,8 +259,19 @@ export function StudioWorkspace() {
           {sending && <div className="studio-thinking" role="status"><span /><span /><span /> Lo Studio sta interpretando…</div>}
           <div ref={bottomRef} />
         </div>
-        {!messages.length && !loading && (
-          <div className="studio-starters">{starterPrompts.map((prompt) => <button type="button" key={prompt} onClick={() => void submit(prompt)}>{prompt}</button>)}</div>
+        {shouldShowStudioStarterPrompts(messages) && !loading && (
+          <div className="studio-starters" aria-label="Possibili inizi con Studio">
+            {studioStarterPrompts.map((prompt) => (
+              <button
+                type="button"
+                key={prompt}
+                disabled={sending}
+                onClick={() => void submit(prompt)}
+              >
+                {prompt}
+              </button>
+            ))}
+          </div>
         )}
         <form className="studio-composer" onSubmit={onSubmit}>
           <textarea

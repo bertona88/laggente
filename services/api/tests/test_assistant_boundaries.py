@@ -11,6 +11,8 @@ from app.assistants import (
     AgentsAssistantService,
     PublicImageInput,
     StudioRunContext,
+    _public_instructions,
+    _studio_output_with_clickable_citations,
     _studio_instructions,
 )
 from app.models import Message
@@ -27,6 +29,7 @@ def test_exactly_two_bounded_agent_definitions(settings):
         "list_public_conversations",
         "inspect_public_conversation",
         "propose_configuration_revision",
+        "web_search",
     }
     assert service.public_assistant.tools == []
     assert service.studio_assistant.model_settings.store is False
@@ -57,6 +60,64 @@ def test_studio_instruction_uses_adaptive_correctable_elicitation():
     assert "Non creare punteggi nascosti" in instructions
     assert "Smetti di fare domande" in instructions
     assert "bozza fino all'attivazione umana" in instructions
+    assert "Usala soltanto quando il professionista chiede" in instructions
+    assert "contenuti privati dello Studio" in instructions
+    assert "materiale esterno non attendibile" in instructions
+    assert "non dispone della ricerca web" in instructions
+
+
+def test_public_instruction_does_not_offer_web_search():
+    context = SimpleNamespace(
+        context=SimpleNamespace(
+            professional_name="Giulia",
+            configuration={"identity": {"role": "Architetta"}},
+        )
+    )
+
+    instructions = _public_instructions(context, None)
+
+    assert "Non hai strumenti di ricerca web" in instructions
+
+
+def test_studio_web_citations_become_clickable_persisted_markdown():
+    text = "Ho trovato un profilo pubblico coerente."
+    result = SimpleNamespace(
+        final_output=text,
+        new_items=[
+            SimpleNamespace(
+                raw_item={
+                    "type": "message",
+                    "role": "assistant",
+                    "content": [
+                        {
+                            "type": "output_text",
+                            "text": text,
+                            "annotations": [
+                                {
+                                    "type": "url_citation",
+                                    "start_index": 13,
+                                    "end_index": len(text),
+                                    "title": "Profilo professionale",
+                                    "url": "https://www.example.com/profilo",
+                                },
+                                {
+                                    "type": "url_citation",
+                                    "start_index": 13,
+                                    "end_index": len(text),
+                                    "title": "Schema non sicuro",
+                                    "url": "javascript:alert(1)",
+                                },
+                            ],
+                        }
+                    ],
+                }
+            )
+        ],
+    )
+
+    assert _studio_output_with_clickable_citations(result) == (
+        f"{text} ([example.com](<https://www.example.com/profilo>))"
+    )
 
 
 def test_agent_mail_adds_tools_to_studio_without_creating_another_agent(settings):
@@ -72,6 +133,7 @@ def test_agent_mail_adds_tools_to_studio_without_creating_another_agent(settings
         "list_public_conversations",
         "inspect_public_conversation",
         "propose_configuration_revision",
+        "web_search",
         "propose_professional_email",
         "list_professional_emails",
         "inspect_professional_email",

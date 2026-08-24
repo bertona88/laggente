@@ -134,6 +134,7 @@ The Studio talks with an authenticated professional. Through typed, server-autho
 - bounded layout and component choices supplied by the platform.
 - sealed professional email proposals and tenant-scoped correspondence inspection when the
   platform capability is enabled.
+- explicit, read-only public-web research with source citations when the professional asks for it.
 
 If the profession is not yet known, the Studio begins from the backend-owned opening question and
 uses the declared work to specialize the configuration. Weighted verticals are starting priorities,
@@ -147,9 +148,19 @@ and stops probing when it can synthesize or propose something concrete. No laten
 professional-profile database is introduced. Durable public meaning still enters the existing
 document-shaped revision path and remains inactive until explicit professional activation.
 
+The hosted web-search tool is attached only to the Studio assistant. Studio does not search during
+onboarding unless asked, and query construction excludes private Studio content, visitor data,
+email bodies, credentials, and secrets. Returned pages are untrusted data rather than
+instructions. URL annotations are rendered as clickable Markdown before the assistant message is
+persisted. A finding cannot become durable professional knowledge or public configuration without
+professional confirmation and the existing draft/activation boundary.
+
 ### Public assistant
 
-The public assistant talks with visitors using only the active configuration of the resolved professional space. It can converse naturally, use approved knowledge, maintain correctable memory, work with enabled tools, and invite the professional to participate.
+The public assistant talks with visitors using only the active configuration of the resolved
+professional space. It can converse naturally, use approved knowledge, maintain correctable
+memory, work with enabled application capabilities, and invite the professional to participate.
+It has no open-web search tool.
 
 It does not run a hard-coded qualification pipeline. The initial seller template is guidance for useful behavior, not a required sequence of questions or completion gates.
 

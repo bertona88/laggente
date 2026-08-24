@@ -417,6 +417,7 @@ img { max-width: 100%; }
 .studio-starters { display: flex; gap: 7px; padding: 0 clamp(24px, 5vw, 78px) 12px; overflow-x: auto; }
 .studio-starters button { flex: 0 0 auto; padding: 8px 11px; border: 1px solid var(--line); background: none; font-family: var(--font-serif); font-size: 11px; cursor: pointer; }
 .studio-starters button:hover { border-color: var(--ink); }
+.studio-starters button:disabled { opacity: .45; cursor: not-allowed; }
 .studio-composer { margin: 0 clamp(24px, 5vw, 78px) 22px; padding: 13px 15px 10px; border: 1px solid rgba(23, 35, 29, .24); background: white; }
 .studio-composer:focus-within { border-color: var(--ink); }
 .studio-composer textarea { width: 100%; border: 0; outline: 0; resize: none; background: none; font-family: var(--font-serif); font-size: 15px; line-height: 1.45; }
