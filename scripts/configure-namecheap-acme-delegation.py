@@ -153,13 +153,13 @@ def load_env(path: Path) -> dict[str, str]:
         "ApiUser": api_user or "",
         "ApiKey": values.get("NAMECHEAP_API_KEY", ""),
         "UserName": values.get("NAMECHEAP_USERNAME", ""),
-        "ClientIp": values.get("NAMECHEAP_CLIENT_IP", ""),
+        # The API request is deliberately executed by the fixed Hetzner host,
+        # so ClientIp must describe that source rather than a stale laptop IP.
+        "ClientIp": SERVER_IP,
     }
     missing = [key for key, value in credentials.items() if not value]
     if missing:
         raise ValueError(f"credential file is missing required fields: {', '.join(missing)}")
-    if credentials["ClientIp"] != SERVER_IP:
-        raise ValueError(f"NAMECHEAP_CLIENT_IP must be the stable Hetzner IP {SERVER_IP}")
     return credentials
 
 
