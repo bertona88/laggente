@@ -199,9 +199,7 @@ def main() -> int:
         "-o",
         "ConnectTimeout=8",
         f"root@{SERVER_IP}",
-        "python3",
-        "-c",
-        REMOTE_RUNNER,
+        f"python3 -c {shlex.quote(REMOTE_RUNNER)}",
     ]
     completed = subprocess.run(command, input=payload, text=True, check=False)
     if completed.returncode != 0:
