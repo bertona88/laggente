@@ -14,6 +14,8 @@ from ..conversations import active_revision, list_memories, list_messages, seria
 from ..database import get_db
 from ..dependencies import ProfessionalContext, current_professional, professional_space, runtime_settings
 from ..models import ConfigRevision, Conversation, Event, Member, MemoryItem, Message, Space, utcnow
+from ..positioning import load_product_positioning
+from ..relationship_graph import build_relationship_graph
 from ..retention import delete_conversation_data, purge_expired_conversations
 from ..schemas import (
     MAX_CONFIGURATION_DOCUMENT_BYTES,
@@ -25,6 +27,7 @@ from ..schemas import (
     MessageCreate,
     RevisionCreate,
     RevisionOut,
+    RelationshipGraphOut,
     SpaceDetail,
     SpaceOut,
     StudioTurnOut,
@@ -103,6 +106,18 @@ def _owned_public_conversation(
     return conversation
 
 
+def _owned_space_role(db: Session, context: ProfessionalContext, space_id: str) -> str:
+    role = db.scalar(
+        select(Space.public_role).where(
+            Space.id == space_id,
+            Space.account_id == context.account_id,
+        )
+    )
+    if not role:
+        raise HTTPException(status_code=404, detail="Spazio non trovato")
+    return role
+
+
 def _professional_detail(db: Session, settings: Settings, conversation: Conversation) -> dict:
     messages = list_messages(
         db, account_id=conversation.account_id, conversation_id=conversation.id
@@ -149,6 +164,19 @@ def get_space(
         space=SpaceOut.model_validate(space),
         active_revision=RevisionOut.model_validate(active) if active else None,
         latest_draft=RevisionOut.model_validate(draft) if draft else None,
+    )
+
+
+@router.get("/relationship-graph", response_model=RelationshipGraphOut)
+def get_relationship_graph(
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(runtime_settings),
+    context: ProfessionalContext = Depends(current_professional),
+) -> RelationshipGraphOut:
+    return build_relationship_graph(
+        db,
+        space=professional_space(db, context),
+        positioning=load_product_positioning(settings.product_positioning_json),
     )
 
 
@@ -392,7 +420,7 @@ async def post_studio_message(
                 account_id=context.account_id,
                 conversation_id=conversation.id,
                 author_type="professional",
-                author_label=f"{context.member.display_name} — agente immobiliare",
+                author_label=f"{member.display_name} — {space.public_role}",
                 content=body.content,
                 client_message_id=body.client_message_id,
                 assistant_reply_state="pending",
@@ -675,7 +703,10 @@ def post_professional_message(
         account_id=context.account_id,
         conversation_id=conversation.id,
         author_type="professional",
-        author_label=f"{context.member.display_name} — agente immobiliare",
+        author_label=(
+            f"{context.member.display_name} — "
+            f"{_owned_space_role(db, context, conversation.space_id)}"
+        ),
         content=body.content,
         client_message_id=body.client_message_id,
     )

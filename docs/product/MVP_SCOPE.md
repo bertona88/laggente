@@ -2,21 +2,21 @@
 
 ## What we want
 
-LAGGENTE begins with the real-estate professional creating a personal agentic space. The professional does not begin by configuring software or filling in a rigid business profile. They talk with a private Studio assistant, and the space takes shape through that conversation.
+LAGGENTE begins with a human professional creating a personal agentic space. The product foundation is profession-agnostic: the professional does not begin by choosing software modules or filling in a rigid business profile. They talk with a private Studio assistant, and the space takes shape through that conversation.
 
 The public assistant is not a separate chatbot project. It is the public expression of the space the professional created and the place where that configuration becomes real for visitors.
 
-The pilot begins with Mauro, expands to five real-estate professionals, and is Italian-first (`it-IT`). The initial commercial context is conversations with people considering selling a property, but that context is a useful starting template rather than a universal questionnaire, CRM pipeline, or permanent ontology.
+The pilot begins with Mauro, expands to five real-estate professionals, and is Italian-first (`it-IT`). Real estate is intentionally the highest-weighted commercial vertical and most prominent example. The initial context is conversations with people considering selling a property, but that context is a useful starting template rather than the identity of LAGGENTE, a universal questionnaire, CRM pipeline, or permanent ontology.
 
 ## The professional creates their space
 
 The professional enters LAGGENTE and:
 
 1. signs in through a magic link;
-2. creates their professional identity;
-3. chooses an available public username, which becomes `<username>.laggente.com`;
-4. starts a private Italian conversation with the Studio assistant;
-5. talks naturally about their territory, work, experience, style, personality, knowledge, preferences, boundaries, and what they want people to experience;
+2. starts with the open question “Che lavoro fai?”;
+3. creates a professional identity whose role and starting template follow from the answer;
+4. chooses an available public username, which becomes `<username>.laggente.com`;
+5. continues a private Italian conversation with the Studio assistant about context, work, experience, style, personality, knowledge, preferences, boundaries, and what they want people to experience;
 6. sees the public space take shape as the Studio understands more;
 7. reviews a proposed revision and its concrete public effect;
 8. explicitly activates the revision when it represents them well.
@@ -58,9 +58,15 @@ The professional can see their conversations, the original authored messages, co
 
 Conversation remains the primary record. Memory, summaries, signals, and possible opportunities are derived views unless real use proves that they need independent lifecycles. LAGGENTE should organize attention without making the professional maintain leads, stages, fields, or statuses.
 
-## The seller-oriented beginning
+The private Studio includes a bounded relationship graph. It connects the professional to people
+through existing public conversations and can connect those people to backend-configured sets derived
+from authored messages and non-dismissed, correctable memory. The graph supports finding, recentering,
+following connected paths, and reopening the source conversation. It does not introduce contact
+records, lead stages, or a second source of truth.
 
-The starting template helps the public assistant receive someone who may be considering selling a property. It should understand why the person came, be useful without applying pressure, avoid inventing facts, notice context that may matter, and make human participation easy.
+## The first weighted vertical: real estate
+
+When the professional says they are a real-estate agent, the highest-weighted starting template helps the public assistant receive someone who may be considering selling a property. It should understand why the person came, be useful without applying pressure, avoid inventing facts, notice context that may matter, and make human participation easy.
 
 Depending on the conversation, useful topics may include the property or area, the person's relationship to it, motivation, timing, ownership, condition, occupancy, expectations, contact preference, and interest in a professional valuation. These are possibilities for attention, not required fields, completion gates, or a fixed order.
 
@@ -75,6 +81,6 @@ LAGGENTE contains two conversational AI roles:
 
 Application code and persistent data coordinate identity, configuration, conversations, memory, files, permissions, activation, and human participation. There is no third coordinating AI agent.
 
-The product is not a conventional CRM, mandatory lead workflow, native WhatsApp bot, property portal, automated valuation authority, transaction platform, multi-agent swarm, or infrastructure deployment per professional. Billing, public self-service purchase, cross-professional network behavior, arbitrary tenant code, and customer-provided OpenAI keys are not part of this product now.
+The product is not a conventional CRM, mandatory lead workflow, native WhatsApp bot, property portal, automated valuation authority, transaction platform, multi-agent swarm, or infrastructure deployment per professional. Billing, public self-service purchase, address-book import, external contact enrichment, cross-professional network behavior, arbitrary tenant code, and customer-provided OpenAI keys are not part of this product now.
 
 The experience we want is simple to recognize: a professional creates a public identity and subdomain, teaches the Studio who they are by talking, activates a space that genuinely reflects them, receives people through its public assistant, and privately understands or joins the resulting conversations without being turned into a data-entry operator.

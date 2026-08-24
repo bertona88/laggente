@@ -24,6 +24,8 @@ def test_exactly_two_bounded_agent_definitions(settings):
     assert service.public_assistant.tools == []
     assert service.studio_assistant.model_settings.store is False
     assert service.public_assistant.model_settings.store is False
+    assert service.product_positioning.opening_question == "Che lavoro fai?"
+    assert service.product_positioning.featured_verticals[0].id == "real_estate_it"
 
 
 def test_public_input_embeds_integrity_checked_private_image(settings):

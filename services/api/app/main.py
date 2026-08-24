@@ -23,7 +23,7 @@ from .retention import (
     discard_stale_unbound_attachments,
     purge_all_expired_conversations,
 )
-from .routes import attachments, auth, public, studio
+from .routes import attachments, auth, product, public, studio
 from .schemas import VersionOut
 from .seed import seed_demo_data
 
@@ -182,6 +182,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return response
 
     app.include_router(auth.router, prefix="/api/v1")
+    app.include_router(product.router, prefix="/api/v1")
     app.include_router(public.router, prefix="/api/v1")
     app.include_router(studio.router, prefix="/api/v1")
     app.include_router(attachments.router, prefix="/api/v1")

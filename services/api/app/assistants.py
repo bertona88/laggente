@@ -25,6 +25,7 @@ from . import database
 from .config import Settings
 from .media import ALLOWED_MEDIA_TYPES, media_magic_matches
 from .models import ConfigRevision, Conversation, Event, MemoryItem, Message, Space
+from .positioning import load_product_positioning
 from .schemas import MAX_CONFIGURATION_DOCUMENT_BYTES, PublicAgentOutput, SpaceConfigEnvelope
 
 
@@ -37,6 +38,7 @@ class StudioRunContext:
     account_id: str
     space_id: str
     member_id: str
+    product_positioning: dict
     proposed_revision_id: str | None = None
 
 
@@ -286,12 +288,18 @@ def propose_configuration_revision(
 def _studio_instructions(
     ctx: RunContextWrapper[StudioRunContext], _agent: Agent[StudioRunContext]
 ) -> str:
-    return """
+    positioning_json = json.dumps(
+        ctx.context.product_positioning, ensure_ascii=False, indent=2
+    )
+    return f"""
 Sei Studio, l'assistente AI privato di LAGGENTE per il professionista autenticato.
 Parla in italiano naturale. Aiutalo a esprimere identità, conoscenza, stile, limiti e il modo
-in cui vuole accogliere le persone. Non imporre un metodo immobiliare, una pipeline CRM o un
-questionario. Esistono esattamente due ruoli AI nel prodotto: tu e l'assistente pubblico; non
-inventare coordinatori o specialisti.
+in cui vuole accogliere le persone. Se il suo lavoro non è ancora noto, comincia dalla domanda
+iniziale definita dal backend. Dopo la risposta, adatta identità, esempi, conoscenza, confini e
+template alla professione dichiarata. I verticali con peso maggiore sono priorità commerciali e
+buoni punti di partenza, non categorie obbligatorie: non applicare il template immobiliare a chi
+fa un altro lavoro. Non imporre una pipeline CRM o un questionario. Esistono esattamente due ruoli
+AI nel prodotto: tu e l'assistente pubblico; non inventare coordinatori o specialisti.
 
 Usa soltanto gli strumenti autorizzati disponibili. Prima di proporre una modifica, leggi la
 configurazione attiva. Per modifiche concrete chiama propose_configuration_revision con un
@@ -299,6 +307,10 @@ documento completo valido: la proposta resta bozza e devi ricordare chiaramente 
 professionista deve attivarla esplicitamente. Non dichiarare mai una bozza come già pubblica.
 Puoi ispezionare conversazioni pubbliche solo quando serve alla richiesta del professionista.
 Non chiedere né mostrare segreti. Non memorizzare o esporre ragionamenti privati.
+
+--- POSIZIONAMENTO E PRIORITÀ DEFINITI DAL BACKEND ---
+{positioning_json}
+--- FINE POSIZIONAMENTO ---
 """.strip()
 
 
@@ -333,6 +345,7 @@ class AgentsAssistantService:
 
     def __init__(self, settings: Settings):
         self.settings = settings
+        self.product_positioning = load_product_positioning(settings.product_positioning_json)
         if settings.openai_api_key:
             set_default_openai_key(settings.openai_api_key, use_for_tracing=False)
         set_default_openai_api("responses")
@@ -450,7 +463,10 @@ class AgentsAssistantService:
     ) -> StudioReply:
         self._ensure_available()
         context = StudioRunContext(
-            account_id=account_id, space_id=space_id, member_id=member_id
+            account_id=account_id,
+            space_id=space_id,
+            member_id=member_id,
+            product_positioning=self.product_positioning.model_dump(mode="json"),
         )
         result = await Runner.run(
             self.studio_assistant,

@@ -1,10 +1,10 @@
 # LAGGENTE
 
-## Agentic product blueprint 0.3
+## Profession-agnostic product blueprint 0.4
 
 **Status:** Current MVP blueprint
-**Date:** 2026-08-22
-**Supersedes:** Founding draft 0.2
+**Date:** 2026-08-23
+**Supersedes:** Agentic product blueprint 0.3
 
 ---
 
@@ -12,7 +12,7 @@
 
 > **LAGGENTE is where la gente meets l'agente.**
 
-Every human real-estate professional receives a personal digital space with two conversational assistants:
+Every human professional receives a personal digital space with two conversational assistants:
 
 1. a private Studio assistant that helps the professional shape the space by talking;
 2. a public assistant that talks with people on the professional's behalf without impersonating the professional.
@@ -20,7 +20,7 @@ Every human real-estate professional receives a personal digital space with two 
 The two assistants share one persistent application space containing configuration, knowledge, conversations, messages, files, memory, permissions, and human participation.
 
 ```text
-human real-estate professional
+human professional
              ↕
 private Studio assistant
              ↕
@@ -33,11 +33,13 @@ visitor
 
 There is no third coordinating AI agent. The middle is the product itself: ordinary application code and persistent data.
 
+The foundation is profession-agnostic. For a new space, the Studio begins with “Che lavoro fai?” and specializes from the answer. Backend-owned weights make real estate the first and most prominent commercial vertical without making it the universal product identity.
+
 ---
 
 ## 2. Why this product exists
 
-Real-estate work already begins in conversations: telephone calls, voice notes, introductions, questions, photographs, local knowledge, timing, uncertainty, and trust.
+Much professional work already begins in conversations: telephone calls, voice notes, introductions, questions, photographs or documents, domain knowledge, timing, uncertainty, and trust. Real estate is the first concrete instance, not the only instance.
 
 Existing software often asks the professional to translate those conversations into administrative records. LAGGENTE reverses that relationship. The conversation remains primary; the system remembers, organizes, and makes useful interpretations without turning the professional into a data-entry operator.
 
@@ -90,7 +92,7 @@ Indicative URL: `app.laggente.com`
 
 The Studio is the first product experience. The professional signs in, creates their professional identity, chooses an available username that becomes their public subdomain, and shapes the public space through conversation rather than a settings maze.
 
-The Studio can begin with useful questions about the professional's territory, work, style, knowledge, preferences, and desired visitor experience. It follows the conversation rather than forcing every professional through the same onboarding fields or order.
+When the work is not yet known, the Studio begins with “Che lavoro fai?”. It then asks useful questions about the professional's context, work, style, knowledge, preferences, and desired visitor experience. It follows the conversation rather than forcing every professional through the same onboarding fields or order.
 
 Mauro can say in Italian:
 
@@ -177,11 +179,17 @@ Derived memory is not hidden model state. It is inspectable, provenance-linked, 
 
 An opportunity is initially a view over a conversation, not a mandatory database object with a universal lifecycle. If LAGGENTE thinks Mauro's attention could matter, it explains why. Mauro does not have to maintain a sales stage for the system.
 
+The Studio also offers a graph over these primary and derived materials. Mauro sits at the center;
+each person is reached through an existing conversation; correctable sets connect people when a
+backend-configured pattern appears in their conversations or active memory. He can find a node,
+recenter the view, follow a highlighted connected path, and reopen the source conversation. This is
+navigation through context, not a lead table disguised as nodes.
+
 ---
 
-## 8. The first seller-oriented template
+## 8. The first weighted vertical: real estate
 
-The pilot starts from a practical template for conversations with people who may be thinking about selling a property.
+The backend ranks real estate first for the pilot. When the professional identifies as a real-estate agent, the Studio can start from a practical template for conversations with people who may be thinking about selling a property.
 
 The template gives the assistant useful orientation:
 
@@ -197,7 +205,7 @@ Possible topics include the property, area, ownership, motivation, timing, condi
 
 Mauro can change this template through the Studio. Another professional can begin from it and shape a substantially different space without receiving a separate deployment.
 
-Future templates may help with buyers, rentals, visits, follow-up, valuation preparation, or other real-estate conversations. Templates are accelerators, not the permanent operating language of every professional.
+Future templates may help with buyers, rentals, visits, follow-up and valuation preparation, or with evidence-backed needs in other professions. Templates are accelerators, not the permanent operating language of every professional.
 
 ---
 
@@ -272,7 +280,9 @@ The accepted MVP topology is:
 - **private filesystem storage** on the Hetzner server for MVP uploads;
 - optional **email delivery** for signed Studio magic links when that authentication mode is configured;
 - **Docker Compose** on the existing Hetzner server;
-- **wildcard DNS and TLS** for `*.laggente.com`.
+- **wildcard DNS and TLS** for `*.laggente.com`;
+- a public **backend positioning contract** for the opening Studio question and ordered, weighted vertical examples;
+- an authenticated, bounded **relationship graph projection** over tenant-owned conversations and correctable memory.
 
 The production web runtime is the existing internal nginx gateway. It serves the immutable Vite
 build with an SPA history fallback and proxies `/api/v1` to FastAPI; there is no separate Node.js
@@ -323,7 +333,7 @@ Every tenant-owned record contains `account_id`. Public records also bind to the
 
 ## 14. Audio and photographs
 
-Voice notes belong in the first credible product because Italian real-estate work already happens through audio messages.
+Voice notes belong in the first credible product because Italian professional work, especially the first real-estate vertical, already happens through audio messages.
 
 The MVP uses one reasoning path:
 
@@ -354,7 +364,7 @@ This includes:
 - dates, times, addresses, and telephone presentation;
 - product acceptance tests.
 
-Code identifiers and technical documentation may remain in English. In code, use `professional` for the human real-estate professional and explicit names such as `studio_assistant` and `public_assistant` for AI roles.
+Code identifiers and technical documentation may remain in English. In code, use `professional` for the human professional and explicit names such as `studio_assistant` and `public_assistant` for AI roles.
 
 ---
 
@@ -388,7 +398,7 @@ The product begins on the professional side and becomes real through the public 
 
 1. Mauro signs in through the configured secure pilot method: strong password today, or a signed single-use magic link when email delivery is configured.
 2. The seeded pilot opens with his professional identity and public username `mauro`; self-service onboarding is outside this release.
-3. The Italian Studio talks with him about his territory, work, style, knowledge, boundaries, and desired visitor experience without reducing the conversation to a fixed form.
+3. The Italian Studio already knows Mauro's seeded pilot profession. For a future unconfigured space it begins with “Che lavoro fai?”, then talks about context, work, style, knowledge, boundaries, and desired visitor experience without reducing the conversation to a fixed form.
 4. The Studio develops an extensible configuration for his space and shows its concrete public effect.
 5. Mauro corrects what it misunderstood and explicitly activates the revision.
 6. `mauro.laggente.com` expresses Mauro's active identity, information, presentation, and public-assistant behavior without a code deployment.
@@ -442,6 +452,7 @@ The initial commercial signal remains qualified valuation appointments per profe
 - renovation rendering;
 - transaction-document orchestration;
 - cross-professional network behavior;
+- address-book import, external contact enrichment, or cross-account relationship clustering;
 - customer-provided code or OpenAI keys;
 - property passports, blockchain proofs, crypto, payments, or title transfer;
 - multi-agent swarms;
@@ -480,7 +491,7 @@ Do not recreate the deleted deterministic funnel under different names.
 
 ## 21. Final conviction
 
-LAGGENTE is not valuable because it has a chatbot, a microphone, or a subdomain.
+LAGGENTE is not valuable because it has a chatbot, a microphone, a vertical label, or a subdomain.
 
 It becomes valuable when a professional can shape a digital presence by speaking, when people can hold conversations that persist and accumulate useful context, and when the system helps the right human attention arrive without creating another administrative machine.
 

@@ -30,8 +30,8 @@ function StudioMessage({ message }: { message: ConversationMessage }) {
 }
 
 const starterPrompts = [
+  "Ti racconto che lavoro faccio",
   "Vorrei rendere l’accoglienza più personale",
-  "Aggiungiamo ciò che so di Roma Nord",
   "Fammi vedere come appare lo spazio oggi",
 ];
 
@@ -83,7 +83,7 @@ export function StudioWorkspace() {
     const optimistic: ConversationMessage = {
       id: `pending-${clientMessageId}`,
       author_type: "professional",
-      author_name: "Mauro",
+      author_name: "Tu",
       content,
       created_at: new Date().toISOString(),
       pending: true,
@@ -133,7 +133,7 @@ export function StudioWorkspace() {
             <div className="studio-empty">
               <span><SparkIcon /></span>
               <h2>Parlami del professionista che vuoi essere qui.</h2>
-              <p>Possiamo partire dal tuo territorio, dal modo in cui ricevi le persone o da qualcosa che non vuoi delegare.</p>
+              <p>Partiamo da “Che lavoro fai?”, poi dal modo in cui ricevi le persone o da qualcosa che non vuoi delegare.</p>
             </div>
           )}
           {messages.map((message) => <StudioMessage key={message.id} message={message} />)}

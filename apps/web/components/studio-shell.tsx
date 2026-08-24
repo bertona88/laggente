@@ -8,6 +8,7 @@ import {
   LayersIcon,
   LogOutIcon,
   MenuIcon,
+  NetworkIcon,
   StudioIcon,
 } from "@/components/icons";
 import { Logo } from "@/components/logo";
@@ -18,6 +19,7 @@ import { publicSpaceHref, studioHref } from "@/lib/hosts";
 const navItems = [
   { href: "/studio", label: "Studio", icon: StudioIcon, exact: true },
   { href: "/studio/conversazioni", label: "Conversazioni", icon: ConversationIcon },
+  { href: "/studio/grafo", label: "Grafo", icon: NetworkIcon },
   { href: "/studio/spazio", label: "Spazio pubblico", icon: LayersIcon },
 ];
 
@@ -26,18 +28,31 @@ interface SessionInfo {
   name?: string;
   display_name?: string;
   email?: string;
+  slug?: string;
   space_slug?: string;
+  public_role?: string;
 }
 
 export function StudioShell({ children }: { children: React.ReactNode }) {
   const [pathname] = useLocation();
   const navigate = useAppNavigate();
-  const [session, setSession] = useState<SessionInfo>({ professional_name: "Mauro Rossi", space_slug: "mauro" });
+  const [session, setSession] = useState<SessionInfo>({});
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
-    apiRequest<SessionInfo | { member?: SessionInfo }>("/auth/session")
-      .then((data) => setSession("member" in data && data.member ? data.member : data as SessionInfo))
+    Promise.all([
+      apiRequest<SessionInfo | { member?: SessionInfo }>("/auth/session"),
+      apiRequest<{ space?: SessionInfo }>("/studio/space"),
+    ])
+      .then(([auth, space]) => {
+        const member = "member" in auth && auth.member ? auth.member : auth as SessionInfo;
+        const resolvedSpace = space.space || {};
+        setSession({
+          ...member,
+          ...resolvedSpace,
+          space_slug: resolvedSpace.slug || resolvedSpace.space_slug,
+        });
+      })
       .catch((error) => {
         if (isUnauthorized(error)) navigate(studioHref("/login"), { replace: true });
       });
@@ -51,7 +66,7 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const professionalName = session.professional_name || session.display_name || session.name || "Mauro Rossi";
+  const professionalName = session.professional_name || session.display_name || session.name || "Il professionista";
   const nav = (
     <>
       <div className="studio-sidebar__brand">
@@ -72,12 +87,12 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
       </nav>
       <div className="studio-sidebar__public">
         <span>Online ora</span>
-        <strong>{session.space_slug || "mauro"}.laggente.com</strong>
-        <Link href={publicSpaceHref(session.space_slug || "mauro")} target="_blank">Apri spazio pubblico ↗</Link>
+        <strong>{session.space_slug || "spazio"}.laggente.com</strong>
+        <Link href={publicSpaceHref(session.space_slug || "spazio")} target="_blank">Apri spazio pubblico ↗</Link>
       </div>
       <div className="studio-user">
         <span className="studio-user__avatar">{initials(professionalName)}</span>
-        <div><strong>{professionalName}</strong><span>{session.email || "Agente immobiliare"}</span></div>
+        <div><strong>{professionalName}</strong><span>{session.public_role || session.email || "Professionista"}</span></div>
         <button type="button" onClick={() => void logout()} aria-label="Esci dallo Studio"><LogOutIcon /></button>
       </div>
     </>

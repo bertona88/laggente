@@ -7,6 +7,7 @@ import { LandingPage } from "@/components/landing-page";
 import { LoginForm } from "@/components/login-form";
 import { Logo } from "@/components/logo";
 import { PublicSpace } from "@/components/public-space";
+import { RelationshipGraph } from "@/components/relationship-graph";
 import { SpaceRevisions } from "@/components/space-revisions";
 import { StudioShell } from "@/components/studio-shell";
 import { StudioWorkspace } from "@/components/studio-workspace";
@@ -23,6 +24,7 @@ export function documentTitleForRoute(location: string, tenantSlug: string | nul
   if (location === "/studio" || location === "/studio/") return "Studio privato";
   if (location === "/studio/conversazioni") return "Conversazioni — Studio";
   if (location.startsWith("/studio/conversazioni/")) return "Conversazione — Studio";
+  if (location === "/studio/grafo") return "Grafo — Studio";
   if (location === "/studio/spazio") return "Spazio pubblico — Studio";
   const pathSlug = tenantSlug
     ? null
@@ -63,6 +65,7 @@ function StudioArea({ location }: { location: string }) {
   let page: ReactNode;
   if (detailMatch) page = <ConversationDetail conversationId={decodeURIComponent(detailMatch[1])} />;
   else if (location === "/studio/conversazioni") page = <ConversationInbox />;
+  else if (location === "/studio/grafo") page = <RelationshipGraph />;
   else if (location === "/studio/spazio") page = <SpaceRevisions />;
   else if (location === "/studio" || location === "/studio/") page = <StudioWorkspace />;
   else page = <NotFoundPage />;
