@@ -22,7 +22,7 @@ const fallbackPositioning: ProductPositioning = {
     weight: 100,
     status: "pilot",
     template_id: "seller_it_v1",
-    example_answer: "Sono un agente immobiliare.",
+    example_answer: "Sono un agente immobiliare a Roma Nord. Prima di valutare un immobile controllo titolo di provenienza, conformità urbanistica e catastale, APE, occupazione e vincoli.",
     headline: "Partiamo dagli agenti immobiliari.",
     description: "È il primo settore che stiamo rendendo concreto: un template italiano per accogliere chi sta valutando di vendere, senza trasformare la conversazione in un questionario o in una pipeline.",
   }],
@@ -96,7 +96,7 @@ export function LandingPage() {
           <p className="section-index">01 / Come nasce il tuo spazio</p>
           <div>
             <h2 id="address-story-title">Modella il tuo stile.<br />Chattando.</h2>
-            <p>Racconta a Studio come lavori e come vuoi accogliere la gente. La conversazione diventa il tuo spazio pubblico: tu lo rivedi, lo correggi e decidi quando aprirlo.</p>
+            <p>Prima parli in privato con Studio: gli racconti come lavori e come vuoi accogliere la gente. Studio prepara lo spazio; tu lo rivedi, lo correggi e decidi quando aprirlo.</p>
           </div>
         </motion.div>
 
@@ -108,13 +108,14 @@ export function LandingPage() {
             transition={{ duration: 0.5 }}
           >
             <span className="address-story__number">01</span>
-            <p className="eyebrow">Parla con Studio</p>
-            <div className="address-story__dialogue" aria-label="Esempio di conversazione nello Studio">
-              <p><span>Studio</span>{positioning.opening_question}</p>
-              <p><span>Tu</span>{featuredVertical.example_answer}</p>
+            <p className="eyebrow">Chat privata · Configurazione</p>
+            <div className="address-story__dialogue" aria-label="Chat privata di configurazione tra il professionista e Studio">
+              <p><span>Studio AI</span>{positioning.opening_question}</p>
+              <p className="address-story__dialogue-answer"><span>Professionista</span>{featuredVertical.example_answer}</p>
+              <p><span>Studio AI</span>Perfetto. Li userò come contesto, non come una checklist da imporre alla gente.</p>
             </div>
-            <h3>Comincia da ciò che fai davvero.</h3>
-            <p className="address-story__copy">Studio segue la conversazione: impara il tuo modo di lavorare, ciò che sai e come vuoi accogliere la gente.</p>
+            <h3>Configura il tuo spazio in privato.</h3>
+            <p className="address-story__copy">Questa non è la chat con i visitatori. Qui Studio impara il tuo modo di lavorare e prepara una proposta che soltanto tu puoi attivare.</p>
           </motion.article>
 
           <motion.article
@@ -161,9 +162,9 @@ export function LandingPage() {
           viewport={{ once: true, amount: 0.35 }}
           transition={{ duration: 0.65 }}
         >
-          <p className="section-index section-index--light">02 / Lo spazio pubblico</p>
+          <p className="section-index section-index--light">02 / La chat della gente</p>
           <h2 id="public-return-title">La gente non compila.<br />Entra.</h2>
-          <p>La gente può scrivere, mandare una nota vocale o una fotografia. La conversazione resta al suo posto, così nessuno deve ricominciare da zero.</p>
+          <p>Questa è un’altra chat: pubblica e separata da Studio. La gente parla con l’assistente AI del professionista; il professionista legge lo stesso filo e può entrarci.</p>
           <div className="public-return__promise">
             <span>AI dichiarata</span>
             <span>Conversazioni persistenti</span>
@@ -177,25 +178,25 @@ export function LandingPage() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.28 }}
           transition={{ duration: 0.72 }}
-          aria-label="Esempio di conversazione in uno spazio LAGGENTE"
+          aria-label="Esempio di chat pubblica tra un visitatore, l’assistente AI e il professionista"
         >
           <div className="public-return__browser">
             <span aria-hidden="true"><i /><i /><i /></span>
             <strong><b>nome</b>.laggente.com</strong>
-            <small>Il tuo spazio pubblico</small>
+            <small>Chat pubblica</small>
           </div>
           <div className="public-return__thread">
             <p className="public-return__day">Oggi</p>
             <article className="public-return__message public-return__message--ai">
               <span>AI</span>
-              <div><strong>Assistente LAGGENTE</strong><p>Ciao. Sono l’assistente AI di questo spazio. Raccontami pure cosa ti porta qui.</p></div>
+              <div><strong>Assistente AI del professionista</strong><p>Ciao. Sono l’assistente AI di questo professionista. Posso raccogliere il contesto e passargli questa conversazione. Cosa vorresti capire?</p></div>
             </article>
             <article className="public-return__message public-return__message--visitor">
-              <div><p>Vorrei capire se puoi aiutarmi. Ho alcune foto e preferirei spiegarmi a voce.</p></div>
+              <div><strong>Visitatore</strong><p>Sto pensando di vendere un appartamento ereditato a Roma Nord. Ho planimetria e APE, ma non so se la veranda è conforme.</p></div>
             </article>
             <article className="public-return__message public-return__message--human">
-              <span>Tu</span>
-              <div><strong>Il professionista è entrato</strong><p>Ho letto la conversazione. Ci sono anch’io.</p></div>
+              <span>PRO</span>
+              <div><strong>Il professionista è entrato</strong><p>Ho letto. Prima della valutazione verifichiamo la conformità della veranda. Se vuoi, carica qui la planimetria.</p></div>
             </article>
             <footer><i /> Questa conversazione resta qui quando tornate.</footer>
           </div>
