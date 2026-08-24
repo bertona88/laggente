@@ -63,6 +63,20 @@ The professional can see their conversations, the original authored messages, co
 
 Conversation remains the primary record. Memory, summaries, signals, and possible opportunities are derived views unless real use proves that they need independent lifecycles. LAGGENTE should organize attention without making the professional maintain leads, stages, fields, or statuses.
 
+## Agent-native professional correspondence
+
+The professional can ask the private Studio assistant to prepare an email from their LAGGENTE
+address. The product does not expose a general-purpose composer or conventional inbox. Studio
+creates an exact, read-only draft with visible sender, recipient, subject, body, and content
+fingerprint. The professional may ask for a new version through conversation or explicitly
+authorize the displayed version; Studio itself cannot send it.
+
+Replies are retained as tenant-scoped email artifacts and announced in the private Studio
+conversation. External email content is untrusted data: receiving it never invokes the model,
+executes a tool, authorizes a disclosure, or sends an automatic reply. The application owns
+identity, persistence, human authorization, delivery state, rate limits, and provider access.
+Email transport is an optional platform capability, not another AI role or a CRM record.
+
 ## The seller-oriented beginning
 
 The starting template helps the public assistant receive someone who may be considering selling a property. It should understand why the person came, be useful without applying pressure, avoid inventing facts, notice context that may matter, and make human participation easy.
@@ -78,7 +92,7 @@ LAGGENTE contains two conversational AI roles:
 1. the private Studio assistant that helps the authenticated professional shape the space;
 2. the public assistant that receives visitors using the active configuration.
 
-Application code and persistent data coordinate identity, configuration, conversations, memory, files, permissions, activation, and human participation. There is no third coordinating AI agent.
+Application code and persistent data coordinate identity, configuration, conversations, memory, files, email artifacts, permissions, activation, delivery authorization, and human participation. There is no third coordinating AI agent.
 
 The product is not a conventional CRM, mandatory lead workflow, native WhatsApp bot, property portal, automated valuation authority, transaction platform, multi-agent swarm, or infrastructure deployment per professional. Billing, public self-service signup or purchase, uncontrolled invitation propagation, cross-professional network behavior, arbitrary tenant code, and customer-provided OpenAI keys are not part of this product now.
 

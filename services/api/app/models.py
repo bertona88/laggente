@@ -4,7 +4,18 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, JSON, String, Text, UniqueConstraint
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    JSON,
+    LargeBinary,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
@@ -190,3 +201,50 @@ class Attachment(Base):
     transcript: Mapped[str | None] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(24), default="available", nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+
+class ProfessionalEmail(Base, TimestampMixin):
+    """An immutable email artifact plus its application-owned delivery state."""
+
+    __tablename__ = "professional_emails"
+    __table_args__ = (
+        Index("ix_professional_email_account_space", "account_id", "space_id"),
+        UniqueConstraint(
+            "provider", "provider_message_id", name="uq_professional_email_provider_message"
+        ),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    account_id: Mapped[str] = mapped_column(
+        ForeignKey("accounts.id", ondelete="CASCADE"), index=True
+    )
+    space_id: Mapped[str] = mapped_column(
+        ForeignKey("spaces.id", ondelete="CASCADE"), index=True
+    )
+    studio_conversation_id: Mapped[str] = mapped_column(
+        ForeignKey("conversations.id", ondelete="CASCADE"), index=True
+    )
+    source_message_id: Mapped[str | None] = mapped_column(
+        ForeignKey("messages.id", ondelete="SET NULL"), index=True
+    )
+    in_reply_to_email_id: Mapped[str | None] = mapped_column(
+        ForeignKey("professional_emails.id", ondelete="SET NULL"), index=True
+    )
+    direction: Mapped[str] = mapped_column(String(16), nullable=False)
+    status: Mapped[str] = mapped_column(String(24), nullable=False)
+    from_address: Mapped[str] = mapped_column(String(320), nullable=False)
+    to_address: Mapped[str] = mapped_column(String(320), nullable=False)
+    reply_to_address: Mapped[str | None] = mapped_column(String(320))
+    subject: Mapped[str] = mapped_column(String(998), nullable=False)
+    body_text: Mapped[str] = mapped_column(Text, nullable=False)
+    raw_content: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    raw_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    content_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    internet_message_id: Mapped[str | None] = mapped_column(String(998))
+    provider: Mapped[str | None] = mapped_column(String(40))
+    provider_message_id: Mapped[str | None] = mapped_column(String(998))
+    proposed_by_member_id: Mapped[str | None] = mapped_column(String(36))
+    authorized_by_member_id: Mapped[str | None] = mapped_column(String(36))
+    authorized_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    received_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    failure_code: Mapped[str | None] = mapped_column(String(120))

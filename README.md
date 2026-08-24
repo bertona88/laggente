@@ -48,6 +48,11 @@ Mauro starts from a useful template for conversations with people who may want t
 
 The Studio prepares a proposed change and shows Mauro its effect. Mauro decides when that change becomes active. Previous revisions remain recoverable.
 
+The same conversational control pattern can prepare professional correspondence. Mauro asks
+Studio to write an email; Studio seals an exact, read-only artifact; Mauro either asks for another
+version or explicitly authorizes that artifact. Replies return to the same private Studio context
+as untrusted external content. This is not a conventional inbox or a third email agent.
+
 The public assistant is the expression and proof of that configuration. It holds natural, persistent conversations in Italian using only Mauro's active space; it can work with text, voice notes, and photographs; maintain useful memory; surface corrections; and help Mauro understand where his attention may be valuable. Visitor information and conversations belong to Mauro's private account context, and Mauro can enter the same conversation without forcing the person through a separate handoff flow.
 
 ## What LAGGENTE is not
@@ -74,6 +79,7 @@ Start with the [documentation index](docs/README.md).
 | System shape | [System Architecture](docs/architecture/SYSTEM_ARCHITECTURE.md) |
 | Hosting | [Hetzner Deployment](docs/operations/HETZNER_DEPLOYMENT.md) |
 | Domains | [Domains and Subdomains](docs/operations/DOMAINS_AND_SUBDOMAINS.md) |
+| Agent-native email | [Email activation runbook](docs/operations/AGENT_NATIVE_EMAIL.md) |
 | AI collaboration | [ChatGPT Work and Codex](docs/workflows/CHATGPT_WORK_AND_CODEX.md) |
 | Git workflow | [Development Workflow](docs/workflows/DEVELOPMENT_WORKFLOW.md) |
 | Decisions | [Architecture Decision Records](docs/decisions/README.md) |
@@ -94,7 +100,12 @@ gateway serves those assets and proxies same-origin `/api/v1` REST endpoints to 
 Node.js web process in the production runtime. Exactly two OpenAI Agents SDK definitions power the
 private Studio assistant and the public assistant. PostgreSQL remains the application-owned source
 of truth for tenant-scoped configuration, conversations, messages, correctable memory, attachments,
-and audit events.
+sealed professional email artifacts, and audit events.
+
+The agent-native email application path is implemented behind the production-safe
+`AGENT_MAIL_ENABLED=false` default. Live provider activation and acceptance evidence are tracked
+separately in the [email activation runbook](docs/operations/AGENT_NATIVE_EMAIL.md); source code by
+itself is never proof of the current production state.
 
 The implemented pilot can provision additional professional spaces end to end through an
 authorized Studio invitation. Dormant invited tenants cannot resolve publicly; slug selection is

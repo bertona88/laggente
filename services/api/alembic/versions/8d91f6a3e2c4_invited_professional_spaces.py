@@ -1,7 +1,7 @@
 """add invited professional space lifecycle
 
 Revision ID: 8d91f6a3e2c4
-Revises: 5258d1a3248a
+Revises: 8c61d3d9b2a4
 Create Date: 2026-08-23 10:15:00.000000
 """
 
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 revision: str = "8d91f6a3e2c4"
-down_revision: Union[str, Sequence[str], None] = "5258d1a3248a"
+down_revision: Union[str, Sequence[str], None] = "8c61d3d9b2a4"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

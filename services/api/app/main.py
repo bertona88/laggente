@@ -14,19 +14,22 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from . import __version__
 from .assistants import AgentsAssistantService
 from .config import Settings, get_settings
-from .database import Base, SessionLocal, configure_database, engine
+from .database import Base, configure_database
 from .email import AuthEmailSender
 from .media import OpenAIAudioTranscriber
+from .professional_email import (
+    build_professional_mail_transport,
+    build_resend_inbound_source,
+)
 from .rate_limit import InMemoryRateLimiter
 from .retention import (
     discard_stale_transcription_reservations,
     discard_stale_unbound_attachments,
     purge_all_expired_conversations,
 )
-from .routes import attachments, auth, invitations, public, studio
+from .routes import attachments, auth, invitations, professional_mail, public, studio
 from .schemas import VersionOut
 from .seed import seed_demo_data
-
 
 logger = logging.getLogger(__name__)
 RETENTION_INITIAL_DELAY_SECONDS = 5 * 60
@@ -118,6 +121,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.settings = runtime_settings
     app.state.rate_limiter = InMemoryRateLimiter()
     app.state.email_sender = AuthEmailSender(runtime_settings)
+    app.state.professional_mail_transport = build_professional_mail_transport(runtime_settings)
+    app.state.resend_inbound_source = build_resend_inbound_source(runtime_settings)
     app.state.assistant_service = AgentsAssistantService(runtime_settings)
     app.state.audio_transcriber = OpenAIAudioTranscriber(runtime_settings)
     app.state.upload_slots = asyncio.Semaphore(MAX_CONCURRENT_UPLOAD_REQUESTS)
@@ -186,6 +191,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(studio.router, prefix="/api/v1")
     app.include_router(invitations.router, prefix="/api/v1")
     app.include_router(attachments.router, prefix="/api/v1")
+    app.include_router(professional_mail.router, prefix="/api/v1")
 
     @app.get("/healthz", include_in_schema=False)
     @app.get("/api/v1/health/live", include_in_schema=False)

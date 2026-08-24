@@ -104,6 +104,39 @@ export interface ConfigRevision {
   preview?: Partial<ProfessionalSpace> | null;
 }
 
+export type ProfessionalEmailStatus =
+  | "draft"
+  | "sending"
+  | "sent"
+  | "delivery_delayed"
+  | "delivered"
+  | "bounced"
+  | "complained"
+  | "suppressed"
+  | "simulated"
+  | "failed"
+  | "superseded"
+  | "received";
+
+export interface ProfessionalEmail {
+  id: string;
+  direction: "outbound" | "inbound";
+  status: ProfessionalEmailStatus | string;
+  from_address: string;
+  to_address: string;
+  reply_to_address?: string | null;
+  subject: string;
+  body_text: string;
+  raw_sha256: string;
+  content_sha256: string;
+  provider?: string | null;
+  provider_message_id?: string | null;
+  authorized_at?: string | null;
+  sent_at?: string | null;
+  received_at?: string | null;
+  created_at: string;
+}
+
 export interface StudioBootstrap {
   professional_name: string;
   space_slug: string;
@@ -111,6 +144,7 @@ export interface StudioBootstrap {
   studio_messages: ConversationMessage[];
   active_revision?: ConfigRevision | null;
   proposed_revision?: ConfigRevision | null;
+  latest_email?: ProfessionalEmail | null;
 }
 
 export interface StudioMember {

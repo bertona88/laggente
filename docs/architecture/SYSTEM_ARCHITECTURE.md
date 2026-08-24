@@ -25,7 +25,7 @@ authenticated professional
 private Studio assistant
           ↕ authorized tools
 LAGGENTE coordination layer
-  configuration · conversations · memory · files · permissions
+  configuration · conversations · memory · files · email · permissions
           ↕ active space context
 public assistant
           ↕
@@ -70,6 +70,13 @@ The MVP runs on one existing Hetzner server with Docker Compose:
 - PostgreSQL;
 - private upload storage on the server filesystem;
 - scheduled database and file backups.
+
+When separately activated, outbound professional email uses Resend as the pilot replaceable
+transport, and signed Resend receiving webhooks lead FastAPI to fetch and retain the original raw
+message. The existing Amazon SES raw-MIME adapter and SES/S3 signed relay remain the planned later
+transport. Resend, SES, S3, and either inbound path are transport infrastructure, not a new product
+runtime, database, or AI role. See
+[ADR-0003](../decisions/0003-agent-native-professional-email.md).
 
 Node.js and Vite are build-stage tools only. The gateway image compiles `apps/web`, copies the
 resulting immutable files into nginx, serves history routes through `index.html`, and caches
@@ -118,6 +125,8 @@ The Studio talks with an authenticated professional. Through typed, server-autho
 - available actions and media capabilities;
 - invitation and human-participation preferences;
 - bounded layout and component choices supplied by the platform.
+- sealed professional email proposals and tenant-scoped correspondence inspection when the
+  platform capability is enabled.
 
 The Studio does not impose a real-estate methodology and does not generate arbitrary application code, scripts, or tenant HTML in the MVP.
 
@@ -139,6 +148,7 @@ The application between the two assistants owns:
 - authorized tool execution;
 - human participation and automatic-response control;
 - notifications;
+- immutable professional email content, human delivery authorization, and provider state;
 - consent, retention, deletion, and audit events;
 - rate limits and abuse controls.
 
@@ -158,6 +168,7 @@ tenant configuration:
 | Conversation creation | 60 new public conversations per space in a rolling hour |
 | Empty-conversation pressure | At most 60 unengaged public conversations per space; conversations without a visitor/professional message, professional participation, or a bound attachment expire after one hour and are pruned on a subsequent creation attempt |
 | Studio inbox projection | Cursorless offset pages of 1–100 conversations; the client can retrieve older pages |
+| Professional email authorization | 10 attempts per authenticated member in a rolling hour |
 
 The inbox page size bounds each retrieval, not reachability or durable conversation retention. Raw
 audio is discarded after transcription. A successfully transcribed or photographed draft has a
@@ -218,6 +229,7 @@ An `opportunity` is initially a generated view or signal that a conversation may
 | `memory_items` | Correctable, provenance-linked interpretations derived from conversations |
 | `events` | Audit trail for authentication, configuration, assistant failures, media, memory correction, and speaker control |
 | `magic_links` | Purpose-bound, expiring, single-use invitation and Studio authentication records |
+| `professional_emails` | Immutable raw email artifacts and application-owned delivery/receipt state |
 
 This table describes the current application-owned persistence boundary, not a permanent command
 to create one table per future noun. Participant identity and visible authorship are represented by
@@ -270,6 +282,8 @@ The hostname is a routing input, never the security boundary.
 - Public writes go through rate-limited server endpoints.
 - Tool arguments and configuration revisions are validated and authorized server-side.
 - User messages, professional knowledge, and uploads are untrusted input.
+- Incoming email bodies are untrusted input; receipt only stores and announces them, without a
+  model call, tool execution, or automatic reply.
 - Professional sessions use host-only cookies for `app.laggente.com`, not cookies shared with tenant subdomains.
 - Only members with explicit `can_invite` permission may create another account; invited members do not inherit it.
 - An invited account is tenant-isolated immediately and cannot resolve through its placeholder or claimed hostname before first activation.

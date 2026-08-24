@@ -9,7 +9,6 @@ from pydantic import (
     ConfigDict,
     EmailStr,
     Field,
-    field_validator,
     model_validator,
 )
 
@@ -217,12 +216,64 @@ class ConversationDetail(BaseModel):
     conversation: ConversationOut
     messages: list[MessageOut]
     memories: list["MemoryOut"] = Field(default_factory=list)
+    latest_email: "ProfessionalEmailOut | None" = None
 
 
 class StudioTurnOut(BaseModel):
     conversation: ConversationOut
     messages: list[MessageOut]
     proposed_revision: RevisionOut | None = None
+    proposed_email: "ProfessionalEmailOut | None" = None
+
+
+class ProfessionalEmailOut(APIModel):
+    id: str
+    direction: Literal["outbound", "inbound"]
+    status: str
+    from_address: EmailStr
+    to_address: EmailStr
+    reply_to_address: EmailStr | None
+    subject: str
+    body_text: str
+    raw_sha256: str
+    content_sha256: str
+    internet_message_id: str | None
+    provider: str | None
+    provider_message_id: str | None
+    in_reply_to_email_id: str | None
+    authorized_at: datetime | None
+    sent_at: datetime | None
+    received_at: datetime | None
+    failure_code: str | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class InboundProfessionalEmail(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    recipient: EmailStr
+    receipt_id: str = Field(min_length=1, max_length=998)
+    raw_base64: str = Field(min_length=1)
+    received_at: datetime | None = None
+
+
+class ResendEmailReceivedData(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    email_id: str = Field(min_length=1, max_length=998)
+    to: list[EmailStr] = Field(min_length=1, max_length=50)
+    created_at: datetime | None = None
+
+
+class ResendEmailDeliveryData(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    email_id: str = Field(min_length=1, max_length=998)
+    tags: Any = None
+
+
+class ResendWebhookEvent(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    type: str = Field(min_length=1, max_length=100)
+    data: dict[str, Any]
 
 
 class PublicSpaceOut(BaseModel):
