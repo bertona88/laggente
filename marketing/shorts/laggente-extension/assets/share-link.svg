@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920" viewBox="0 0 1080 1920">
+  <rect width="1080" height="1920" fill="#f1eee5"/>
+  <text x="84" y="166" fill="#a96343" font-family="Inter, Arial, sans-serif" font-size="25" font-weight="700" letter-spacing="6">02 / SHARING LINK</text>
+  <text x="84" y="310" fill="#17231d" font-family="Iowan Old Style, Palatino, Georgia, serif" font-size="104" letter-spacing="-4">Condividi</text>
+  <text x="84" y="414" fill="#17231d" font-family="Iowan Old Style, Palatino, Georgia, serif" font-size="104" letter-spacing="-4">il tuo spazio.</text>
+  <rect x="84" y="620" width="912" height="250" rx="18" fill="#f8f6ef" stroke="#17231d" stroke-opacity=".16" stroke-width="2"/>
+  <text x="132" y="695" fill="#72786f" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" letter-spacing="4">SPAZIO PUBBLICO</text>
+  <text x="132" y="794" fill="#a96343" font-family="Iowan Old Style, Palatino, Georgia, serif" font-size="56">mauro</text>
+  <text x="300" y="794" fill="#17231d" font-family="Iowan Old Style, Palatino, Georgia, serif" font-size="56">.laggente.com</text>
+  <path d="M540 870V1080" stroke="#a96343" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="540" cy="1090" r="13" fill="#a96343"/>
+  <rect x="170" y="1160" width="740" height="285" rx="42" fill="#26382e"/>
+  <text x="230" y="1245" fill="#c2c99a" font-family="Inter, Arial, sans-serif" font-size="23" font-weight="700" letter-spacing="3">LINK CONDIVISO</text>
+  <text x="230" y="1346" fill="#f8f6ef" font-family="Iowan Old Style, Palatino, Georgia, serif" font-size="47">mauro.laggente.com</text>
+  <text x="84" y="1712" fill="#3e4a43" font-family="Inter, Arial, sans-serif" font-size="31">Un link normale. Uno spazio personale.</text>
+</svg>
