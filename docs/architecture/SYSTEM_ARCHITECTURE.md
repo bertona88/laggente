@@ -78,6 +78,12 @@ The MVP runs on one existing Hetzner server with Docker Compose:
 - private upload storage on the server filesystem;
 - scheduled database and file backups.
 
+Host-level certificate infrastructure delegates `auth.laggente.com` to a limited authoritative
+`acme-dns` service and gives Certbot one record-scoped credential for unattended wildcard renewal.
+The DNS listener is not an application API or tenant service; its HTTP update API is loopback-only,
+and the broad Namecheap credential is never retained on the server. See
+[ADR-0005](../decisions/0005-delegated-acme-dns-wildcard-tls.md).
+
 When separately activated, outbound professional email uses Resend as the pilot replaceable
 transport, and signed Resend receiving webhooks lead FastAPI to fetch and retain the original raw
 message. The existing Amazon SES raw-MIME adapter and SES/S3 signed relay remain the planned later

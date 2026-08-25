@@ -4,6 +4,7 @@ set -Eeuo pipefail
 base_url=${LAGGENTE_BASE_URL:-https://laggente.com}
 app_url=${LAGGENTE_APP_URL:-https://app.laggente.com}
 pilot_url=${LAGGENTE_PILOT_URL:-https://mauro.laggente.com}
+secondary_url=${LAGGENTE_SECONDARY_URL:-}
 
 require_status() {
     local url=$1
@@ -44,6 +45,10 @@ require_redirect() {
 require_status "$base_url/" '^200$'
 require_redirect "$app_url/?source=smoke" "${app_url%/}/studio?source=smoke"
 require_status "$pilot_url/" '^200$'
+if [[ -n "$secondary_url" ]]; then
+    require_status "${secondary_url%/}/" '^200$'
+    require_status "${secondary_url%/}/api/v1/public/resolve" '^200$'
+fi
 require_status "$base_url/api/health" '^200$'
 require_status "$base_url/api/readyz" '^200$'
 require_status "$base_url/api/v1" '^404$'
@@ -54,6 +59,17 @@ if ! grep -Eqi '^location: https://laggente\.com/' <<<"$www_headers"; then
     printf 'smoke: www does not redirect to canonical apex\n' >&2
     exit 1
 fi
+
+certificate_text=$(openssl s_client \
+    -connect laggente.com:443 \
+    -servername tls-probe.laggente.com \
+    </dev/null 2>/dev/null | openssl x509 -noout -ext subjectAltName)
+if ! grep -Fq 'DNS:laggente.com' <<<"$certificate_text" || \
+   ! grep -Fq 'DNS:*.laggente.com' <<<"$certificate_text"; then
+    printf 'smoke: active certificate does not cover laggente.com and *.laggente.com\n' >&2
+    exit 1
+fi
+printf 'smoke: wildcard TLS covers arbitrary professional subdomains\n'
 
 security_headers=$(curl --silent --show-error --head --max-time 15 "$base_url/")
 for header in strict-transport-security x-content-type-options referrer-policy permissions-policy content-security-policy; do
