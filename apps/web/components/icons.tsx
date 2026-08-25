@@ -37,6 +37,9 @@ export const MicIcon = (props: IconProps) => (
 export const ImageIcon = (props: IconProps) => (
   <IconBase {...props}><rect x="3" y="4" width="18" height="16" rx="2" /><circle cx="8.5" cy="9" r="1.5" /><path d="m21 15-5-5L5 20" /></IconBase>
 );
+export const DocumentIcon = (props: IconProps) => (
+  <IconBase {...props}><path d="M6 3h8l4 4v14H6z" /><path d="M14 3v5h5M9 12h6M9 16h6" /></IconBase>
+);
 export const SparkIcon = (props: IconProps) => (
   <IconBase {...props}><path d="m12 3 .8 3.2A6 6 0 0 0 17.2 11l2.8 1-2.8 1a6 6 0 0 0-4.4 4.8L12 21l-.8-3.2A6 6 0 0 0 6.8 13L4 12l2.8-1a6 6 0 0 0 4.4-4.8L12 3Z" /></IconBase>
 );

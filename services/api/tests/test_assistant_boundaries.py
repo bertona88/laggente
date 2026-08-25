@@ -26,9 +26,15 @@ def test_exactly_two_bounded_agent_definitions(settings):
         "inspect_active_space_configuration",
         "list_public_conversations",
         "inspect_public_conversation",
+        "list_studio_documents",
+        "inspect_studio_document",
+        "inspect_conversation_document",
         "propose_configuration_revision",
     }
-    assert service.public_assistant.tools == []
+    assert {tool.name for tool in service.public_assistant.tools} == {
+        "search_approved_knowledge",
+        "inspect_shared_document",
+    }
     assert service.studio_assistant.model_settings.store is False
     assert service.public_assistant.model_settings.store is False
     assert service.product_positioning.opening_question == "Che lavoro fai?"
@@ -71,12 +77,18 @@ def test_agent_mail_adds_tools_to_studio_without_creating_another_agent(settings
         "inspect_active_space_configuration",
         "list_public_conversations",
         "inspect_public_conversation",
+        "list_studio_documents",
+        "inspect_studio_document",
+        "inspect_conversation_document",
         "propose_configuration_revision",
         "propose_professional_email",
         "list_professional_emails",
         "inspect_professional_email",
     }
-    assert service.public_assistant.tools == []
+    assert {tool.name for tool in service.public_assistant.tools} == {
+        "search_approved_knowledge",
+        "inspect_shared_document",
+    }
     assert service.studio_assistant.handoffs == []
 
 

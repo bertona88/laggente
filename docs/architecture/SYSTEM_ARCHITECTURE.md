@@ -93,8 +93,9 @@ space and enforces `account_id` for every data operation.
 
 The SPA history fallback is deliberately outside the API namespace. Exact `/api/v1` and every
 `/api/v1/...` request go to FastAPI; known health paths are explicit; every other `/api/...` path
-returns an HTTP 404 and can never receive `index.html`. The host nginx keeps its attachment-upload
-regex limiter ahead of the ordinary `/api/v1/` prefix before forwarding into the same boundary.
+returns an HTTP 404 and can never receive `index.html`. The host nginx keeps its private multipart
+upload limiter for public attachments, conversation documents, and Studio documents ahead of the
+ordinary `/api/v1/` prefix before forwarding into the same boundary.
 
 The Studio assistant and public assistant reuse the application-owned conversation store, HTTP
 transport, model integration, and authorized-tool framework. They have different roles,
@@ -119,6 +120,14 @@ sent to the provider. This model input is transient: application-owned attachmen
 the durable source and provider response storage remains disabled. The visitor-facing privacy
 notice explicitly discloses this provider processing.
 
+Documents use a separate application-owned lifecycle from media attachments. FastAPI accepts only
+PDF, DOCX, UTF-8 text, Markdown, and CSV; verifies their format; extracts bounded text locally; and
+stores both original bytes and extracted text under a tenant-derived opaque path. All extracted
+content is untrusted data, never an instruction. The private Studio assistant can list and inspect
+tenant-owned Studio sources. The public assistant can search only sources referenced by the active
+configuration, and can inspect only bound documents from its current conversation. The professional
+must explicitly activate a revision before a private source becomes approved public knowledge.
+
 ## Two AI roles
 
 ### Private Studio assistant
@@ -128,6 +137,7 @@ The Studio talks with an authenticated professional. Through typed, server-autho
 - public identity and presentation;
 - tone, language, and conversational behavior;
 - professional knowledge;
+- private Studio source documents and conversation-scoped documents;
 - topics and signals worth noticing;
 - available actions and media capabilities;
 - invitation and human-participation preferences;
@@ -149,7 +159,7 @@ document-shaped revision path and remains inactive until explicit professional a
 
 ### Public assistant
 
-The public assistant talks with visitors using only the active configuration of the resolved professional space. It can converse naturally, use approved knowledge, maintain correctable memory, work with enabled tools, and invite the professional to participate.
+The public assistant talks with visitors using only the active configuration of the resolved professional space. It can converse naturally, search approved active-revision document sources, inspect documents bound to its current conversation, maintain correctable memory, work with enabled tools, and invite the professional to participate.
 
 It does not run a hard-coded qualification pipeline. The initial seller template is guidance for useful behavior, not a required sequence of questions or completion gates.
 
@@ -159,7 +169,7 @@ The application between the two assistants owns:
 
 - tenant and professional identity;
 - active and historical space configuration;
-- persistent threads, participants, messages, and attachments;
+- persistent threads, participants, messages, attachments, and documents;
 - retrieval of approved professional knowledge;
 - correctable memory and generated conversation views;
 - authorized tool execution;
@@ -178,21 +188,24 @@ tenant configuration:
 
 | Resource | Enforced ceiling |
 | --- | --- |
-| Durable image storage | 512 MiB per account and 50 MiB per conversation |
-| Attachments | 20 records per conversation, including image and audio records |
+| Private file storage | 512 MiB per account and 50 MiB per conversation across durable images and documents |
+| Conversation files | 20 attachment/document records per conversation |
+| Studio source library | 100 documents per space; each upload also obeys the 10 MiB request ceiling |
 | Audio transcription | 12 attempts per account in a rolling hour |
 | Public-assistant model use | 60 model-backed turns per space in a rolling hour |
 | Conversation creation | 60 new public conversations per space in a rolling hour |
 | Professional email entry | 8 requests per IP in 15 minutes, 3 per address in one hour, and 60 new-address requests per API process in one hour |
-| Empty-conversation pressure | At most 60 unengaged public conversations per space; conversations without a visitor/professional message, professional participation, or a bound attachment expire after one hour and are pruned on a subsequent creation attempt |
+| Empty-conversation pressure | At most 60 unengaged public conversations per space; conversations without a visitor/professional message, professional participation, or a bound attachment or document expire after one hour and are pruned on a subsequent creation attempt |
 | Studio inbox projection | Cursorless offset pages of 1–100 conversations; the client can retrieve older pages |
 | Professional email authorization | 10 attempts per authenticated member in a rolling hour |
 
 The inbox page size bounds each retrieval, not reachability or durable conversation retention. Raw
-audio is discarded after transcription. A successfully transcribed or photographed draft has a
-one-hour binding window; an abandoned unbound record and any private image payload are then
+audio is discarded after transcription. A successfully transcribed, photographed, or document
+draft has a one-hour binding window; an abandoned unbound record and any private file payload are then
 reclaimed. A failed transcription releases its unusable row immediately while its content-free
-attempt event remains for rolling spend control. The byte ceilings apply to durable image payloads.
+attempt event remains for rolling spend control. The byte ceilings apply to durable images and
+documents. PDF extraction is bounded to 100 pages, DOCX expansion to 30 MiB, and retained extracted
+text to 120,000 characters per document.
 The rolling public rate counters live in the single API process used by the current pilot
 topology and reset if that process restarts; database-backed storage, attachment, transcription,
 and unengaged-conversation checks remain persistent. These operational controls do not create a
@@ -227,7 +240,7 @@ Do not normalize every possible professional preference into a dedicated table, 
 
 ## Conversation and memory model
 
-Conversation is primary. A persistent thread contains participants, messages, attachment references, and authorship. A visitor may begin with a secure anonymous session identity and later provide contact information without being forced to create an account.
+Conversation is primary. A persistent thread contains participants, messages, attachment and document references, and authorship. A visitor may begin with a secure anonymous session identity and later provide contact information without being forced to create an account. A conversation document becomes durable shared context only when it is bound to an authored message; it is not a transaction record or independent client dossier.
 
 Memory is derived from conversation content. It may contain facts, preferences, open questions, summaries, signals, and suggested next actions. Every derived item must retain enough provenance to show where it came from and must be correctable without rewriting the original message history.
 
@@ -263,7 +276,8 @@ new AI role. The existing application coordination layer computes the projection
 | `config_revisions` | Proposed, active, and historical space configurations |
 | `conversations` | Persistent private Studio or public threads |
 | `messages` | Immutable authored items in a conversation |
-| `attachments` | Private audio, photograph, and other supported file metadata |
+| `attachments` | Private audio and photograph metadata |
+| `documents` | Tenant-owned Studio sources and message-bound conversation documents, including extracted text and private storage metadata |
 | `memory_items` | Correctable, provenance-linked interpretations derived from conversations |
 | `events` | Audit trail for authentication, configuration, assistant failures, media, memory correction, and speaker control |
 | `magic_links` | Purpose-bound, expiring, single-use invitation and Studio authentication records |
@@ -275,7 +289,7 @@ to create one table per future noun. Participant identity and visible authorship
 conversation state and immutable message authorship in this release; a separate participant
 lifecycle has not been introduced without evidence that it is needed.
 
-Every tenant-owned record contains `account_id`. Every public conversation and attachment is also bound to the resolved `space_id` and authorized through server-side context.
+Every tenant-owned record contains `account_id`. Every public conversation, attachment, and document is also bound to the resolved `space_id` and authorized through server-side context.
 
 ## Conversation persistence and transport boundary
 
@@ -286,7 +300,7 @@ requests and private filesystem storage; downloads pass through an authorized Fa
 
 Application records are the only durable conversation truth. They contain the context a model or
 generic chat transport cannot infer safely: account, space, authenticated member, anonymous
-visitor continuation identity, authorship, attachment ownership, revision activation, and
+visitor continuation identity, authorship, attachment/document ownership, revision activation, and
 AI-response control. Adding streaming or ChatKit later must preserve this boundary and must not
 create a second chat database.
 
@@ -321,6 +335,8 @@ The hostname is a routing input, never the security boundary.
 - Public writes go through rate-limited server endpoints.
 - Tool arguments and configuration revisions are validated and authorized server-side.
 - User messages, professional knowledge, and uploads are untrusted input.
+- Document references are revalidated against `account_id`, `space_id`, scope, and ready state both
+  when a draft is created and when it is activated; extracted document text is always untrusted.
 - Incoming email bodies are untrusted input; receipt only stores and announces them, without a
   model call, tool execution, or automatic reply.
 - Professional sessions use host-only cookies for `app.laggente.com`, not cookies shared with tenant subdomains.

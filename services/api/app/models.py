@@ -220,6 +220,39 @@ class Attachment(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
 
 
+class Document(Base, TimestampMixin):
+    """A private source file with an application-owned access and activation lifecycle."""
+
+    __tablename__ = "documents"
+    __table_args__ = (
+        Index("ix_document_account_space_scope", "account_id", "space_id", "scope"),
+        Index("ix_document_account_conversation", "account_id", "conversation_id"),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    account_id: Mapped[str] = mapped_column(
+        ForeignKey("accounts.id", ondelete="CASCADE"), index=True
+    )
+    space_id: Mapped[str] = mapped_column(
+        ForeignKey("spaces.id", ondelete="CASCADE"), index=True
+    )
+    conversation_id: Mapped[str | None] = mapped_column(
+        ForeignKey("conversations.id", ondelete="CASCADE"), index=True
+    )
+    message_id: Mapped[str | None] = mapped_column(
+        ForeignKey("messages.id", ondelete="SET NULL"), index=True
+    )
+    scope: Mapped[str] = mapped_column(String(24), nullable=False)
+    uploader_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    uploader_id: Mapped[str | None] = mapped_column(String(100))
+    storage_key: Mapped[str] = mapped_column(String(500), unique=True, nullable=False)
+    original_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    media_type: Mapped[str] = mapped_column(String(160), nullable=False)
+    size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
+    sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    extracted_text: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(String(24), default="ready", nullable=False)
+
+
 class ProfessionalEmail(Base, TimestampMixin):
     """An immutable email artifact plus its application-owned delivery state."""
 

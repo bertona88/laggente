@@ -41,6 +41,12 @@ enters a configuration proposal.
 
 After publication, the Studio remains the primary way to evolve the space. The professional can keep talking, correct the Studio's interpretation, add knowledge, change tone or behavior, recover an earlier revision, and activate a new one without deploying code.
 
+The professional can also keep a bounded private source library in the Studio. PDF, DOCX, text,
+Markdown, and CSV files are extracted locally into inspectable source text. The private Studio
+assistant may read every tenant-owned source when useful. A source is not available to the public
+assistant merely because it was uploaded: the professional must first propose its inclusion in a
+configuration revision and then explicitly activate that revision.
+
 ## A living configuration, not a cramped schema
 
 The Studio creates an inspectable, revisable configuration of the professional's space. That configuration may contain identity, presentation, knowledge, examples, preferences, conversational guidance, things worth noticing, available capabilities, page elements, and other material that emerges from the professional's conversation.
@@ -64,13 +70,13 @@ When the professional activates a space, the personal subdomain becomes its publ
 
 The public assistant uses only the active configuration of that professional's space. A change discussed privately does not affect visitors until the professional activates it. This lets the product test the Studio's understanding through observable public behavior: what the assistant says, what it knows, how it speaks, what it notices, what it refuses to invent, and when it brings the professional closer.
 
-A visitor can begin without creating an account, converse naturally in Italian, return to the same persistent conversation, and eventually use supported voice notes and private photographs. The assistant follows the visitor's intent rather than marching through a qualification script.
+A visitor can begin without creating an account, converse naturally in Italian, return to the same persistent conversation, and use supported voice notes, private photographs, and documents. The professional can share documents back in the same thread. These files form a conversation-scoped room visible to its visitor, professional, and authorized assistants; they do not enter another conversation or the public knowledge library. The assistant follows the visitor's intent rather than marching through a qualification script.
 
 ## Information returns to the professional
 
 Public conversations are stored inside the resolved professional's account and space. They are not shared across professionals, exposed through the hostname alone, or treated as model-owned state.
 
-The professional can see their conversations, the original authored messages, correctable memory, concise summaries, open questions, signals, and explanations of why their attention may be useful. They can enter the same conversation as themselves. Their authorship is explicit, automatic AI replies pause by default when they write, and they may explicitly re-enable the assistant later.
+The professional can see their conversations, the original authored messages, shared documents, correctable memory, concise summaries, open questions, signals, and explanations of why their attention may be useful. They can enter the same conversation as themselves, upload a document, and make it visible to the visitor in that existing thread. Their authorship is explicit, automatic AI replies pause by default when they write, and they may explicitly re-enable the assistant later.
 
 Conversation remains the primary record. Memory, summaries, signals, and possible opportunities are derived views unless real use proves that they need independent lifecycles. LAGGENTE should organize attention without making the professional maintain leads, stages, fields, or statuses.
 
@@ -111,6 +117,6 @@ LAGGENTE contains two conversational AI roles:
 
 Application code and persistent data coordinate identity, configuration, conversations, memory, files, email artifacts, permissions, activation, delivery authorization, and human participation. There is no third coordinating AI agent.
 
-The product is not a conventional CRM, mandatory lead workflow, native WhatsApp bot, property portal, automated valuation authority, transaction platform, multi-agent swarm, or infrastructure deployment per professional. Billing and purchase, uncontrolled invitation propagation, address-book import, external contact enrichment, cross-professional network behavior, arbitrary tenant code, and customer-provided OpenAI keys are not part of this product now.
+The product is not a conventional CRM, mandatory lead workflow, native WhatsApp bot, property portal, automated valuation authority, transaction platform, transaction-document orchestrator, multi-agent swarm, or infrastructure deployment per professional. Billing and purchase, document signing or checklists, uncontrolled invitation propagation, address-book import, external contact enrichment, cross-professional network behavior, arbitrary tenant code, and customer-provided OpenAI keys are not part of this product now.
 
 The experience we want is simple to recognize: a professional creates a public identity and subdomain, teaches the Studio who they are by talking, activates a space that genuinely reflects them, receives people through its public assistant, and privately understands or joins the resulting conversations without being turned into a data-entry operator.

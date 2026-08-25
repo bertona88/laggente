@@ -12,6 +12,14 @@ export interface ConversationAttachment {
   url?: string;
 }
 
+export interface ConversationDocument {
+  id: string;
+  name: string;
+  media_type: string;
+  size_bytes: number;
+  url: string;
+}
+
 export interface ProfessionalSpace {
   slug: string;
   professional_name: string;
@@ -89,6 +97,23 @@ export interface ConversationMessage {
   created_at: string;
   pending?: boolean;
   attachment?: ConversationAttachment | null;
+  document?: ConversationDocument | null;
+}
+
+export type DocumentPublicState = "private" | "draft" | "active";
+
+export interface StudioDocument extends ConversationDocument {
+  conversation_id?: string | null;
+  message_id?: string | null;
+  scope: "studio" | "conversation";
+  uploader_type: "visitor" | "professional" | string;
+  sha256: string;
+  status: string;
+  extracted_characters: number;
+  public_state: DocumentPublicState;
+  download_url: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface PublicConversation {
