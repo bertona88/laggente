@@ -236,6 +236,28 @@ The wildcard procedure installs the pinned `acme-dns.service`, performs one full
 Namecheap delegation from the allowlisted Hetzner origin, issues `laggente-wildcard`, and proves a
 dry-run renewal. Certificate issuance does not stop application containers or neighboring services.
 
+The Hetzner Cloud firewall is provider-side state and is not changed by the repository scripts or
+the host firewall. The firewall attached to `116.203.123.0` (currently `firewall-1`) must retain
+these inbound authoritative-DNS rules in addition to the established SSH and web rules:
+
+| Protocol | Port | Sources |
+| --- | --- | --- |
+| TCP | `53` | `0.0.0.0/0`, `::/0` |
+| UDP | `53` | `0.0.0.0/0`, `::/0` |
+
+Do not expose the acme-dns update API on port `5399`; it remains bound to loopback. After attaching
+or replacing a Cloud Firewall, verify both DNS transports from a machine outside the VPS:
+
+```bash
+dig +norecurse @116.203.123.0 auth.laggente.com SOA
+dig +tcp +norecurse @116.203.123.0 auth.laggente.com SOA
+dig @1.1.1.1 auth.laggente.com SOA
+```
+
+The two direct queries must return `NOERROR` with the zone SOA, and the recursive query must return
+the delegated zone rather than `SERVFAIL`. A loopback service health check alone cannot prove that
+the Hetzner Cloud firewall admits public DNS traffic.
+
 ## 5. First application release
 
 Validate the encoded topology before using the release script. With Docker available, `--build`

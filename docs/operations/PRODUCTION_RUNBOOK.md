@@ -137,7 +137,21 @@ Run `systemctl reload nginx` only after `nginx -t` succeeds and a host-config ch
 ### Wildcard renewal unhealthy
 
 The Namecheap account credential is not part of renewal and must not be copied to the server. Check
-the narrowly delegated path instead:
+the narrowly delegated path instead. First prove the provider firewall and delegation from a
+workstation outside the VPS; the loopback health endpoint bypasses the Hetzner Cloud firewall:
+
+```bash
+dig +norecurse @116.203.123.0 auth.laggente.com SOA
+dig +tcp +norecurse @116.203.123.0 auth.laggente.com SOA
+dig @1.1.1.1 auth.laggente.com SOA
+```
+
+Both direct transports must return `NOERROR` with the zone SOA, and the recursive query must not
+return `SERVFAIL`. If either direct query times out, confirm that the Cloud Firewall attached to
+`116.203.123.0` admits inbound TCP and UDP port `53` from `0.0.0.0/0` and `::/0`. Do not open the
+loopback update API on port `5399`.
+
+Then check the service, limited credential, timer path, and complete renewal from the VPS:
 
 ```bash
 sudo systemctl status acme-dns --no-pager
