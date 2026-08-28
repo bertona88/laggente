@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920" viewBox="0 0 1080 1920">
+  <rect width="1080" height="1920" fill="#26382e"/>
+  <text x="84" y="170" fill="#c2c99a" font-family="Inter, Arial, sans-serif" font-size="25" font-weight="700" letter-spacing="6">LAGGENTE</text>
+  <text x="84" y="350" fill="#f8f6ef" font-family="Iowan Old Style, Palatino, Georgia, serif" font-size="105" letter-spacing="-4">Un'estensione</text>
+  <text x="84" y="458" fill="#f8f6ef" font-family="Iowan Old Style, Palatino, Georgia, serif" font-size="105" letter-spacing="-4">del professionista.</text>
+  <circle cx="540" cy="770" r="118" fill="#a96343"/>
+  <text x="540" y="758" text-anchor="middle" fill="#fff" font-family="Inter, Arial, sans-serif" font-size="27" font-weight="700" letter-spacing="3">MAURO</text>
+  <text x="540" y="800" text-anchor="middle" fill="#fff" font-family="Inter, Arial, sans-serif" font-size="20">agente immobiliare</text>
+  <path d="M540 888V1045" stroke="#c2c99a" stroke-width="5"/>
+  <rect x="178" y="1045" width="724" height="160" rx="18" fill="#f8f6ef"/>
+  <text x="540" y="1115" text-anchor="middle" fill="#17231d" font-family="Inter, Arial, sans-serif" font-size="25" font-weight="700" letter-spacing="5">STUDIO</text>
+  <text x="540" y="1160" text-anchor="middle" fill="#72786f" font-family="Iowan Old Style, Palatino, Georgia, serif" font-size="29">costruisce lo spazio con te</text>
+  <path d="M540 1205V1360" stroke="#c2c99a" stroke-width="5"/>
+  <rect x="178" y="1360" width="724" height="160" rx="18" fill="#f8f6ef"/>
+  <text x="540" y="1430" text-anchor="middle" fill="#17231d" font-family="Inter, Arial, sans-serif" font-size="25" font-weight="700" letter-spacing="5">SPAZIO PUBBLICO</text>
+  <text x="540" y="1475" text-anchor="middle" fill="#72786f" font-family="Iowan Old Style, Palatino, Georgia, serif" font-size="29">accoglie la gente</text>
+  <path d="M540 1520V1655" stroke="#c2c99a" stroke-width="5"/>
+  <circle cx="410" cy="1710" r="44" fill="#f8f6ef"/>
+  <circle cx="540" cy="1710" r="44" fill="#f8f6ef"/>
+  <circle cx="670" cy="1710" r="44" fill="#f8f6ef"/>
+  <text x="540" y="1810" text-anchor="middle" fill="#c2c99a" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="700" letter-spacing="4">LA GENTE</text>
+</svg>
