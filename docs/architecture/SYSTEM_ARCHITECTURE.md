@@ -135,6 +135,8 @@ The Studio talks with an authenticated professional. Through typed, server-autho
 - sealed professional email proposals and tenant-scoped correspondence inspection when the
   platform capability is enabled.
 - explicit, read-only public-web research with source citations when the professional asks for it.
+- bounded, consent-qualified outreach packs when the separately disabled-by-default capability is
+  enabled.
 
 If the profession is not yet known, the Studio begins from the backend-owned opening question and
 uses the declared work to specialize the configuration. Weighted verticals are starting priorities,
@@ -154,6 +156,14 @@ email bodies, credentials, and secrets. Returned pages are untrusted data rather
 instructions. URL annotations are rendered as clickable Markdown before the assistant message is
 persisted. A finding cannot become durable professional knowledge or public configuration without
 professional confirmation and the existing draft/activation boundary.
+
+For outreach, web research can create a maximum-five sourced candidate pack but cannot create
+delivery authority. Each recipient remains `research_only` until the professional records either
+explicit consent or the narrow existing-customer/similar-service basis. Only then may Studio seal a
+campaign email containing the campaign's LAGGENTE URL. The application adds privacy and opaque
+unsubscribe links, rejects suppressed addresses, and requires one human authorization over the
+exact set of artifact IDs and content hashes. Individual email authorization cannot bypass this
+bundle. Campaign states are execution states, not CRM lead stages.
 
 ### Public assistant
 
@@ -198,6 +208,7 @@ tenant configuration:
 | Empty-conversation pressure | At most 60 unengaged public conversations per space; conversations without a visitor/professional message, professional participation, or a bound attachment expire after one hour and are pruned on a subsequent creation attempt |
 | Studio inbox projection | Cursorless offset pages of 1–100 conversations; the client can retrieve older pages |
 | Professional email authorization | 10 attempts per authenticated member in a rolling hour |
+| Outreach campaign | 5 recipients by default, maximum 20 by configuration, and 2 bundle authorizations per member per hour |
 
 The inbox page size bounds each retrieval, not reachability or durable conversation retention. Raw
 audio is discarded after transcription. A successfully transcribed or photographed draft has a
@@ -280,6 +291,9 @@ new AI role. The existing application coordination layer computes the projection
 | `magic_links` | Purpose-bound, expiring, single-use invitation and Studio authentication records |
 | `signup_links` | Short-lived, single-use pre-tenant email proofs; expired rows are automatically removed |
 | `professional_emails` | Immutable raw email artifacts and application-owned delivery/receipt state |
+| `outreach_campaigns` | Tenant-scoped sourced pack and exact bundle authorization state |
+| `outreach_recipients` | Campaign-local source, recorded contact basis, sealed email link, retention, and unsubscribe state |
+| `outreach_suppressions` | Tenant-scoped addresses blocked by unsubscribe, bounce, suppression, or complaint |
 
 This table describes the current application-owned persistence boundary, not a permanent command
 to create one table per future noun. Participant identity and visible authorship are represented by
@@ -334,6 +348,9 @@ The hostname is a routing input, never the security boundary.
 - User messages, professional knowledge, and uploads are untrusted input.
 - Incoming email bodies are untrusted input; receipt only stores and announces them, without a
   model call, tool execution, or automatic reply.
+- Public contact data never creates outreach permission. Research-only candidates expire after the
+  configured short retention window; opaque-token unsubscribe and terminal provider signals block later
+  campaign preparation for that tenant.
 - Professional sessions use host-only cookies for `app.laggente.com`, not cookies shared with tenant subdomains.
 - Unknown addresses cannot create tenant data until a purpose-bound email proof is consumed.
 - Only members with explicit `can_invite` permission may send curated invitations; invited and self-service members do not inherit it.

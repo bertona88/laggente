@@ -142,6 +142,43 @@ def test_agent_mail_adds_tools_to_studio_without_creating_another_agent(settings
     assert service.studio_assistant.handoffs == []
 
 
+def test_outreach_adds_bounded_studio_tools_and_never_public_tools(settings):
+    enabled = settings.model_copy(
+        update={
+            "agent_mail_enabled": True,
+            "agent_mail_inbound_secret": "x" * 32,
+            "outreach_enabled": True,
+            "outreach_max_recipients": 5,
+        }
+    )
+    service = AgentsAssistantService(enabled)
+    tool_names = {tool.name for tool in service.studio_assistant.tools}
+
+    assert {
+        "web_search",
+        "propose_outreach_campaign",
+        "record_outreach_contact_permission",
+        "propose_outreach_email",
+        "list_outreach_campaigns",
+        "inspect_outreach_campaign",
+    }.issubset(tool_names)
+    assert service.public_assistant.tools == []
+    context = StudioRunContext(
+        account_id="account",
+        space_id="space",
+        member_id="member",
+        product_positioning={"opening_question": "Che lavoro fai?", "featured_verticals": []},
+        mail_enabled=True,
+        outreach_enabled=True,
+        runtime_settings=enabled,
+    )
+    instructions = _studio_instructions(SimpleNamespace(context=context), None)
+    assert "Un indirizzo pubblicato online" in instructions
+    assert "NON costituiscono consenso" in instructions
+    assert "existing_customer_similar_services" in instructions
+    assert "tu non puoi inviare" in instructions
+
+
 def test_public_input_embeds_integrity_checked_private_image(settings):
     image_bytes = b"\x89PNG\r\n\x1a\n" + b"private-image"
     storage_key = "account/conversation/image.png"

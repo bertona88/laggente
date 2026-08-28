@@ -148,6 +148,14 @@ change request is another Studio message and produces another sealed version rat
 the artifact in place. Incoming email is quoted, untrusted material and never an instruction to
 the assistant or an automatic-reply trigger.
 
+When the separately gated outreach capability is enabled, Studio may turn explicit public-web
+research into a maximum-five candidate pack for sharing a LAGGENTE link. Sources nominate; they do
+not authorize. Candidates remain research-only until the professional records exact consent or the
+narrow existing-customer/similar-service basis. Studio can then seal one immutable email per
+recipient. The application adds privacy and opaque-token unsubscribe links, checks suppression, and lets
+the professional authorize only the complete exact bundle. The bundle describes one action and
+never becomes a lead pipeline.
+
 ---
 
 ## 5. The public space
@@ -286,6 +294,7 @@ The application, not the model, determines:
 - whether automatic replies are enabled;
 - whether a tool call is authorized;
 - whether an exact email artifact has human authorization to be delivered;
+- whether every outreach recipient has a permitted contact basis and is absent from suppression;
 - retention and deletion execution;
 - immutable disclosure and safety rules.
 
@@ -350,6 +359,8 @@ The MVP begins with a compact persistent model:
 | Message | Immutable authored conversational item |
 | Attachment | Private supported media and metadata |
 | Professional email | Sealed inbound or outbound correspondence plus delivery state |
+| Outreach campaign | Bounded sourced candidate pack and exact bundle-authorization state |
+| Outreach recipient | Campaign-local source, contact basis, sealed artifact link, and suppression state |
 | Memory item | Correctable interpretation linked to source messages |
 | Event | Auditable configuration, tool, consent, speaker-control, and deletion action |
 
@@ -357,8 +368,9 @@ Do not create a table for every possible interpretation. Summaries, signals, and
 
 In the implemented pilot, participant identity and visible authorship are carried by conversation
 state and immutable message fields rather than a separate participant table. The schema also has
-a `magic_links` support record for the optional email authentication mode and a
-`professional_emails` record for immutable correspondence artifacts. These storage choices
+a `magic_links` support record for the optional email authentication mode, a
+`professional_emails` record for immutable correspondence artifacts, and bounded outreach
+campaign/recipient records when that capability is explicitly enabled. These storage choices
 do not change the conceptual roles above.
 
 Every tenant-owned record contains `account_id`. Public records also bind to the resolved professional space. The hostname selects context but never substitutes for server-side authorization.
@@ -494,7 +506,7 @@ The initial commercial signal remains qualified valuation appointments per profe
 - renovation rendering;
 - transaction-document orchestration;
 - cross-professional network behavior;
-- address-book import, external contact enrichment, or cross-account relationship clustering;
+- address-book import, bulk scraping, purchased contact lists, inferred cold-email permission, or cross-account relationship clustering;
 - customer-provided code or OpenAI keys;
 - property passports, blockchain proofs, crypto, payments, or title transfer;
 - multi-agent swarms;

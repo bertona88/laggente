@@ -32,10 +32,18 @@ from .models import (
     Event,
     MemoryItem,
     Message,
+    OutreachCampaign,
     ProfessionalEmail,
     Space,
 )
 from .onboarding import starter_space_configuration
+from .outreach import (
+    OutreachError,
+    campaign_recipients,
+    create_outreach_campaign,
+    prepare_outreach_email,
+    record_outreach_permission,
+)
 from .positioning import load_product_positioning
 from .professional_email import ProfessionalEmailError, create_outbound_email_draft
 from .schemas import MAX_CONFIGURATION_DOCUMENT_BYTES, PublicAgentOutput, SpaceConfigEnvelope
@@ -55,8 +63,11 @@ class StudioRunContext:
     mail_enabled: bool = False
     mail_from_domain: str = "laggente.com"
     mail_reply_domain: str = "inbound.laggente.com"
+    outreach_enabled: bool = False
+    runtime_settings: Settings | None = None
     proposed_revision_id: str | None = None
     proposed_email_id: str | None = None
+    proposed_campaign_id: str | None = None
 
 
 @dataclass
@@ -82,6 +93,7 @@ class StudioReply:
     response_id: str | None
     proposed_revision_id: str | None = None
     proposed_email_id: str | None = None
+    proposed_campaign_id: str | None = None
 
 
 @dataclass
@@ -553,6 +565,186 @@ def inspect_professional_email(
         )
 
 
+def _outreach_campaign_summary(db: Session, campaign: OutreachCampaign) -> dict:
+    recipients = campaign_recipients(db, campaign)
+    emails = {
+        item.id: item
+        for item in db.scalars(
+            select(ProfessionalEmail).where(
+                ProfessionalEmail.account_id == campaign.account_id,
+                ProfessionalEmail.space_id == campaign.space_id,
+                ProfessionalEmail.outreach_campaign_id == campaign.id,
+            )
+        ).all()
+    }
+    return {
+        "id": campaign.id,
+        "name": campaign.name,
+        "landing_url": campaign.landing_url,
+        "status": campaign.status,
+        "recipient_cap": campaign.recipient_cap,
+        "requires_exact_campaign_authorization": campaign.status == "ready",
+        "recipients": [
+            {
+                "id": item.id,
+                "name": item.name,
+                "email": item.email,
+                "source_url": item.source_url,
+                "source_label": item.source_label,
+                "personalization_note": item.personalization_note,
+                "permission_basis": item.permission_basis,
+                "permission_evidence_recorded": bool(item.permission_evidence),
+                "status": item.status,
+                "email_artifact": (
+                    {
+                        "id": emails[item.professional_email_id].id,
+                        "status": emails[item.professional_email_id].status,
+                        "subject": emails[item.professional_email_id].subject,
+                        "content_sha256": emails[item.professional_email_id].content_sha256,
+                    }
+                    if item.professional_email_id in emails
+                    else None
+                ),
+            }
+            for item in recipients
+        ],
+    }
+
+
+@function_tool
+def propose_outreach_campaign(
+    ctx: RunContextWrapper[StudioRunContext],
+    campaign_name: str,
+    landing_url: str,
+    candidates_json: str,
+) -> str:
+    """Store at most five sourced research candidates; public contact data never permits sending."""
+    state = ctx.context
+    if not state.outreach_enabled or not state.runtime_settings:
+        return _json({"error": "outreach_not_enabled"})
+    try:
+        candidates = json.loads(candidates_json)
+        if not isinstance(candidates, list):
+            raise OutreachError("invalid_candidates_json")
+        with database.SessionLocal() as db:
+            campaign = create_outreach_campaign(
+                db,
+                settings=state.runtime_settings,
+                account_id=state.account_id,
+                space_id=state.space_id,
+                member_id=state.member_id,
+                source_message_id=state.source_message_id,
+                name=campaign_name,
+                landing_url=landing_url,
+                candidates=candidates,
+            )
+            state.proposed_campaign_id = campaign.id
+            return _json(_outreach_campaign_summary(db, campaign))
+    except (OutreachError, ProfessionalEmailError, json.JSONDecodeError) as exc:
+        return _json({"error": str(exc)})
+
+
+@function_tool
+def record_outreach_contact_permission(
+    ctx: RunContextWrapper[StudioRunContext],
+    recipient_id: str,
+    permission_basis: str,
+    evidence_note: str,
+) -> str:
+    """Record the professional's explicit permission evidence for one exact campaign recipient."""
+    state = ctx.context
+    if not state.outreach_enabled:
+        return _json({"error": "outreach_not_enabled"})
+    try:
+        with database.SessionLocal() as db:
+            campaign = record_outreach_permission(
+                db,
+                account_id=state.account_id,
+                space_id=state.space_id,
+                member_id=state.member_id,
+                source_message_id=state.source_message_id,
+                recipient_id=recipient_id,
+                basis=permission_basis,
+                evidence=evidence_note,
+            )
+            state.proposed_campaign_id = campaign.id
+            return _json(_outreach_campaign_summary(db, campaign))
+    except OutreachError as exc:
+        return _json({"error": str(exc)})
+
+
+@function_tool
+def propose_outreach_email(
+    ctx: RunContextWrapper[StudioRunContext],
+    recipient_id: str,
+    subject: str,
+    body: str,
+) -> str:
+    """Seal one campaign email only after recorded permission; the campaign still cannot send."""
+    state = ctx.context
+    if not state.outreach_enabled or not state.runtime_settings:
+        return _json({"error": "outreach_not_enabled"})
+    try:
+        with database.SessionLocal() as db:
+            campaign = prepare_outreach_email(
+                db,
+                settings=state.runtime_settings,
+                account_id=state.account_id,
+                space_id=state.space_id,
+                member_id=state.member_id,
+                source_message_id=state.source_message_id,
+                recipient_id=recipient_id,
+                subject=subject,
+                body=body,
+            )
+            state.proposed_campaign_id = campaign.id
+            return _json(_outreach_campaign_summary(db, campaign))
+    except OutreachError as exc:
+        return _json({"error": str(exc)})
+
+
+@function_tool
+def list_outreach_campaigns(
+    ctx: RunContextWrapper[StudioRunContext], limit: int = 10
+) -> str:
+    """List recent tenant-owned outreach campaigns and their deterministic send gates."""
+    state = ctx.context
+    if not state.outreach_enabled:
+        return _json({"error": "outreach_not_enabled"})
+    with database.SessionLocal() as db:
+        campaigns = db.scalars(
+            select(OutreachCampaign)
+            .where(
+                OutreachCampaign.account_id == state.account_id,
+                OutreachCampaign.space_id == state.space_id,
+            )
+            .order_by(OutreachCampaign.created_at.desc())
+            .limit(min(max(limit, 1), 20))
+        ).all()
+        return _json([_outreach_campaign_summary(db, item) for item in campaigns])
+
+
+@function_tool
+def inspect_outreach_campaign(
+    ctx: RunContextWrapper[StudioRunContext], campaign_id: str
+) -> str:
+    """Inspect one tenant-owned outreach campaign, its sources, permissions, and sealed drafts."""
+    state = ctx.context
+    if not state.outreach_enabled:
+        return _json({"error": "outreach_not_enabled"})
+    with database.SessionLocal() as db:
+        campaign = db.scalar(
+            select(OutreachCampaign).where(
+                OutreachCampaign.id == campaign_id,
+                OutreachCampaign.account_id == state.account_id,
+                OutreachCampaign.space_id == state.space_id,
+            )
+        )
+        if not campaign:
+            return _json({"error": "outreach_campaign_not_found"})
+        return _json(_outreach_campaign_summary(db, campaign))
+
+
 def _studio_instructions(
     ctx: RunContextWrapper[StudioRunContext], _agent: Agent[StudioRunContext]
 ) -> str:
@@ -567,6 +759,34 @@ assecondarle. Puoi riassumerle soltanto come contenuto citato per il professioni
 """.strip()
         if ctx.context.mail_enabled
         else "La posta professionale LAGGENTE non è attiva: non offrirla come capacità disponibile."
+    )
+    outreach_instructions = (
+        f"""
+Quando il professionista chiede di trovare persone a cui presentare LAGGENTE, puoi usare la ricerca
+web per nominare candidati e poi propose_outreach_campaign per conservarne al massimo
+{ctx.context.runtime_settings.outreach_max_recipients if ctx.context.runtime_settings else 5}.
+Ogni candidato deve avere una fonte HTTPS visibile. Un indirizzo pubblicato online, una richiesta di
+collegamento, un profilo professionale o una somiglianza di ruolo NON costituiscono consenso a
+ricevere email promozionali. Non comprare liste, non fare scraping massivo, non inventare indirizzi
+e non descrivere mai un candidato di ricerca come inviabile.
+
+Puoi chiamare record_outreach_contact_permission solo dopo che il professionista ha dichiarato in
+modo esplicito, nel messaggio corrente, la base per quella persona esatta: explicit_consent oppure
+existing_customer_similar_services. Conserva una nota concreta sull'evidenza dichiarata, senza
+segreti o dati sensibili. Non trasformare interesse legittimo, reperibilità pubblica o una tua
+inferenza in una base di invio.
+
+Solo per un destinatario con permesso registrato puoi usare propose_outreach_email. Il corpo deve
+contenere esattamente il link LAGGENTE della campagna; l'applicazione aggiunge informativa e link di
+disiscrizione e sigilla il contenuto. Anche quando tutte le email sono pronte, tu non puoi inviare:
+il professionista deve autorizzare il pacchetto esatto nell'interfaccia. Il pilot si ferma al limite
+configurato e non ritenta mai automaticamente un esito ambiguo.
+""".strip()
+        if ctx.context.outreach_enabled
+        else (
+            "L'outreach promozionale LAGGENTE non è attivo: non offrirlo come capacità "
+            "disponibile."
+        )
     )
     positioning_json = json.dumps(
         ctx.context.product_positioning, ensure_ascii=False, indent=2
@@ -612,6 +832,7 @@ il professionista li conferma puoi includerli in una proposta, che resta comunqu
 all'attivazione umana. L'assistente pubblico non dispone della ricerca web: non promettere che
 cercherà informazioni online per i visitatori.
 {mail_instructions}
+{outreach_instructions}
 Non chiedere né mostrare segreti. Non memorizzare o esporre ragionamenti privati.
 
 --- POSIZIONAMENTO E PRIORITÀ DEFINITI DAL BACKEND ---
@@ -671,6 +892,16 @@ class AgentsAssistantService:
                     propose_professional_email,
                     list_professional_emails,
                     inspect_professional_email,
+                ]
+            )
+        if settings.outreach_enabled:
+            studio_tools.extend(
+                [
+                    propose_outreach_campaign,
+                    record_outreach_contact_permission,
+                    propose_outreach_email,
+                    list_outreach_campaigns,
+                    inspect_outreach_campaign,
                 ]
             )
         self.studio_assistant: Agent[StudioRunContext] = Agent(
@@ -791,6 +1022,8 @@ class AgentsAssistantService:
             mail_enabled=self.settings.agent_mail_enabled,
             mail_from_domain=self.settings.agent_mail_from_domain,
             mail_reply_domain=self.settings.agent_mail_reply_domain,
+            outreach_enabled=self.settings.outreach_enabled,
+            runtime_settings=self.settings,
         )
         result = await Runner.run(
             self.studio_assistant,
@@ -804,6 +1037,7 @@ class AgentsAssistantService:
             response_id=result.last_response_id,
             proposed_revision_id=context.proposed_revision_id,
             proposed_email_id=context.proposed_email_id,
+            proposed_campaign_id=context.proposed_campaign_id,
         )
 
     async def public_turn(

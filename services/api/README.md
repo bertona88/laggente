@@ -53,6 +53,13 @@ clickable Markdown citations. Search queries must exclude private Studio materia
 email bodies, credentials, and secrets. The public assistant has no web-search tool and remains
 bounded to the active tenant configuration.
 
+Consent-qualified Studio outreach is disabled by default. Enabling `OUTREACH_ENABLED=true`
+requires agent mail, keeps public-source candidates research-only for 30 days by default, caps a
+campaign through `OUTREACH_MAX_RECIPIENTS=5`, and accepts only `explicit_consent` or
+`existing_customer_similar_services` as send bases. One authenticated action authorizes the exact
+sealed bundle; opaque-token unsubscribe and provider complaint/bounce/suppression events block later
+preparation. Public availability alone never permits delivery.
+
 ## HTTP contract
 
 All product routes use `/api/v1`. The main groups are:
@@ -63,7 +70,9 @@ All product routes use `/api/v1`. The main groups are:
   continuation-token conversations;
 - `/studio/*` — authorized professional invitation, dormant-space slug claim, private Studio
   conversation, configuration proposal/activation, public conversations, professional join, AI
-  pause/resume, memory correction, and explicit human authorization of sealed email drafts;
+  pause/resume, memory correction, explicit human authorization of sealed email drafts, and
+  consent-qualified outreach bundles;
+- `/outreach/unsubscribe` — opaque-token public suppression request with a non-enumerating response;
 - `/integrations/professional-email/resend` — signed Resend receiving webhook; the API retrieves the
   original raw email, stores it as untrusted data, and never causes an automatic reply;
 - `/integrations/professional-email/inbound` — retained HMAC-authenticated SES/S3 relay ingestion

@@ -6,6 +6,7 @@ import { ConversationInbox } from "@/components/conversation-inbox";
 import { LandingPage } from "@/components/landing-page";
 import { InviteProfessional } from "@/components/invite-professional";
 import { LoginForm } from "@/components/login-form";
+import { OutreachUnsubscribe } from "@/components/outreach-unsubscribe";
 import { Logo } from "@/components/logo";
 import { PublicSpace } from "@/components/public-space";
 import { RelationshipGraph } from "@/components/relationship-graph";
@@ -20,6 +21,7 @@ export function documentTitleForRoute(location: string, tenantSlug: string | nul
   if (location === "/privacy") return "Privacy";
   if (location === "/terms") return "Condizioni d’uso";
   if (location === "/login") return "Accesso allo Studio";
+  if (location === "/outreach/unsubscribe") return "Disiscrizione";
   if (location === "/studio" || location === "/studio/") return "Studio privato";
   if (location === "/studio/conversazioni") return "Conversazioni — Studio";
   if (location.startsWith("/studio/conversazioni/")) return "Conversazione — Studio";
@@ -78,6 +80,7 @@ function LocalRoutes({ location }: { location: string }) {
   if (location === "/login") return <LoginForm />;
   if (location === "/privacy") return <PrivacyPage />;
   if (location === "/terms") return <TermsPage />;
+  if (location === "/outreach/unsubscribe") return <OutreachUnsubscribe />;
   if (location.startsWith("/studio")) return <StudioArea location={location} />;
 
   const internalSpace = location.match(/^\/spazio\/([a-z0-9]+(?:-[a-z0-9]+)*)\/?$/);

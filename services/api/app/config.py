@@ -71,6 +71,13 @@ class Settings(BaseSettings):
         le=25 * 1024 * 1024,
         alias="AGENT_MAIL_MAX_INBOUND_BYTES",
     )
+    outreach_enabled: bool = Field(default=False, alias="OUTREACH_ENABLED")
+    outreach_max_recipients: int = Field(
+        default=5, ge=1, le=20, alias="OUTREACH_MAX_RECIPIENTS"
+    )
+    outreach_candidate_retention_days: int = Field(
+        default=30, ge=1, le=90, alias="OUTREACH_CANDIDATE_RETENTION_DAYS"
+    )
     aws_access_key_id: str | None = Field(default=None, alias="AWS_ACCESS_KEY_ID")
     aws_secret_access_key: str | None = Field(default=None, alias="AWS_SECRET_ACCESS_KEY")
     aws_session_token: str | None = Field(default=None, alias="AWS_SESSION_TOKEN")
@@ -80,7 +87,7 @@ class Settings(BaseSettings):
         default=365, ge=1, le=3650, alias="CONVERSATION_RETENTION_DAYS"
     )
     privacy_notice_version: str = Field(
-        default="2026-08-22.2", min_length=1, max_length=50, alias="PRIVACY_NOTICE_VERSION"
+        default="2026-08-27.1", min_length=1, max_length=50, alias="PRIVACY_NOTICE_VERSION"
     )
     version: str = Field(default="0.1.0", alias="APP_VERSION")
     git_sha: str = Field(default="unknown", alias="GIT_SHA")
@@ -161,6 +168,8 @@ class Settings(BaseSettings):
                     "AGENT_MAIL_INBOUND_SECRET must contain at least 32 characters "
                     "for the SES inbound relay"
                 )
+        if self.outreach_enabled and not self.agent_mail_enabled:
+            raise RuntimeError("OUTREACH_ENABLED requires AGENT_MAIL_ENABLED")
         if self.is_production:
             if self.session_secret == "development-only-change-me" or len(self.session_secret) < 32:
                 raise RuntimeError("SESSION_SECRET must be a strong, project-specific value in production")

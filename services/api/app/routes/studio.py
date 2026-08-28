@@ -4,15 +4,20 @@ import asyncio
 import json
 from weakref import WeakValueDictionary
 
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
 from ..config import Settings
 from ..conversations import active_revision, list_memories, list_messages, serialize_messages
 from ..database import get_db
-from ..dependencies import ProfessionalContext, current_professional, professional_space, runtime_settings
+from ..dependencies import (
+    ProfessionalContext,
+    current_professional,
+    professional_space,
+    runtime_settings,
+)
 from ..models import (
     Account,
     ConfigRevision,
@@ -21,6 +26,7 @@ from ..models import (
     Member,
     MemoryItem,
     Message,
+    OutreachCampaign,
     ProfessionalEmail,
     Space,
     utcnow,
@@ -47,6 +53,7 @@ from ..schemas import (
     StudioTurnOut,
 )
 from ..tenant import normalize_claimed_slug
+from .outreach import campaign_out, latest_campaign
 
 router = APIRouter(prefix="/studio", tags=["studio"])
 
@@ -113,6 +120,7 @@ def _latest_email(db: Session, account_id: str, space_id: str) -> ProfessionalEm
             ProfessionalEmail.account_id == account_id,
             ProfessionalEmail.space_id == space_id,
             ProfessionalEmail.direction == "outbound",
+            ProfessionalEmail.outreach_campaign_id.is_(None),
         )
         .order_by(ProfessionalEmail.created_at.desc())
         .limit(1)
@@ -435,6 +443,9 @@ def get_studio_messages(
     conversation = _studio_conversation(db, context.account_id, space.id)
     messages = list_messages(db, account_id=context.account_id, conversation_id=conversation.id)
     latest_email = _latest_email(db, context.account_id, space.id)
+    latest_outreach = latest_campaign(
+        db, account_id=context.account_id, space_id=space.id
+    ) if settings.outreach_enabled else None
     return ConversationDetail(
         conversation=ConversationOut.model_validate(conversation),
         messages=serialize_messages(
@@ -448,6 +459,7 @@ def get_studio_messages(
         latest_email=(
             ProfessionalEmailOut.model_validate(latest_email) if latest_email else None
         ),
+        latest_campaign=(campaign_out(db, latest_outreach) if latest_outreach else None),
     )
 
 
@@ -524,6 +536,16 @@ async def post_studio_message(
                         .order_by(ProfessionalEmail.created_at.desc())
                         .limit(1)
                     )
+                    existing_campaign = db.scalar(
+                        select(OutreachCampaign)
+                        .where(
+                            OutreachCampaign.account_id == context.account_id,
+                            OutreachCampaign.space_id == space.id,
+                            OutreachCampaign.source_message_id == professional_message.id,
+                        )
+                        .order_by(OutreachCampaign.created_at.desc())
+                        .limit(1)
+                    )
                     return StudioTurnOut(
                         conversation=ConversationOut.model_validate(conversation),
                         messages=serialize_messages(
@@ -536,6 +558,11 @@ async def post_studio_message(
                         proposed_email=(
                             ProfessionalEmailOut.model_validate(existing_email)
                             if existing_email
+                            else None
+                        ),
+                        proposed_campaign=(
+                            campaign_out(db, existing_campaign)
+                            if existing_campaign
                             else None
                         ),
                     )
@@ -558,6 +585,7 @@ async def post_studio_message(
         db.commit()
         proposed_revision = None
         proposed_email = None
+        proposed_campaign = None
         try:
             reply = await request.app.state.assistant_service.studio_turn(
                 db,
@@ -582,6 +610,14 @@ async def post_studio_message(
                         ProfessionalEmail.id == reply.proposed_email_id,
                         ProfessionalEmail.account_id == context.account_id,
                         ProfessionalEmail.space_id == space.id,
+                    )
+                )
+            if reply.proposed_campaign_id:
+                proposed_campaign = db.scalar(
+                    select(OutreachCampaign).where(
+                        OutreachCampaign.id == reply.proposed_campaign_id,
+                        OutreachCampaign.account_id == context.account_id,
+                        OutreachCampaign.space_id == space.id,
                     )
                 )
         except Exception as exc:
@@ -628,6 +664,9 @@ async def post_studio_message(
             ),
             proposed_email=(
                 ProfessionalEmailOut.model_validate(proposed_email) if proposed_email else None
+            ),
+            proposed_campaign=(
+                campaign_out(db, proposed_campaign) if proposed_campaign else None
             ),
         )
 

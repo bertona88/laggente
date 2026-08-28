@@ -20,6 +20,8 @@ export function PrivacyPage() {
         <p>Il testo, le note vocali e le fotografie necessari a rispondere vengono elaborati dal fornitore AI di LAGGENTE. Una fotografia viene inviata soltanto nel turno a cui è allegata; il suo indirizzo privato non viene condiviso e LAGGENTE non usa la funzione di archiviazione delle risposte del fornitore.</p>
         <h2>Le tue scelte</h2>
         <p>Puoi chiedere al professionista l’accesso, la correzione o la cancellazione dei tuoi dati. Non è necessario fornire recapiti per iniziare una conversazione.</p>
+        <h2>Se ricevi una presentazione di LAGGENTE</h2>
+        <p>Una campagna pilot conserva la fonte pubblica usata per nominare il professionista e non consente l’invio finché chi opera lo Studio non registra un consenso esplicito o il limitato rapporto cliente già esistente previsto per servizi analoghi. Ogni email include un collegamento personale per bloccare altri invii da quello spazio. Un candidato rimasto soltanto in ricerca viene eliminato automaticamente dopo il breve periodo configurato.</p>
         <p className="legal-page__notice">Questa informativa sintetica accompagna il pilot. L’informativa legale completa e i contatti del titolare saranno pubblicati prima dell’apertura al pubblico.</p>
       </article>
     </main>

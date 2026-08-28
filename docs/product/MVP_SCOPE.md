@@ -99,6 +99,16 @@ executes a tool, authorizes a disclosure, or sends an automatic reply. The appli
 identity, persistence, human authorization, delivery state, rate limits, and provider access.
 Email transport is an optional platform capability, not another AI role or a CRM record.
 
+For the first product-growth loop, an explicitly enabled private Studio may research a bounded set
+of professional candidates and prepare a LAGGENTE link-sharing campaign. Each candidate keeps a
+visible public source and remains research-only by default. Public availability, a social
+connection, role similarity, or inferred interest is never permission to send promotional email.
+The professional must record explicit consent for that exact recipient or the narrow
+existing-customer/similar-service exception before Studio may seal an email. One human action then
+authorizes the exact campaign bundle; unsubscribe, provider suppression, the pilot recipient cap,
+and no-automatic-retry behavior are application-owned controls. These records describe one bounded
+outreach action, not lead stages or a CRM lifecycle.
+
 The private Studio includes a bounded relationship graph. It connects the professional to people
 through existing public conversations and can connect those people to backend-configured sets derived
 from authored messages and non-dismissed, correctable memory. The graph supports finding, recentering,
@@ -122,6 +132,6 @@ LAGGENTE contains two conversational AI roles:
 
 Application code and persistent data coordinate identity, configuration, conversations, memory, files, email artifacts, permissions, activation, delivery authorization, and human participation. There is no third coordinating AI agent.
 
-The product is not a conventional CRM, mandatory lead workflow, native WhatsApp bot, property portal, automated valuation authority, transaction platform, multi-agent swarm, or infrastructure deployment per professional. Billing and purchase, uncontrolled invitation propagation, address-book import, external contact enrichment, cross-professional network behavior, arbitrary tenant code, and customer-provided OpenAI keys are not part of this product now.
+The product is not a conventional CRM, mandatory lead workflow, native WhatsApp bot, property portal, automated valuation authority, transaction platform, multi-agent swarm, or infrastructure deployment per professional. Billing and purchase, uncontrolled invitation propagation, address-book import, bulk scraping, purchased contact lists, inferred cold-email permission, cross-professional network behavior, arbitrary tenant code, and customer-provided OpenAI keys are not part of this product now.
 
 The experience we want is simple to recognize: a professional creates a public identity and subdomain, teaches the Studio who they are by talking, activates a space that genuinely reflects them, receives people through its public assistant, and privately understands or joins the resulting conversations without being turned into a data-entry operator.
