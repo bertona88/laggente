@@ -253,6 +253,89 @@ class Document(Base, TimestampMixin):
     status: Mapped[str] = mapped_column(String(24), default="ready", nullable=False)
 
 
+class OutreachCampaign(Base, TimestampMixin):
+    """A bounded, human-authorized outreach action; not a lead pipeline."""
+
+    __tablename__ = "outreach_campaigns"
+    __table_args__ = (Index("ix_outreach_campaign_account_space", "account_id", "space_id"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    account_id: Mapped[str] = mapped_column(
+        ForeignKey("accounts.id", ondelete="CASCADE"), index=True
+    )
+    space_id: Mapped[str] = mapped_column(
+        ForeignKey("spaces.id", ondelete="CASCADE"), index=True
+    )
+    studio_conversation_id: Mapped[str] = mapped_column(
+        ForeignKey("conversations.id", ondelete="CASCADE"), index=True
+    )
+    source_message_id: Mapped[str | None] = mapped_column(
+        ForeignKey("messages.id", ondelete="SET NULL"), index=True
+    )
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    landing_url: Mapped[str] = mapped_column(String(1000), nullable=False)
+    status: Mapped[str] = mapped_column(String(24), default="research", nullable=False)
+    recipient_cap: Mapped[int] = mapped_column(Integer, nullable=False)
+    authorized_by_member_id: Mapped[str | None] = mapped_column(String(36))
+    authorized_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class OutreachRecipient(Base, TimestampMixin):
+    """One sourced campaign candidate with an independent permission gate."""
+
+    __tablename__ = "outreach_recipients"
+    __table_args__ = (
+        Index("ix_outreach_recipient_account_campaign", "account_id", "campaign_id"),
+        UniqueConstraint("campaign_id", "email", name="uq_outreach_campaign_email"),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    account_id: Mapped[str] = mapped_column(
+        ForeignKey("accounts.id", ondelete="CASCADE"), index=True
+    )
+    space_id: Mapped[str] = mapped_column(
+        ForeignKey("spaces.id", ondelete="CASCADE"), index=True
+    )
+    campaign_id: Mapped[str] = mapped_column(
+        ForeignKey("outreach_campaigns.id", ondelete="CASCADE"), index=True
+    )
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    email: Mapped[str | None] = mapped_column(String(320))
+    source_url: Mapped[str] = mapped_column(String(1000), nullable=False)
+    source_label: Mapped[str | None] = mapped_column(String(300))
+    personalization_note: Mapped[str | None] = mapped_column(Text)
+    permission_basis: Mapped[str] = mapped_column(
+        String(48), default="not_recorded", nullable=False
+    )
+    permission_evidence: Mapped[str | None] = mapped_column(Text)
+    permission_recorded_by_member_id: Mapped[str | None] = mapped_column(String(36))
+    permission_source_message_id: Mapped[str | None] = mapped_column(
+        ForeignKey("messages.id", ondelete="SET NULL"), index=True
+    )
+    permission_recorded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    status: Mapped[str] = mapped_column(String(24), default="research_only", nullable=False)
+    unsubscribe_token_hash: Mapped[str | None] = mapped_column(
+        String(64), unique=True, index=True
+    )
+    unsubscribe_requested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    professional_email_id: Mapped[str | None] = mapped_column(String(36), index=True)
+    retention_until: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class OutreachSuppression(Base):
+    __tablename__ = "outreach_suppressions"
+    __table_args__ = (
+        UniqueConstraint("account_id", "email", name="uq_outreach_suppression_email"),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    account_id: Mapped[str] = mapped_column(
+        ForeignKey("accounts.id", ondelete="CASCADE"), index=True
+    )
+    email: Mapped[str] = mapped_column(String(320), nullable=False)
+    reason: Mapped[str] = mapped_column(String(80), nullable=False)
+    source: Mapped[str] = mapped_column(String(40), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+
 class ProfessionalEmail(Base, TimestampMixin):
     """An immutable email artifact plus its application-owned delivery state."""
 
@@ -278,6 +361,12 @@ class ProfessionalEmail(Base, TimestampMixin):
     )
     in_reply_to_email_id: Mapped[str | None] = mapped_column(
         ForeignKey("professional_emails.id", ondelete="SET NULL"), index=True
+    )
+    outreach_campaign_id: Mapped[str | None] = mapped_column(
+        ForeignKey("outreach_campaigns.id", ondelete="SET NULL"), index=True
+    )
+    outreach_recipient_id: Mapped[str | None] = mapped_column(
+        ForeignKey("outreach_recipients.id", ondelete="SET NULL"), index=True
     )
     direction: Mapped[str] = mapped_column(String(16), nullable=False)
     status: Mapped[str] = mapped_column(String(24), nullable=False)

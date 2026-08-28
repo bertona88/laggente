@@ -39,6 +39,13 @@ does not create a hidden completeness score or psychological profile; it disting
 professional said from what the Studio inferred and makes material inference correctable before it
 enters a configuration proposal.
 
+The professional may explicitly ask Studio to search public web sources, including for their own
+website and professional profiles. Search does not run automatically during onboarding. Studio
+uses only the minimum public identifiers supplied for that search, displays source links, and
+flags ambiguous or conflicting matches. Web findings are untrusted evidence: they do not become
+memory, knowledge, or configuration until the professional confirms them, and any resulting
+configuration change still follows the ordinary proposal and activation path.
+
 After publication, the Studio remains the primary way to evolve the space. The professional can keep talking, correct the Studio's interpretation, add knowledge, change tone or behavior, recover an earlier revision, and activate a new one without deploying code.
 
 The professional can also keep a bounded private source library in the Studio. PDF, DOCX, text,
@@ -68,7 +75,11 @@ Inside that stable envelope, professional meaning should be allowed to evolve. V
 
 When the professional activates a space, the personal subdomain becomes its public expression. It contains the professional's name, role, portrait, territory, selected public information, and a prominent conversation with an assistant that clearly identifies itself as AI.
 
-The public assistant uses only the active configuration of that professional's space. A change discussed privately does not affect visitors until the professional activates it. This lets the product test the Studio's understanding through observable public behavior: what the assistant says, what it knows, how it speaks, what it notices, what it refuses to invent, and when it brings the professional closer.
+The public assistant uses only the active configuration of that professional's space and has no
+web-search capability. A change discussed privately does not affect visitors until the
+professional activates it. This lets the product test the Studio's understanding through
+observable public behavior: what the assistant says, what it knows, how it speaks, what it
+notices, what it refuses to invent, and when it brings the professional closer.
 
 A visitor can begin without creating an account, converse naturally in Italian, return to the same persistent conversation, and use supported voice notes, private photographs, and documents. The professional can share documents back in the same thread. These files form a conversation-scoped room visible to its visitor, professional, and authorized assistants; they do not enter another conversation or the public knowledge library. The assistant follows the visitor's intent rather than marching through a qualification script.
 
@@ -94,6 +105,16 @@ executes a tool, authorizes a disclosure, or sends an automatic reply. The appli
 identity, persistence, human authorization, delivery state, rate limits, and provider access.
 Email transport is an optional platform capability, not another AI role or a CRM record.
 
+For the first product-growth loop, an explicitly enabled private Studio may research a bounded set
+of professional candidates and prepare a LAGGENTE link-sharing campaign. Each candidate keeps a
+visible public source and remains research-only by default. Public availability, a social
+connection, role similarity, or inferred interest is never permission to send promotional email.
+The professional must record explicit consent for that exact recipient or the narrow
+existing-customer/similar-service exception before Studio may seal an email. One human action then
+authorizes the exact campaign bundle; unsubscribe, provider suppression, the pilot recipient cap,
+and no-automatic-retry behavior are application-owned controls. These records describe one bounded
+outreach action, not lead stages or a CRM lifecycle.
+
 The private Studio includes a bounded relationship graph. It connects the professional to people
 through existing public conversations and can connect those people to backend-configured sets derived
 from authored messages and non-dismissed, correctable memory. The graph supports finding, recentering,
@@ -117,6 +138,6 @@ LAGGENTE contains two conversational AI roles:
 
 Application code and persistent data coordinate identity, configuration, conversations, memory, files, email artifacts, permissions, activation, delivery authorization, and human participation. There is no third coordinating AI agent.
 
-The product is not a conventional CRM, mandatory lead workflow, native WhatsApp bot, property portal, automated valuation authority, transaction platform, transaction-document orchestrator, multi-agent swarm, or infrastructure deployment per professional. Billing and purchase, document signing or checklists, uncontrolled invitation propagation, address-book import, external contact enrichment, cross-professional network behavior, arbitrary tenant code, and customer-provided OpenAI keys are not part of this product now.
+The product is not a conventional CRM, mandatory lead workflow, native WhatsApp bot, property portal, automated valuation authority, transaction platform, transaction-document orchestrator, multi-agent swarm, or infrastructure deployment per professional. Billing and purchase, document signing or checklists, uncontrolled invitation propagation, address-book import, external contact enrichment, bulk scraping, purchased contact lists, inferred cold-email permission, cross-professional network behavior, arbitrary tenant code, and customer-provided OpenAI keys are not part of this product now.
 
 The experience we want is simple to recognize: a professional creates a public identity and subdomain, teaches the Studio who they are by talking, activates a space that genuinely reflects them, receives people through its public assistant, and privately understands or joins the resulting conversations without being turned into a data-entry operator.

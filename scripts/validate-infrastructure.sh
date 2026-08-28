@@ -495,6 +495,9 @@ printf '%s\n' \
     'AGENT_MAIL_AWS_REGION=eu-south-1' \
     'AGENT_MAIL_INBOUND_SECRET=' \
     'AGENT_MAIL_MAX_INBOUND_BYTES=5242880' \
+    'OUTREACH_ENABLED=false' \
+    'OUTREACH_MAX_RECIPIENTS=5' \
+    'OUTREACH_CANDIDATE_RETENTION_DAYS=30' \
     'AWS_ACCESS_KEY_ID=' \
     'AWS_SECRET_ACCESS_KEY=' \
     'AWS_SESSION_TOKEN=' \
@@ -538,8 +541,9 @@ for production_line in \
     }
 done
 grep -q '^CONVERSATION_RETENTION_DAYS=365$' "$application_env"
-grep -q '^PRIVACY_NOTICE_VERSION=2026-08-25[.]1$' "$application_env"
+grep -q '^PRIVACY_NOTICE_VERSION=2026-08-27[.]1$' "$application_env"
 grep -q '^AGENT_MAIL_ENABLED=false$' "$application_env"
+grep -q '^OUTREACH_ENABLED=false$' "$application_env"
 grep -q '^PRODUCT_POSITIONING_JSON={"audience":"Professionisti"' "$application_env"
 (
     # Exercise the same exact production-origin/host contract used by deploy and audit.

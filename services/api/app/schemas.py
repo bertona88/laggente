@@ -234,6 +234,7 @@ class ConversationDetail(BaseModel):
     messages: list[MessageOut]
     memories: list["MemoryOut"] = Field(default_factory=list)
     latest_email: "ProfessionalEmailOut | None" = None
+    latest_campaign: "OutreachCampaignOut | None" = None
 
 
 class StudioTurnOut(BaseModel):
@@ -241,6 +242,7 @@ class StudioTurnOut(BaseModel):
     messages: list[MessageOut]
     proposed_revision: RevisionOut | None = None
     proposed_email: "ProfessionalEmailOut | None" = None
+    proposed_campaign: "OutreachCampaignOut | None" = None
 
 
 class ProfessionalEmailOut(APIModel):
@@ -258,12 +260,55 @@ class ProfessionalEmailOut(APIModel):
     provider: str | None
     provider_message_id: str | None
     in_reply_to_email_id: str | None
+    outreach_campaign_id: str | None
+    outreach_recipient_id: str | None
     authorized_at: datetime | None
     sent_at: datetime | None
     received_at: datetime | None
     failure_code: str | None
     created_at: datetime
     updated_at: datetime
+
+
+class OutreachRecipientOut(APIModel):
+    id: str
+    campaign_id: str
+    name: str
+    email: EmailStr | None
+    source_url: str
+    source_label: str | None
+    personalization_note: str | None
+    permission_basis: str
+    permission_evidence: str | None
+    status: str
+    unsubscribe_requested_at: datetime | None
+    retention_until: datetime
+    professional_email: ProfessionalEmailOut | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class OutreachCampaignOut(APIModel):
+    id: str
+    name: str
+    landing_url: str
+    status: str
+    recipient_cap: int
+    authorized_at: datetime | None
+    completed_at: datetime | None
+    created_at: datetime
+    updated_at: datetime
+    recipients: list[OutreachRecipientOut] = Field(default_factory=list)
+
+
+class OutreachUnsubscribeRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    token: str = Field(min_length=20, max_length=200)
+
+
+class OutreachUnsubscribeOut(BaseModel):
+    accepted: bool = True
+    message: str = "La richiesta è stata registrata."
 
 
 class InboundProfessionalEmail(BaseModel):

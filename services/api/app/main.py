@@ -17,6 +17,7 @@ from .config import Settings, get_settings
 from .database import Base, configure_database
 from .email import AuthEmailSender
 from .media import OpenAIAudioTranscriber
+from .outreach import purge_expired_outreach_candidates
 from .professional_email import (
     build_professional_mail_transport,
     build_resend_inbound_source,
@@ -34,6 +35,7 @@ from .routes import (
     auth,
     documents,
     invitations,
+    outreach,
     product,
     professional_mail,
     public,
@@ -68,12 +70,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
         retention_stop = asyncio.Event()
 
-        def run_retention_cycle() -> tuple[int, int, int, int, int]:
+        def run_retention_cycle() -> tuple[int, int, int, int, int, int]:
             with database.SessionLocal() as db:
                 stale_audio = discard_stale_transcription_reservations(db)
                 stale_attachments = discard_stale_unbound_attachments(db, runtime_settings)
                 stale_documents = discard_stale_unbound_documents(db, runtime_settings)
                 expired_signup_links = purge_expired_signup_links(db)
+                expired_outreach_candidates = purge_expired_outreach_candidates(db)
                 expired_conversations = len(
                     purge_all_expired_conversations(db, runtime_settings)
                 )
@@ -83,6 +86,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     stale_attachments,
                     stale_documents,
                     expired_signup_links,
+                    expired_outreach_candidates,
                 )
 
         async def retention_worker() -> None:
@@ -101,6 +105,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                         stale_attachments,
                         stale_documents,
                         expired_signup_links,
+                        expired_outreach_candidates,
                     ) = await asyncio.to_thread(run_retention_cycle)
                     if (
                         deleted
@@ -108,16 +113,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                         or stale_attachments
                         or stale_documents
                         or expired_signup_links
+                        or expired_outreach_candidates
                     ):
                         logger.info(
                             "automatic retention deleted %s conversations, %s stale audio "
                             "reservations, %s abandoned attachments, %s abandoned documents, "
-                            "and %s expired signup links",
+                            "%s expired signup links, and %s outreach candidates",
                             deleted,
                             stale_audio,
                             stale_attachments,
                             stale_documents,
                             expired_signup_links,
+                            expired_outreach_candidates,
                         )
                 except Exception:
                     # A transient database/filesystem failure must be visible but must not take the
@@ -230,6 +237,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(attachments.router, prefix="/api/v1")
     app.include_router(documents.router, prefix="/api/v1")
     app.include_router(professional_mail.router, prefix="/api/v1")
+    app.include_router(outreach.router, prefix="/api/v1")
 
     @app.get("/healthz", include_in_schema=False)
     @app.get("/api/v1/health/live", include_in_schema=False)

@@ -18,6 +18,7 @@ Architecture Decision Records capture choices that materially constrain implemen
 | [0003](0003-agent-native-professional-email.md) | Accepted | Use sealed email artifacts, Resend for the pilot, and retain SES as the later transport |
 | [0004](0004-open-email-verified-professional-signup.md) | Accepted | Open professional entry with pre-tenant email verification |
 | [0005](0005-delegated-acme-dns-wildcard-tls.md) | Accepted | Automate wildcard TLS through a narrowly delegated ACME DNS service |
+| [0006](0006-consent-qualified-studio-outreach.md) | Accepted | Bound Studio outreach to sourced research, recorded permission, exact bundle authorization, and suppression |
 
 ## Creating a new ADR
 

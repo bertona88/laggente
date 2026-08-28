@@ -1,1 +1,1 @@
-export const PRIVACY_NOTICE_VERSION = "2026-08-25.1";
+export const PRIVACY_NOTICE_VERSION = "2026-08-27.1";
