@@ -1,4 +1,10 @@
-import type { ApiErrorBody, ConversationAttachment, ConversationMessage } from "@/lib/types";
+import type {
+  ApiErrorBody,
+  ConversationAttachment,
+  ConversationDocument,
+  ConversationMessage,
+  StudioDocument,
+} from "@/lib/types";
 
 export class ApiError extends Error {
   constructor(
@@ -119,6 +125,50 @@ export function attachmentFromUploadResponse(value: unknown): ConversationAttach
     : attachment;
 }
 
+export function normalizeDocument(value: unknown): ConversationDocument | null {
+  const object = recordFrom(value);
+  if (!object) return null;
+  const id = typeof object.id === "string" ? object.id : "";
+  const name = object.name || object.original_name;
+  const url = object.url || object.download_url;
+  if (!id || typeof name !== "string" || !name || typeof url !== "string" || !url) return null;
+  return {
+    id,
+    name,
+    media_type: typeof object.media_type === "string" ? object.media_type : "application/octet-stream",
+    size_bytes: typeof object.size_bytes === "number" ? object.size_bytes : 0,
+    url,
+  };
+}
+
+export function documentFromUploadResponse(value: unknown): ConversationDocument | null {
+  const object = recordFrom(value);
+  if (!object) return null;
+  return normalizeDocument(object.document || object);
+}
+
+export function normalizeStudioDocument(value: unknown): StudioDocument | null {
+  const object = recordFrom(value);
+  const document = normalizeDocument(object);
+  if (!object || !document) return null;
+  const publicState = object.public_state;
+  if (publicState !== "private" && publicState !== "draft" && publicState !== "active") return null;
+  return {
+    ...document,
+    conversation_id: typeof object.conversation_id === "string" ? object.conversation_id : null,
+    message_id: typeof object.message_id === "string" ? object.message_id : null,
+    scope: object.scope === "conversation" ? "conversation" : "studio",
+    uploader_type: typeof object.uploader_type === "string" ? object.uploader_type : "professional",
+    sha256: typeof object.sha256 === "string" ? object.sha256 : "",
+    status: typeof object.status === "string" ? object.status : "ready",
+    extracted_characters: typeof object.extracted_characters === "number" ? object.extracted_characters : 0,
+    public_state: publicState,
+    download_url: document.url,
+    created_at: typeof object.created_at === "string" ? object.created_at : "",
+    updated_at: typeof object.updated_at === "string" ? object.updated_at : "",
+  };
+}
+
 export function normalizeMessage(value: unknown): ConversationMessage {
   const object = (value || {}) as Record<string, unknown>;
   const authorType = String(object.author_type || object.author || "system") as ConversationMessage["author_type"];
@@ -139,6 +189,7 @@ export function normalizeMessage(value: unknown): ConversationMessage {
     created_at: String(object.created_at || new Date().toISOString()),
     pending: Boolean(object.pending),
     attachment: normalizeAttachment(object.attachment),
+    document: normalizeDocument(object.document),
   };
 }
 
@@ -172,6 +223,19 @@ export function reconcileMessages(
       return {
         ...message,
         attachment: { ...incomingAttachment, url: previousAttachment.url },
+      };
+    }
+    const previousDocument = previous?.document;
+    const incomingDocument = message.document;
+    if (
+      previousDocument
+      && incomingDocument
+      && previousDocument.id === incomingDocument.id
+      && previousDocument.url
+    ) {
+      return {
+        ...message,
+        document: { ...incomingDocument, url: previousDocument.url },
       };
     }
     return message;

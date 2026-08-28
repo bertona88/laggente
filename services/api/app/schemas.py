@@ -171,11 +171,14 @@ class MessageCreate(BaseModel):
     content: str = Field(default="", max_length=12_000)
     client_message_id: str | None = Field(default=None, max_length=100)
     attachment_id: str | None = Field(default=None, max_length=36)
+    document_id: str | None = Field(default=None, max_length=36)
 
     @model_validator(mode="after")
     def content_or_attachment(self):
         self.content = self.content.strip()
-        if not self.content and not self.attachment_id:
+        if self.attachment_id and self.document_id:
+            raise ValueError("Invia un solo allegato per messaggio")
+        if not self.content and not self.attachment_id and not self.document_id:
             raise ValueError("Il messaggio o un allegato è obbligatorio")
         return self
 
@@ -189,6 +192,16 @@ class MessageAttachmentOut(BaseModel):
     url: str | None = None
 
 
+class MessageDocumentOut(BaseModel):
+    """Conversation-safe document metadata embedded in a durable message."""
+
+    id: str
+    name: str
+    media_type: str
+    size_bytes: int
+    url: str
+
+
 class MessageOut(APIModel):
     id: str
     account_id: str
@@ -200,6 +213,7 @@ class MessageOut(APIModel):
     client_message_id: str | None
     created_at: datetime
     attachment: MessageAttachmentOut | None = None
+    document: MessageDocumentOut | None = None
 
 
 class ConversationOut(APIModel):
@@ -384,6 +398,37 @@ class PublicAgentOutput(BaseModel):
     answer: str = Field(min_length=1, max_length=5000)
     summary: str = Field(min_length=1, max_length=2000)
     memory_items: list[PublicMemoryProposal] = Field(default_factory=list, max_length=8)
+
+
+class DocumentOut(BaseModel):
+    id: str
+    conversation_id: str | None
+    message_id: str | None
+    scope: Literal["studio", "conversation"]
+    uploader_type: Literal["visitor", "professional"]
+    original_name: str
+    media_type: str
+    size_bytes: int
+    sha256: str
+    status: str
+    extracted_characters: int
+    public_state: Literal["private", "draft", "active"]
+    download_url: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class DocumentCreated(BaseModel):
+    document: DocumentOut
+
+
+class DocumentPublicationProposal(BaseModel):
+    enabled: bool
+
+
+class DocumentPublicationProposalOut(BaseModel):
+    document: DocumentOut
+    revision: RevisionOut
 
 
 class AttachmentOut(APIModel):

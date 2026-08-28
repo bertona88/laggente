@@ -181,11 +181,11 @@ backup_id=$(docker compose --env-file "$current_env" exec -T backup \
 Do not prune backups to make a failed backup appear healthy. Diagnose capacity, credentials, database readiness, permissions, and checksum errors.
 
 The database dump and upload archive are captured sequentially while the application can still
-accept writes. Do not deliberately delete or manually purge attachments while a backup is running.
+accept writes. Do not deliberately delete or manually purge attachments or documents while a backup is running.
 The API's automatic six-hour retention cycle can theoretically overlap this capture; that is part
 of the controlled-pilot cross-store caveat until writer quiescence or reconciliation is implemented. A normal
 completed set proves each payload is readable and intact, but it does not prove that database rows
-and upload files came from one atomic application snapshot. Before claiming complete attachment
+and upload files came from one atomic application snapshot. Before claiming complete private-file
 consistency, either quiesce all application writers for the backup or produce and verify a
 database-to-archive reconciliation manifest. See [Backup and Restore](BACKUP_AND_RESTORE.md).
 
@@ -217,15 +217,15 @@ Treat root disk above 85%, less than 2 GiB free before a build, repeated kernel 
 
 The application ceilings operators should expect are:
 
-- 512 MiB of durable image data per account and 50 MiB per conversation;
-- 20 attachment records per conversation;
+- 512 MiB of combined durable image and document data per account and 50 MiB per conversation;
+- 20 attachment/document records per conversation and 100 source documents per Studio;
 - 12 audio transcriptions per account in a rolling hour;
-- one hour for a visitor to bind an uploaded photograph or corrected transcript before an
+- one hour to bind an uploaded photograph, corrected transcript, or conversation document before an
   abandoned draft is reclaimed;
 - 60 model-backed public turns and 60 new public conversations per space in a rolling hour;
 - at most 60 unengaged conversations per space, with one-hour expiry before pruning on a later
   creation attempt unless a visitor/professional has written, the professional has joined, or an
-  attachment has been bound to a durable message;
+  attachment or document has been bound to a durable message;
 - Studio inbox pages of up to 100 public conversations, with older pages reachable from the UI;
 - automatic application of `CONVERSATION_RETENTION_DAYS` after a five-minute startup grace and
   every six hours thereafter.

@@ -25,10 +25,20 @@ from .rate_limit import InMemoryRateLimiter
 from .retention import (
     discard_stale_transcription_reservations,
     discard_stale_unbound_attachments,
+    discard_stale_unbound_documents,
     purge_all_expired_conversations,
     purge_expired_signup_links,
 )
-from .routes import attachments, auth, invitations, product, professional_mail, public, studio
+from .routes import (
+    attachments,
+    auth,
+    documents,
+    invitations,
+    product,
+    professional_mail,
+    public,
+    studio,
+)
 from .schemas import VersionOut
 from .seed import seed_demo_data
 
@@ -58,10 +68,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
         retention_stop = asyncio.Event()
 
-        def run_retention_cycle() -> tuple[int, int, int, int]:
+        def run_retention_cycle() -> tuple[int, int, int, int, int]:
             with database.SessionLocal() as db:
                 stale_audio = discard_stale_transcription_reservations(db)
                 stale_attachments = discard_stale_unbound_attachments(db, runtime_settings)
+                stale_documents = discard_stale_unbound_documents(db, runtime_settings)
                 expired_signup_links = purge_expired_signup_links(db)
                 expired_conversations = len(
                     purge_all_expired_conversations(db, runtime_settings)
@@ -70,6 +81,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     expired_conversations,
                     stale_audio,
                     stale_attachments,
+                    stale_documents,
                     expired_signup_links,
                 )
 
@@ -83,16 +95,28 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 pass
             while not retention_stop.is_set():
                 try:
-                    deleted, stale_audio, stale_attachments, expired_signup_links = (
-                        await asyncio.to_thread(run_retention_cycle)
-                    )
-                    if deleted or stale_audio or stale_attachments or expired_signup_links:
+                    (
+                        deleted,
+                        stale_audio,
+                        stale_attachments,
+                        stale_documents,
+                        expired_signup_links,
+                    ) = await asyncio.to_thread(run_retention_cycle)
+                    if (
+                        deleted
+                        or stale_audio
+                        or stale_attachments
+                        or stale_documents
+                        or expired_signup_links
+                    ):
                         logger.info(
                             "automatic retention deleted %s conversations, %s stale audio "
-                            "reservations, %s abandoned attachments, and %s expired signup links",
+                            "reservations, %s abandoned attachments, %s abandoned documents, "
+                            "and %s expired signup links",
                             deleted,
                             stale_audio,
                             stale_attachments,
+                            stale_documents,
                             expired_signup_links,
                         )
                 except Exception:
@@ -162,13 +186,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             origin = request.headers.get("origin")
             if origin and origin.rstrip("/") != runtime_settings.app_origin.rstrip("/"):
                 return JSONResponse(status_code=403, content={"detail": "Origine non autorizzata"})
-        is_public_upload = (
+        is_private_upload = (
             request.method == "POST"
-            and request_path.startswith("/api/v1/public/conversations/")
-            and request_path.rstrip("/").endswith("/attachments")
+            and (
+                request_path.startswith("/api/v1/public/conversations/")
+                or request_path.startswith("/api/v1/studio/documents")
+                or request_path.startswith("/api/v1/studio/conversations/")
+            )
+            and request_path.rstrip("/").endswith(("/attachments", "/documents"))
         )
         upload_slot_acquired = False
-        if is_public_upload:
+        if is_private_upload:
             try:
                 await asyncio.wait_for(
                     app.state.upload_slots.acquire(), timeout=UPLOAD_SLOT_WAIT_SECONDS
@@ -182,7 +210,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 )
         try:
             # The upload semaphore is acquired before FastAPI parses/spools multipart content, so
-            # at most two public bodies can occupy API memory and /tmp simultaneously.
+            # at most two private file bodies can occupy API memory and /tmp simultaneously.
             response = await call_next(request)
         finally:
             if upload_slot_acquired:
@@ -200,6 +228,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(studio.router, prefix="/api/v1")
     app.include_router(invitations.router, prefix="/api/v1")
     app.include_router(attachments.router, prefix="/api/v1")
+    app.include_router(documents.router, prefix="/api/v1")
     app.include_router(professional_mail.router, prefix="/api/v1")
 
     @app.get("/healthz", include_in_schema=False)

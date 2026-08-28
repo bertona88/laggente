@@ -198,7 +198,7 @@ if [[ -n "$source_env" ]]; then
         printf '%s\n' 'CONVERSATION_RETENTION_DAYS=365' >>"$application_tmp"
     fi
     if ! grep -q '^PRIVACY_NOTICE_VERSION=' "$application_tmp"; then
-        printf '%s\n' 'PRIVACY_NOTICE_VERSION=2026-08-22.2' >>"$application_tmp"
+        printf '%s\n' 'PRIVACY_NOTICE_VERSION=2026-08-25.1' >>"$application_tmp"
     fi
     if ! grep -q '^AGENT_MAIL_ENABLED=' "$application_tmp"; then
         printf '%s\n' 'AGENT_MAIL_ENABLED=false' >>"$application_tmp"
@@ -267,7 +267,7 @@ else
         'UPLOAD_DIR=/data/uploads' \
         'MAX_UPLOAD_BYTES=10485760' \
         'CONVERSATION_RETENTION_DAYS=365' \
-        'PRIVACY_NOTICE_VERSION=2026-08-22.2' \
+        'PRIVACY_NOTICE_VERSION=2026-08-25.1' \
         >>"$application_tmp"
 fi
 

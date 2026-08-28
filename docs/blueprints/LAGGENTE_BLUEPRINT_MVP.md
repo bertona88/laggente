@@ -125,6 +125,11 @@ The Studio can shape, within platform-provided capabilities:
 - bounded page structure, components, and visual choices;
 - starter templates and their guidance.
 
+The Studio also has a private source library for PDF, DOCX, text, Markdown, and CSV. Its assistant
+can list and inspect every source owned by that tenant. Upload is not publication: making a source
+available to the public assistant produces an ordinary configuration draft and still requires
+explicit professional activation. Extracted file content is treated as quoted, untrusted data.
+
 The Studio does not impose its own real-estate doctrine. It may point out ambiguity, risk, or uncertainty, but its job is to help the professional express their intent safely and visibly.
 
 What the Studio learns becomes an evolving, document-shaped space configuration. The product keeps stable types for ownership, activation, permissions, capabilities, and safety, but it does not constrain the professional's identity or way of working to a narrow profile schema. New meaning can be represented as the conversation evolves, remains inspectable, and can be corrected.
@@ -154,7 +159,8 @@ It displays:
 - the professional's name, portrait, agency, territory, and human role;
 - a clear label identifying the public assistant as AI;
 - a persistent conversation;
-- text, voice-note, and limited photograph input;
+- text, voice-note, limited photograph, and document input;
+- a conversation-scoped document room shared with the professional;
 - useful interactive elements when the conversation benefits from them;
 - an obvious way for the professional to participate;
 - visible authorship for every AI, visitor, human, and system message.
@@ -167,7 +173,7 @@ The first message clearly says, in Italian, that LAGGENTE is Mauro's AI assistan
 
 ## 6. Natural conversation, not a hidden form
 
-The public assistant follows the person's intent. It can ask a useful question, answer from approved knowledge, acknowledge uncertainty, accept a voice note or photograph, surface what it understood, or invite Mauro.
+The public assistant follows the person's intent. It can ask a useful question, answer from approved active knowledge, acknowledge uncertainty, accept a voice note, photograph, or document, inspect a document shared only in its current conversation, surface what it understood, or invite Mauro.
 
 It should not dump a questionnaire, insist on completing a field set, or force every person through the same sequence.
 
@@ -337,6 +343,7 @@ The MVP begins with a compact persistent model:
 | Conversation | Persistent private Studio or public thread |
 | Message | Immutable authored conversational item |
 | Attachment | Private supported media and metadata |
+| Document | Private Studio source or message-bound conversation file with bounded extracted text |
 | Professional email | Sealed inbound or outbound correspondence plus delivery state |
 | Memory item | Correctable interpretation linked to source messages |
 | Event | Auditable configuration, tool, consent, speaker-control, and deletion action |
@@ -353,7 +360,7 @@ Every tenant-owned record contains `account_id`. Public records also bind to the
 
 ---
 
-## 14. Audio and photographs
+## 14. Audio, photographs, and documents
 
 Voice notes belong in the first credible product because Italian professional work, especially the first real-estate vertical, already happens through audio messages.
 
@@ -369,6 +376,14 @@ The MVP uses one reasoning path:
 Raw audio is deleted after transcription by default unless an explicit retained-audio policy applies.
 
 Photographs are private attachments to a conversation. The MVP limits file types, size, and count; serves them through stable same-origin endpoints that authorize every request from the current visitor or professional session; and never presents an image-derived claim as certain professional judgment. When a photograph is attached to an AI-assisted turn, its verified bytes are processed by the configured AI provider for that turn only, as disclosed in the versioned visitor privacy notice; the private attachment URL is not shared and historical photographs are not replayed on later text turns.
+
+Documents follow two bounded lifecycles. Studio sources remain private to the professional and
+private assistant until an active configuration references them. Conversation documents are
+uploaded by the visitor or professional, bound to an authored message, and readable only inside
+that tenant/space/conversation authorization boundary. Unbound conversation drafts expire after
+one hour. Deleting a conversation deletes its document rows, extracted text, files, and scoped
+events. This shared room does not implement signatures, checklists, transaction stages, or a
+property dossier.
 
 ---
 
@@ -407,6 +422,7 @@ The MVP also requires:
 - separate marketing consent where applicable;
 - configurable retention and executable deletion paths;
 - access control for conversations and files;
+- explicit configuration activation before a private Studio source becomes public-assistant knowledge;
 - recorded consent and speaker-control events;
 - product-specific legal and privacy review before public launch.
 
@@ -426,7 +442,7 @@ The product begins on the professional side and becomes real through the public 
 6. Giulia chooses the available username `giulia`, reserving `giulia.laggente.com` globally.
 7. She reviews the concrete public effect, corrects the Studio if needed, and explicitly activates the revision.
 8. The first activation makes the dormant space public. It changes PostgreSQL state; it does not deploy code, create infrastructure, or load a Giulia-specific environment file.
-9. `giulia.laggente.com` now uses the same public assistant, seller template, conversation persistence, voice-note, photograph, memory, and human-control machinery as Mauro's space, scoped to Giulia's `account_id` and active configuration.
+9. `giulia.laggente.com` now uses the same public assistant, seller template, conversation persistence, voice-note, photograph, document-sharing, memory, and human-control machinery as Mauro's space, scoped to Giulia's `account_id` and active configuration.
 10. A visitor starts a natural, persistent Italian conversation without creating an account.
 11. The resulting conversation and derived, correctable context are privately available only to Giulia's account.
 12. Giulia can join the same thread as a visible human; automatic AI replies pause when she writes and can be explicitly re-enabled.

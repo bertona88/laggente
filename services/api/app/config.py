@@ -80,7 +80,7 @@ class Settings(BaseSettings):
         default=365, ge=1, le=3650, alias="CONVERSATION_RETENTION_DAYS"
     )
     privacy_notice_version: str = Field(
-        default="2026-08-22.2", min_length=1, max_length=50, alias="PRIVACY_NOTICE_VERSION"
+        default="2026-08-25.1", min_length=1, max_length=50, alias="PRIVACY_NOTICE_VERSION"
     )
     version: str = Field(default="0.1.0", alias="APP_VERSION")
     git_sha: str = Field(default="unknown", alias="GIT_SHA")

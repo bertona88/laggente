@@ -55,7 +55,14 @@ Studio to write an email; Studio seals an exact, read-only artifact; Mauro eithe
 version or explicitly authorizes that artifact. Replies return to the same private Studio context
 as untrusted external content. This is not a conventional inbox or a third email agent.
 
-The public assistant is the expression and proof of that configuration. It holds natural, persistent conversations in Italian using only Mauro's active space; it can work with text, voice notes, and photographs; maintain useful memory; surface corrections; and help Mauro understand where his attention may be valuable. Visitor information and conversations belong to Mauro's private account context, and Mauro can enter the same conversation without forcing the person through a separate handoff flow.
+The public assistant is the expression and proof of that configuration. It holds natural, persistent conversations in Italian using only Mauro's active space; it can work with text, voice notes, photographs, approved Studio sources, and documents shared inside one conversation; maintain useful memory; surface corrections; and help Mauro understand where his attention may be valuable. Visitor information and conversations belong to Mauro's private account context, and Mauro can enter the same conversation without forcing the person through a separate handoff flow.
+
+The private Studio includes a source library for PDF, DOCX, text, Markdown, and CSV documents. Studio
+can inspect every source owned by that tenant. A source affects the public assistant only after the
+professional prepares and explicitly activates a configuration revision that references it. Public
+conversations also have a document room: the visitor and professional can each share a file, and the
+two assistants can inspect it only inside the authorization boundary that owns it. This is shared
+conversation context, not transaction-document orchestration or a CRM workflow.
 
 ## What LAGGENTE is not
 
@@ -101,7 +108,7 @@ tenant active configuration owns the actual public role. Vite produces static as
 gateway serves those assets and proxies same-origin `/api/v1` REST endpoints to FastAPI. There is no
 Node.js web process in the production runtime. Exactly two OpenAI Agents SDK definitions power the
 private Studio assistant and the public assistant. PostgreSQL remains the application-owned source
-of truth for tenant-scoped configuration, conversations, messages, correctable memory, attachments,
+of truth for tenant-scoped configuration, conversations, messages, correctable memory, attachments, documents,
 sealed professional email artifacts, and audit events.
 
 The agent-native email application path is implemented behind the production-safe

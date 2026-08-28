@@ -11,6 +11,7 @@ import { PublicSpace } from "@/components/public-space";
 import { RelationshipGraph } from "@/components/relationship-graph";
 import { SpaceRevisions } from "@/components/space-revisions";
 import { StudioShell } from "@/components/studio-shell";
+import { StudioDocuments } from "@/components/studio-documents";
 import { StudioWorkspace } from "@/components/studio-workspace";
 import { canonicalProductRedirect, isReservedTenantSlug, tenantSlugFromHost } from "@/lib/tenant-routing";
 import { PrivacyPage, TermsPage } from "@/src/legal-pages";
@@ -24,6 +25,7 @@ export function documentTitleForRoute(location: string, tenantSlug: string | nul
   if (location === "/studio/conversazioni") return "Conversazioni — Studio";
   if (location.startsWith("/studio/conversazioni/")) return "Conversazione — Studio";
   if (location === "/studio/grafo") return "Grafo — Studio";
+  if (location === "/studio/documenti") return "Documenti — Studio";
   if (location === "/studio/spazio") return "Spazio pubblico — Studio";
   if (location === "/studio/inviti") return "Invita — Studio";
   const pathSlug = tenantSlug
@@ -66,6 +68,7 @@ function StudioArea({ location }: { location: string }) {
   if (detailMatch) page = <ConversationDetail conversationId={decodeURIComponent(detailMatch[1])} />;
   else if (location === "/studio/conversazioni") page = <ConversationInbox />;
   else if (location === "/studio/grafo") page = <RelationshipGraph />;
+  else if (location === "/studio/documenti") page = <StudioDocuments />;
   else if (location === "/studio/spazio") page = <SpaceRevisions />;
   else if (location === "/studio/inviti") page = <InviteProfessional />;
   else if (location === "/studio" || location === "/studio/") page = <StudioWorkspace />;

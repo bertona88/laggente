@@ -49,7 +49,7 @@ ssh -i /Users/andreabertoncini/.ssh/hetzner_wofi_ed25519 \
 Do not run concurrent image builds on this host. The initial `--build-on-host` path serializes builds with `COMPOSE_PARALLEL_LIMIT=1`. If a build is killed for measured memory pressure, stop and either build immutable images elsewhere or add temporary swap as an explicit, monitored operational action; do not assume swap is required in advance.
 
 Do not treat the preflight's free-space snapshot as long-term capacity. A single account at the
-512 MiB durable-image ceiling represents about 7 GiB of upload payload across 14 full local backup
+512 MiB combined durable-image-and-document ceiling represents about 7 GiB of upload payload across 14 full local backup
 sets, before live data, PostgreSQL dumps, images, build cache, and additional accounts. Provider
 backups or an independently controlled off-host copy must still be enabled and sized for the
 retention policy. See [Backup and Restore](BACKUP_AND_RESTORE.md).
