@@ -42,7 +42,7 @@ case "${1:-}" in
             exclude_case_option=--exclude-ignore-case
         fi
 
-        # Images remain durable. Raw voice-note formats and temporary paths never
+        # Images and documents remain durable. Raw voice-note formats and temporary paths never
         # enter a completed archive, even if application cleanup regresses.
         tar -C "$uploads_root" -czf "$archive" \
             $exclude_case_option \

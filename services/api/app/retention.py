@@ -9,7 +9,8 @@ from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from .config import Settings
-from .models import Attachment, Conversation, Event, MemoryItem, Message, SignupLink, utcnow
+from .documents import safe_document_path
+from .models import Attachment, Conversation, Document, Event, MemoryItem, Message, SignupLink, utcnow
 
 
 STALE_TRANSCRIPTION_RESERVATION_TTL = timedelta(minutes=30)
@@ -23,6 +24,7 @@ class DeletionResult:
     messages_deleted: int
     memories_deleted: int
     attachments_deleted: int
+    documents_deleted: int
     files_deleted: int
 
 
@@ -102,6 +104,7 @@ def delete_conversation_data(
             messages_deleted=0,
             memories_deleted=0,
             attachments_deleted=0,
+            documents_deleted=0,
             files_deleted=0,
         )
     if (
@@ -139,7 +142,21 @@ def delete_conversation_data(
             )
             .limit(1)
         )
-        if locked_conversation.professional_joined or has_human_message or has_bound_attachment:
+        has_bound_document = db.scalar(
+            select(Document.id)
+            .where(
+                Document.account_id == locked_conversation.account_id,
+                Document.conversation_id == locked_conversation.id,
+                Document.message_id.is_not(None),
+            )
+            .limit(1)
+        )
+        if (
+            locked_conversation.professional_joined
+            or has_human_message
+            or has_bound_attachment
+            or has_bound_document
+        ):
             db.rollback()
             return None
     conversation = locked_conversation
@@ -158,6 +175,21 @@ def delete_conversation_data(
         if target.exists():
             if not target.is_file():
                 raise RuntimeError("Attachment target is not a regular file")
+            target.unlink()
+            files_deleted += 1
+    documents = list(
+        db.scalars(
+            select(Document).where(
+                Document.account_id == conversation.account_id,
+                Document.conversation_id == conversation.id,
+            )
+        ).all()
+    )
+    for document in documents:
+        target = safe_document_path(settings.upload_dir, document.storage_key)
+        if target.exists():
+            if not target.is_file():
+                raise RuntimeError("Document target is not a regular file")
             target.unlink()
             files_deleted += 1
 
@@ -182,6 +214,12 @@ def delete_conversation_data(
         delete(Event).where(
             Event.account_id == conversation.account_id,
             Event.conversation_id == conversation.id,
+        )
+    )
+    db.execute(
+        delete(Document).where(
+            Document.account_id == conversation.account_id,
+            Document.conversation_id == conversation.id,
         )
     )
     db.execute(
@@ -214,6 +252,7 @@ def delete_conversation_data(
         messages_deleted=message_count,
         memories_deleted=memory_count,
         attachments_deleted=len(attachments),
+        documents_deleted=len(documents),
         files_deleted=files_deleted,
     )
     db.add(
@@ -230,6 +269,7 @@ def delete_conversation_data(
                 "messages_deleted": result.messages_deleted,
                 "memories_deleted": result.memories_deleted,
                 "attachments_deleted": result.attachments_deleted,
+                "documents_deleted": result.documents_deleted,
                 "files_deleted": result.files_deleted,
             },
         )
@@ -440,6 +480,94 @@ def discard_stale_unbound_attachments(
         db.delete(attachment)
         deleted_count += 1
 
+    if deleted_count and commit:
+        db.commit()
+    return deleted_count
+
+
+def discard_stale_unbound_documents(
+    db: Session,
+    settings: Settings,
+    *,
+    now: datetime | None = None,
+    account_id: str | None = None,
+    conversation_id: str | None = None,
+    commit: bool = True,
+) -> int:
+    """Reclaim abandoned conversation-document drafts after their one-hour binding window."""
+
+    cutoff = (now or utcnow()) - STALE_UNBOUND_ATTACHMENT_TTL
+    predicates = [
+        Document.scope == "conversation",
+        Document.message_id.is_(None),
+        Document.status == "ready",
+        Document.created_at < cutoff,
+    ]
+    if account_id is not None:
+        predicates.append(Document.account_id == account_id)
+    if conversation_id is not None:
+        predicates.append(Document.conversation_id == conversation_id)
+    candidates = list(
+        db.execute(
+            select(
+                Document.id,
+                Document.account_id,
+                Document.space_id,
+                Document.conversation_id,
+            )
+            .where(*predicates)
+            .order_by(Document.conversation_id, Document.created_at, Document.id)
+        ).all()
+    )
+    deleted_count = 0
+    for candidate in candidates:
+        conversation = db.scalar(
+            select(Conversation)
+            .where(
+                Conversation.id == candidate.conversation_id,
+                Conversation.account_id == candidate.account_id,
+                Conversation.space_id == candidate.space_id,
+                Conversation.kind == "public",
+            )
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+        if not conversation:
+            continue
+        document = db.scalar(
+            select(Document)
+            .where(
+                Document.id == candidate.id,
+                Document.account_id == conversation.account_id,
+                Document.space_id == conversation.space_id,
+                Document.conversation_id == conversation.id,
+                Document.scope == "conversation",
+                Document.message_id.is_(None),
+                Document.status == "ready",
+                Document.created_at < cutoff,
+            )
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+        if not document:
+            continue
+        target = safe_document_path(settings.upload_dir, document.storage_key)
+        if target.exists():
+            if not target.is_file():
+                raise RuntimeError("Document target is not a regular file")
+            target.unlink()
+        db.add(
+            Event(
+                account_id=document.account_id,
+                space_id=document.space_id,
+                conversation_id=document.conversation_id,
+                actor_type="system",
+                event_type="document_draft_expired",
+                payload={"document_id": document.id},
+            )
+        )
+        db.delete(document)
+        deleted_count += 1
     if deleted_count and commit:
         db.commit()
     return deleted_count

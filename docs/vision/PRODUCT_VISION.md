@@ -33,9 +33,15 @@ The professional explains how they work and what they want their public space to
 
 The Studio must not reduce that conversation to a closed professional-profile schema. Professional meaning remains extensible and document-shaped inside platform-owned boundaries for identity, permissions, activation, safety, and executable capabilities.
 
+On the professional's explicit request, Studio may perform read-only research across public web
+sources—for example, to find the professional's site or public professional profiles. It shows
+clickable sources, preserves ambiguity between a plausible match and verified identity, and waits
+for the professional's confirmation before using a finding in a proposed configuration. This
+research capability remains private to Studio.
+
 ### Public assistant
 
-The visitor speaks naturally rather than completing a disguised form. The public assistant uses the professional's active configuration, maintains continuity, works with text and supported media, and makes it easy for the professional to join.
+The visitor speaks naturally rather than completing a disguised form. The public assistant uses the professional's active configuration, maintains continuity, works with text and supported media, and makes it easy for the professional to join. It does not search the web for visitors.
 
 The two assistants do not talk through a third AI manager. Ordinary application code coordinates persistence, permissions, configuration, identity, and response control.
 

@@ -3,6 +3,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { SendIcon, SparkIcon } from "@/components/icons";
 import { MessageContent } from "@/components/message-markdown";
 import { ProfessionalEmailProposal } from "@/components/professional-email-proposal";
+import { OutreachCampaignProposal } from "@/components/outreach-campaign-proposal";
 import { RevisionInspector } from "@/components/revision-inspector";
 import { InlineError, LoadingLine } from "@/components/status";
 import { useStudioSession } from "@/components/studio-shell";
@@ -10,8 +11,9 @@ import { apiRequest, normalizeMessages } from "@/lib/api";
 import { createClientMessageAttemptTracker } from "@/lib/client-message-id";
 import { formatTime } from "@/lib/format";
 import { normalizeProfessionalEmail } from "@/lib/professional-email";
+import { normalizeOutreachCampaign } from "@/lib/outreach";
 import { normalizeRevision } from "@/lib/revisions";
-import type { ConfigRevision, ConversationMessage, ProfessionalEmail, StudioBootstrap, StudioSpaceState } from "@/lib/types";
+import type { ConfigRevision, ConversationMessage, OutreachCampaign, ProfessionalEmail, StudioBootstrap, StudioSpaceState } from "@/lib/types";
 
 function StudioMessage({ message }: { message: ConversationMessage }) {
   if (message.author_type === "system") return <div className="studio-system-event">{message.content}</div>;
@@ -32,12 +34,18 @@ function StudioMessage({ message }: { message: ConversationMessage }) {
   );
 }
 
-const starterPrompts = [
+export const studioStarterPrompts = [
   "Ti racconto che lavoro faccio",
+  "Cerca cosa si trova già su di me online",
+  "Trova il mio sito e i miei profili professionali",
   "Vorrei rendere l’accoglienza più personale",
   "Ti racconto il territorio in cui lavoro",
   "Fammi vedere come appare lo spazio oggi",
 ];
+
+export function shouldShowStudioStarterPrompts(messages: ConversationMessage[]) {
+  return !messages.some((message) => message.author_type === "professional");
+}
 
 export function suggestPublicSlug(value: string) {
   return value
@@ -61,10 +69,12 @@ export function StudioWorkspace() {
   const [claimingSlug, setClaimingSlug] = useState(false);
   const [slugMessage, setSlugMessage] = useState<string | null>(null);
   const [email, setEmail] = useState<ProfessionalEmail | null>(null);
+  const [campaign, setCampaign] = useState<OutreachCampaign | null>(null);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [authorizingEmail, setAuthorizingEmail] = useState(false);
+  const [authorizingCampaign, setAuthorizingCampaign] = useState(false);
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -95,6 +105,7 @@ export function StudioWorkspace() {
         setSlugInput((current) => current || suggestPublicSlug(loadedDraft.preview?.professional_name || ""));
       }
       setEmail(normalizeProfessionalEmail(messageObject.latest_email));
+      setCampaign(normalizeOutreachCampaign(messageObject.latest_campaign));
     } catch (reason) {
       if (!background) {
         setError(reason instanceof Error ? reason.message : "Non è stato possibile aprire lo Studio.");
@@ -105,7 +116,7 @@ export function StudioWorkspace() {
   }, []);
 
   useEffect(() => { void load(); }, [load]);
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth" }); }, [messages, email, sending, reduceMotion]);
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth" }); }, [messages, email, campaign, sending, reduceMotion]);
 
   async function submit(value: string) {
     const content = value.trim();
@@ -133,6 +144,8 @@ export function StudioWorkspace() {
       if (revision) setProposed(revision);
       const proposedEmail = normalizeProfessionalEmail(object.proposed_email);
       if (proposedEmail) setEmail(proposedEmail);
+      const proposedCampaign = normalizeOutreachCampaign(object.proposed_campaign);
+      if (proposedCampaign) setCampaign(proposedCampaign);
       await load(true);
       attemptTrackerRef.current.complete(clientMessageId);
     } catch (reason) {
@@ -194,6 +207,31 @@ export function StudioWorkspace() {
     setInput(`Vorrei modificare la bozza email per ${email.to_address}: `);
     requestAnimationFrame(() => composerRef.current?.focus());
   }
+
+  async function authorizeCampaign() {
+    if (!campaign || campaign.status !== "ready" || authorizingCampaign) return;
+    setAuthorizingCampaign(true);
+    setError(null);
+    try {
+      const result = await apiRequest<unknown>(`/studio/outreach/${campaign.id}/authorize`, {
+        method: "POST",
+      });
+      const updated = normalizeOutreachCampaign(result);
+      if (updated) setCampaign(updated);
+      await load(true);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Non è stato possibile autorizzare la campagna.");
+      await load(true);
+    } finally {
+      setAuthorizingCampaign(false);
+    }
+  }
+
+  function continueCampaign() {
+    if (!campaign) return;
+    setInput(`Continuiamo la campagna “${campaign.name}”. Mostrami esattamente cosa manca prima di poter autorizzare gli invii.`);
+    requestAnimationFrame(() => composerRef.current?.focus());
+  }
   return (
     <div className="studio-workspace">
       <section className="studio-conversation" aria-label="Conversazione con lo Studio LAGGENTE">
@@ -250,11 +288,30 @@ export function StudioWorkspace() {
               onRequestChange={requestEmailChange}
             />
           )}
+          {campaign && (
+            <OutreachCampaignProposal
+              campaign={campaign}
+              busy={authorizingCampaign}
+              onAuthorize={() => void authorizeCampaign()}
+              onContinue={continueCampaign}
+            />
+          )}
           {sending && <div className="studio-thinking" role="status"><span /><span /><span /> Lo Studio sta interpretando…</div>}
           <div ref={bottomRef} />
         </div>
-        {!messages.length && !loading && (
-          <div className="studio-starters">{starterPrompts.map((prompt) => <button type="button" key={prompt} onClick={() => void submit(prompt)}>{prompt}</button>)}</div>
+        {shouldShowStudioStarterPrompts(messages) && !loading && (
+          <div className="studio-starters" aria-label="Possibili inizi con Studio">
+            {studioStarterPrompts.map((prompt) => (
+              <button
+                type="button"
+                key={prompt}
+                disabled={sending}
+                onClick={() => void submit(prompt)}
+              >
+                {prompt}
+              </button>
+            ))}
+          </div>
         )}
         <form className="studio-composer" onSubmit={onSubmit}>
           <textarea

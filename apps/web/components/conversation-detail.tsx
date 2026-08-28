@@ -4,21 +4,33 @@ import { AppLink as Link, useAppNavigate } from "@/components/app-link";
 import {
   ArrowLeftIcon,
   CheckIcon,
+  DocumentIcon,
   EditIcon,
   PauseIcon,
   PlayIcon,
   SendIcon,
   SparkIcon,
 } from "@/components/icons";
+import { ConversationDocument } from "@/components/conversation-document";
 import { ConversationPhoto } from "@/components/conversation-photo";
 import { MessageContent } from "@/components/message-markdown";
 import { InlineError, LoadingLine } from "@/components/status";
 import { useStudioSession } from "@/components/studio-shell";
-import { apiRequest, normalizeMessages, resolveMessageResponse } from "@/lib/api";
+import {
+  apiRequest,
+  documentFromUploadResponse,
+  normalizeMessages,
+  resolveMessageResponse,
+} from "@/lib/api";
 import { createClientMessageAttemptTracker } from "@/lib/client-message-id";
 import { confirmConversationDeletion } from "@/lib/conversation-deletion";
 import { formatDateTime, formatTime, initials } from "@/lib/format";
-import type { ConversationMessage, MemoryItem, StudioConversationDetail } from "@/lib/types";
+import type {
+  ConversationDocument as ConversationDocumentValue,
+  ConversationMessage,
+  MemoryItem,
+  StudioConversationDetail,
+} from "@/lib/types";
 import { startVisiblePolling } from "@/lib/visible-polling";
 import { isNearThreadBottom, shouldAutoScrollThread } from "@/lib/thread-scroll";
 
@@ -50,6 +62,7 @@ export function ThreadMessage({ message }: { message: ConversationMessage }) {
       <div>
         <header><strong>{message.author_name}</strong><time dateTime={message.created_at}>{formatTime(message.created_at)}</time></header>
         <ConversationPhoto attachment={message.attachment} surface="studio" />
+        <ConversationDocument document={message.document} />
         <MessageContent authorType={message.author_type} content={message.content} />
       </div>
     </motion.article>
@@ -105,9 +118,12 @@ export function ConversationDetail({ conversationId }: { conversationId: string 
   const [joinBusy, setJoinBusy] = useState(false);
   const [controlBusy, setControlBusy] = useState(false);
   const [deleteBusy, setDeleteBusy] = useState(false);
+  const [uploadingDocument, setUploadingDocument] = useState(false);
+  const [pendingDocument, setPendingDocument] = useState<ConversationDocumentValue | null>(null);
   const [contextOpen, setContextOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const documentInputRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const threadRef = useRef<HTMLDivElement>(null);
   const nearBottomRef = useRef(true);
@@ -157,16 +173,31 @@ export function ConversationDetail({ conversationId }: { conversationId: string 
   async function submit(event: FormEvent) {
     event.preventDefault();
     const content = input.trim();
-    if (!content || sending || !detail) return;
-    const clientMessageId = attemptTrackerRef.current.idFor(content);
-    const optimistic: ConversationMessage = { id: `pending-${clientMessageId}`, author_type: "professional", author_name: session?.member.display_name || "Professionista", content, created_at: new Date().toISOString(), pending: true };
+    if ((!content && !pendingDocument) || sending || uploadingDocument || !detail) return;
+    const clientMessageId = attemptTrackerRef.current.idFor(content, pendingDocument?.id);
+    const optimistic: ConversationMessage = {
+      id: `pending-${clientMessageId}`,
+      author_type: "professional",
+      author_name: session?.member.display_name || "Professionista",
+      content: content || `Ho condiviso il documento “${pendingDocument?.name}”.`,
+      created_at: new Date().toISOString(),
+      pending: true,
+      document: pendingDocument,
+    };
     setDetail({ ...detail, messages: [...detail.messages, optimistic], professional_present: true, automatic_replies_enabled: false });
     setJoined(true);
     setInput("");
     setSending(true);
     setError(null);
     try {
-      const result = await apiRequest<unknown>(`/studio/conversations/${encodeURIComponent(conversationId)}/messages`, { method: "POST", body: JSON.stringify({ content, client_message_id: clientMessageId }) });
+      const result = await apiRequest<unknown>(`/studio/conversations/${encodeURIComponent(conversationId)}/messages`, {
+        method: "POST",
+        body: JSON.stringify({
+          content,
+          client_message_id: clientMessageId,
+          ...(pendingDocument ? { document_id: pendingDocument.id } : {}),
+        }),
+      });
       const object = (result || {}) as Record<string, unknown>;
       if (object.conversation || object.memory_items || object.automatic_replies_enabled !== undefined) {
         setDetail(normalizeDetail(result, conversationId, studioSpaceSlug));
@@ -174,6 +205,7 @@ export function ConversationDetail({ conversationId }: { conversationId: string 
         const returned = resolveMessageResponse(result) as ConversationMessage[];
         setDetail((current) => current ? { ...current, messages: [...current.messages.filter((message) => message.id !== optimistic.id), ...(returned.length ? returned : [{ ...optimistic, pending: false }])], professional_present: true, automatic_replies_enabled: false } : current);
       }
+      setPendingDocument(null);
       attemptTrackerRef.current.complete(clientMessageId);
     } catch (reason) {
       setDetail((current) => current ? { ...current, messages: current.messages.filter((message) => message.id !== optimistic.id) } : current);
@@ -181,6 +213,27 @@ export function ConversationDetail({ conversationId }: { conversationId: string 
       setError(reason instanceof Error ? reason.message : "Il messaggio non è partito.");
     } finally {
       setSending(false);
+    }
+  }
+
+  async function uploadDocument(file: File) {
+    if (uploadingDocument || sending || pendingDocument) return;
+    setUploadingDocument(true);
+    setError(null);
+    try {
+      const form = new FormData();
+      form.append("file", file, file.name);
+      const result = await apiRequest<unknown>(
+        `/studio/conversations/${encodeURIComponent(conversationId)}/documents`,
+        { method: "POST", body: form },
+      );
+      const document = documentFromUploadResponse(result);
+      if (!document) throw new Error("Il documento caricato non è disponibile.");
+      setPendingDocument(document);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Il documento non è stato caricato.");
+    } finally {
+      setUploadingDocument(false);
     }
   }
 
@@ -234,6 +287,9 @@ export function ConversationDetail({ conversationId }: { conversationId: string 
   const professionalName = session?.member.display_name || "il professionista";
   const professionalFirstName = professionalName.split(/\s+/)[0] || "il professionista";
   const professionalInitials = initials(professionalName) || "P";
+  const sharedDocuments = detail.messages.flatMap(
+    (message) => message.document ? [message.document] : [],
+  );
 
   return (
     <section className="conversation-detail">
@@ -274,8 +330,20 @@ export function ConversationDetail({ conversationId }: { conversationId: string 
             {joined && (
               <motion.form className="professional-composer" onSubmit={submit} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
                 <div className="professional-composer__identity"><span>{professionalInitials}</span><strong>Stai scrivendo come {professionalName}</strong></div>
+                <input
+                  ref={documentInputRef}
+                  type="file"
+                  accept=".pdf,.docx,.txt,.md,.markdown,.csv,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown,text/csv"
+                  hidden
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) void uploadDocument(file);
+                    event.currentTarget.value = "";
+                  }}
+                />
+                {pendingDocument && <div className="professional-document-draft"><ConversationDocument document={pendingDocument} compact /><button type="button" onClick={() => setPendingDocument(null)}>Rimuovi</button></div>}
                 <textarea ref={inputRef} value={input} onChange={(event) => { attemptTrackerRef.current.invalidate(); setInput(event.target.value); }} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} rows={2} placeholder="Scrivi alla persona…" aria-label={`Messaggio di ${professionalName}`} />
-                <div><span>L’assistente andrà in pausa automaticamente.</span><button type="submit" disabled={sending || !input.trim()}>{sending ? "Invio…" : `Invia come ${professionalFirstName}`}<SendIcon /></button></div>
+                <div><button className="professional-composer__document" type="button" disabled={sending || uploadingDocument || Boolean(pendingDocument)} onClick={() => documentInputRef.current?.click()}><DocumentIcon /> {uploadingDocument ? "Carico…" : "Documento"}</button><span>L’assistente andrà in pausa automaticamente.</span><button type="submit" disabled={sending || uploadingDocument || (!input.trim() && !pendingDocument)}>{sending ? "Invio…" : `Invia come ${professionalFirstName}`}<SendIcon /></button></div>
               </motion.form>
             )}
           </AnimatePresence>
@@ -290,6 +358,13 @@ export function ConversationDetail({ conversationId }: { conversationId: string 
             <h2>{detail.summary || "La conversazione sta ancora prendendo forma."}</h2>
           </section>
           {detail.attention_reason && <section className="attention-note"><SparkIcon /><div><p>Perché guardarla</p><strong>{detail.attention_reason}</strong></div></section>}
+          <section className="context-documents">
+            <header><p className="context-label">Documenti condivisi</p><span>{sharedDocuments.length}</span></header>
+            <p>Visibili alla persona, a te e agli assistenti soltanto dentro questa conversazione.</p>
+            {sharedDocuments.length
+              ? sharedDocuments.map((document) => <ConversationDocument key={document.id} document={document} compact />)
+              : <small>Nessun documento condiviso.</small>}
+          </section>
           <section className="memory-section">
             <header><div><p className="context-label">Memoria correggibile</p><span>{detail.memory_items.length} elementi derivati</span></div></header>
             {detail.memory_items.length ? detail.memory_items.map((item) => <MemoryRow key={item.id} item={item} conversationId={conversationId} onSaved={(updated) => setDetail((current) => current ? { ...current, memory_items: current.memory_items.map((memory) => memory.id === updated.id ? updated : memory) } : current)} />) : <p className="memory-empty">LAGGENTE non ha ancora derivato informazioni utili. I messaggi originali restano comunque qui.</p>}

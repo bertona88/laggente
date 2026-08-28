@@ -170,7 +170,7 @@ for nginx_file in \
 done
 if grep -Eq '^[[:space:]]*location[[:space:]]+\^~[[:space:]]+/api/v1/[[:space:]]*\{' \
     "$repo_root/infra/nginx/laggente.conf"; then
-    printf 'host nginx /api/v1 prefix would bypass the attachment regex limiter\n' >&2
+    printf 'host nginx /api/v1 prefix would bypass the private-upload regex limiter\n' >&2
     exit 1
 fi
 if [[ $(grep -Fc 'limit_req zone=laggente_api burst=5 nodelay;' \
@@ -207,15 +207,15 @@ if grep -q '/api/v1/uploads/' "$repo_root/infra/nginx/laggente.conf"; then
     printf 'host nginx still contains the obsolete upload route\n' >&2
     exit 1
 fi
-if ! grep -Eq 'location ~ \^/api/v1/public/conversations/\[\^/\]\+/attachments/\?\$' \
+if ! grep -Fq 'location ~ ^/api/v1/(?:public/conversations/[^/]+/(?:attachments|documents)|studio/documents|studio/conversations/[^/]+/documents)/?$' \
     "$repo_root/infra/nginx/laggente.conf"; then
-    printf 'host nginx is missing the public-conversation attachment limiter\n' >&2
+    printf 'host nginx is missing one or more private multipart upload limiters\n' >&2
     exit 1
 fi
 if ! grep -Fq 'limit_conn laggente_upload_connections 2;' \
     "$repo_root/infra/nginx/laggente.conf" || \
    ! grep -Fq 'MAX_CONCURRENT_UPLOAD_REQUESTS = 2' "$repo_root/services/api/app/main.py"; then
-    printf 'public multipart concurrency is not bounded consistently at edge and API\n' >&2
+    printf 'private multipart concurrency is not bounded consistently at edge and API\n' >&2
     exit 1
 fi
 
@@ -312,10 +312,12 @@ fi
 archive_test_uploads="$validation_tmp/uploads"
 archive_test_output="$validation_tmp/uploads.tar.gz"
 mkdir -p "$archive_test_uploads/account/conversation" \
+    "$archive_test_uploads/documents/account/studio/space" \
     "$archive_test_uploads/account/tmp" \
     "$archive_test_uploads/account/.transcription-tmp"
 printf 'image' >"$archive_test_uploads/account/conversation/photo.jpg"
 printf 'image' >"$archive_test_uploads/account/conversation/planimetria.PNG"
+printf 'document' >"$archive_test_uploads/documents/account/studio/space/guida.pdf"
 printf 'audio' >"$archive_test_uploads/account/conversation/voice.wav"
 printf 'audio' >"$archive_test_uploads/account/conversation/VOICE.MP3"
 printf 'temporary image' >"$archive_test_uploads/account/tmp/not-durable.jpg"
@@ -325,6 +327,7 @@ sh "$repo_root/infra/backup/archive-uploads.sh" create \
 archive_listing=$(tar -tzf "$archive_test_output")
 printf '%s\n' "$archive_listing" | grep -q 'account/conversation/photo.jpg'
 printf '%s\n' "$archive_listing" | grep -q 'account/conversation/planimetria.PNG'
+printf '%s\n' "$archive_listing" | grep -q 'documents/account/studio/space/guida.pdf'
 if printf '%s\n' "$archive_listing" | grep -Eqi \
     '[.](mp3|wav|webm|ogg|oga|opus|m4a|mp4|aac|flac|amr|aiff|aif|caf|mpeg|mpga)$|/(tmp|[.]transcription-tmp)/'; then
     printf 'upload archive contains raw audio or temporary content\n' >&2
@@ -492,6 +495,9 @@ printf '%s\n' \
     'AGENT_MAIL_AWS_REGION=eu-south-1' \
     'AGENT_MAIL_INBOUND_SECRET=' \
     'AGENT_MAIL_MAX_INBOUND_BYTES=5242880' \
+    'OUTREACH_ENABLED=false' \
+    'OUTREACH_MAX_RECIPIENTS=5' \
+    'OUTREACH_CANDIDATE_RETENTION_DAYS=30' \
     'AWS_ACCESS_KEY_ID=' \
     'AWS_SECRET_ACCESS_KEY=' \
     'AWS_SESSION_TOKEN=' \
@@ -535,8 +541,9 @@ for production_line in \
     }
 done
 grep -q '^CONVERSATION_RETENTION_DAYS=365$' "$application_env"
-grep -q '^PRIVACY_NOTICE_VERSION=2026-08-22[.]2$' "$application_env"
+grep -q '^PRIVACY_NOTICE_VERSION=2026-08-27[.]1$' "$application_env"
 grep -q '^AGENT_MAIL_ENABLED=false$' "$application_env"
+grep -q '^OUTREACH_ENABLED=false$' "$application_env"
 grep -q '^PRODUCT_POSITIONING_JSON={"audience":"Professionisti"' "$application_env"
 (
     # Exercise the same exact production-origin/host contract used by deploy and audit.

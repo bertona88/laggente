@@ -12,6 +12,14 @@ export interface ConversationAttachment {
   url?: string;
 }
 
+export interface ConversationDocument {
+  id: string;
+  name: string;
+  media_type: string;
+  size_bytes: number;
+  url: string;
+}
+
 export interface ProfessionalSpace {
   slug: string;
   professional_name: string;
@@ -89,6 +97,23 @@ export interface ConversationMessage {
   created_at: string;
   pending?: boolean;
   attachment?: ConversationAttachment | null;
+  document?: ConversationDocument | null;
+}
+
+export type DocumentPublicState = "private" | "draft" | "active";
+
+export interface StudioDocument extends ConversationDocument {
+  conversation_id?: string | null;
+  message_id?: string | null;
+  scope: "studio" | "conversation";
+  uploader_type: "visitor" | "professional" | string;
+  sha256: string;
+  status: string;
+  extracted_characters: number;
+  public_state: DocumentPublicState;
+  download_url: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface PublicConversation {
@@ -186,6 +211,37 @@ export interface ProfessionalEmail {
   created_at: string;
 }
 
+export interface OutreachRecipient {
+  id: string;
+  campaign_id: string;
+  name: string;
+  email?: string | null;
+  source_url: string;
+  source_label?: string | null;
+  personalization_note?: string | null;
+  permission_basis: "not_recorded" | "explicit_consent" | "existing_customer_similar_services" | string;
+  permission_evidence?: string | null;
+  status: string;
+  unsubscribe_requested_at?: string | null;
+  retention_until: string;
+  professional_email?: ProfessionalEmail | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OutreachCampaign {
+  id: string;
+  name: string;
+  landing_url: string;
+  status: "research" | "preparing" | "ready" | "sending" | "sent" | "simulated" | "partial" | "failed" | string;
+  recipient_cap: number;
+  authorized_at?: string | null;
+  completed_at?: string | null;
+  recipients: OutreachRecipient[];
+  created_at: string;
+  updated_at: string;
+}
+
 export interface StudioBootstrap {
   professional_name: string;
   space_slug: string;
@@ -194,6 +250,7 @@ export interface StudioBootstrap {
   active_revision?: ConfigRevision | null;
   proposed_revision?: ConfigRevision | null;
   latest_email?: ProfessionalEmail | null;
+  latest_campaign?: OutreachCampaign | null;
 }
 
 export interface StudioMember {

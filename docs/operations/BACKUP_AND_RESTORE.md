@@ -13,30 +13,30 @@ The `backup` container runs immediately at startup and then every 24 hours by de
 ```
 
 - `database.dump` is an internally consistent PostgreSQL custom-format snapshot created by `pg_dump` and structurally checked by `pg_restore --list`.
-- `uploads.tar.gz` is a private filesystem archive of durable image attachments. Recognized raw-audio extensions and temporary paths are excluded as defense in depth, then the completed archive is checked for forbidden entries. It is readable only by the backup/runtime identity.
+- `uploads.tar.gz` is a private filesystem archive of durable image attachments and documents. Recognized raw-audio extensions and temporary paths are excluded as defense in depth, then the completed archive is checked for forbidden entries. It is readable only by the backup/runtime identity.
 - `SHA256SUMS` protects both payloads against silent corruption.
 - A completed set becomes visible only after its temporary directory is atomically renamed.
 
 The default retention is 14 days with a minimum of seven completed sets. Retention only removes timestamp-shaped directories inside the dedicated backup mount. It never touches another project's data.
 
 `pg_dump` completes before the live upload tree is archived. The two payloads are therefore
-individually verifiable but are not a cross-store atomic snapshot: an attachment created or deleted
+individually verifiable but are not a cross-store atomic snapshot: a private file created or deleted
 between those steps can leave a database row and archive entry out of alignment. This is an
 accepted controlled-pilot recovery caveat, not a claim of full application consistency. Do not run
-a deliberate attachment deletion, manual retention purge, or data repair during a backup. The API
+a deliberate attachment/document deletion, manual retention purge, or data repair during a backup. The API
 also applies retention automatically every six hours after its startup grace, so a completed set
 must still be treated as potentially cross-store non-atomic until writer quiescence or
 reconciliation is implemented. Before calling
-a backup fully attachment-consistent, either quiesce all application writers for the entire capture
-or add and verify a reconciliation manifest that maps the dump's attachment records to archived
+a backup fully file-consistent, either quiesce all application writers for the entire capture
+or add and verify a reconciliation manifest that maps the dump's attachment and document records to archived
 files. The current `manifest.json` records set metadata and sizes; it is not that reconciliation.
 
 ## Important boundary
 
 These logical backups are initially on the same server disk. They protect against application mistakes and support point-in-time operator recovery, but they do not protect against loss of the entire VPS or disk. Before public launch, enable Hetzner provider backups or copy the completed backup sets to an independently controlled off-host destination. A provider snapshot complements `pg_dump`; it does not replace it.
 
-Capacity planning must include full-copy amplification. One account held at the 512 MiB durable
-image ceiling can contribute about 7 GiB of upload payload across 14 full local backup sets
+Capacity planning must include full-copy amplification. One account held at the 512 MiB combined
+durable-image-and-document ceiling can contribute about 7 GiB of upload payload across 14 full local backup sets
 (`14 × 512 MiB = 7168 MiB`), before the live upload tree, database dumps, manifests, container
 images, build cache, or additional accounts. Compression may reduce physical use but must not be
 assumed when reserving space. Independently sized Hetzner provider or off-host capacity remains a
@@ -105,7 +105,7 @@ sudo sh -ec '
 ' sh "$backup_id"
 ```
 
-The root step is deliberate: rootless containers own bind-mounted backup payloads through subordinate UIDs, so the ordinary `laggente` host user must not inspect them directly. The archive contains durable image attachments only; raw-audio extensions and temporary paths are excluded and verified inside the backup container. Inspect the recovery tree before deliberately exchanging it with `/opt/laggente/data/uploads`. Keep the previous upload directory intact until the application and authorization checks pass. Do not merge archives blindly into the live tree.
+The root step is deliberate: rootless containers own bind-mounted backup payloads through subordinate UIDs, so the ordinary `laggente` host user must not inspect them directly. The archive contains durable image attachments and documents; raw-audio extensions and temporary paths are excluded and verified inside the backup container. Inspect the recovery tree before deliberately exchanging it with `/opt/laggente/data/uploads`. Keep the previous upload directory intact until the application and authorization checks pass. Do not merge archives blindly into the live tree.
 
 ## Full database recovery
 
@@ -152,8 +152,8 @@ A recovery is accepted only when:
 
 - the selected dump and upload archive checksums pass;
 - an isolated restore rehearsal succeeds;
-- the cross-store consistency status is recorded; claim full attachment consistency only when
-  attachment rows and archived files were reconciled or the set was captured with application
+- the cross-store consistency status is recorded; claim full private-file consistency only when
+  attachment/document rows and archived files were reconciled or the set was captured with application
   writers quiesced, otherwise keep the controlled-pilot caveat explicit;
 - migrations complete against the recovered database;
 - the loopback gateway, public hosts, authentication, Studio, public conversation, activation boundary, and human join flow pass;

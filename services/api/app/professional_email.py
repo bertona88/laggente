@@ -325,6 +325,11 @@ def create_outbound_email_draft(
     body: str,
     from_domain: str,
     reply_domain: str,
+    footer_lines: list[str] | None = None,
+    supersede_pending: bool = True,
+    outreach_campaign_id: str | None = None,
+    outreach_recipient_id: str | None = None,
+    commit: bool = True,
 ) -> ProfessionalEmail:
     space = db.scalar(
         select(Space).where(Space.id == space_id, Space.account_id == account_id)
@@ -348,11 +353,12 @@ def create_outbound_email_draft(
     email_id = new_id()
     reply_to = normalize_address(f"{space.slug}+{email_id}@{reply_domain}")
     created_at = utcnow()
-    sealed_body = (
-        f"{body}\n\n---\n"
-        f"Messaggio preparato dall’assistente AI Studio LAGGENTE e autorizzato da "
+    footer = list(footer_lines or [])
+    footer.append(
+        "Messaggio preparato dall’assistente AI Studio LAGGENTE e autorizzato da "
         f"{space.professional_name}."
     )
+    sealed_body = f"{body}\n\n---\n" + "\n".join(footer)
     content_sha256 = _content_hash(
         sender=sender, recipient=recipient, subject=subject, body=sealed_body
     )
@@ -368,16 +374,18 @@ def create_outbound_email_draft(
         content_sha256=content_sha256,
     )
 
-    pending = db.scalars(
-        select(ProfessionalEmail).where(
-            ProfessionalEmail.account_id == account_id,
-            ProfessionalEmail.space_id == space_id,
-            ProfessionalEmail.direction == "outbound",
-            ProfessionalEmail.status == "draft",
-        )
-    ).all()
-    for previous in pending:
-        previous.status = "superseded"
+    if supersede_pending:
+        pending = db.scalars(
+            select(ProfessionalEmail).where(
+                ProfessionalEmail.account_id == account_id,
+                ProfessionalEmail.space_id == space_id,
+                ProfessionalEmail.direction == "outbound",
+                ProfessionalEmail.status == "draft",
+                ProfessionalEmail.outreach_campaign_id.is_(None),
+            )
+        ).all()
+        for previous in pending:
+            previous.status = "superseded"
 
     email = ProfessionalEmail(
         id=email_id,
@@ -385,6 +393,8 @@ def create_outbound_email_draft(
         space_id=space_id,
         studio_conversation_id=studio.id,
         source_message_id=source_message_id,
+        outreach_campaign_id=outreach_campaign_id,
+        outreach_recipient_id=outreach_recipient_id,
         direction="outbound",
         status="draft",
         from_address=sender,
@@ -418,6 +428,9 @@ def create_outbound_email_draft(
             },
         )
     )
-    db.commit()
-    db.refresh(email)
+    if commit:
+        db.commit()
+        db.refresh(email)
+    else:
+        db.flush()
     return email

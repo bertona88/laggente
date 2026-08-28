@@ -3,11 +3,27 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from .assistants import AssistantService, AssistantUnavailable, PublicImageInput
+from .assistants import (
+    AssistantService,
+    AssistantUnavailable,
+    PublicDocumentInput,
+    PublicImageInput,
+)
 from .config import Settings
 from .media import ALLOWED_MEDIA_TYPES, attachment_content_url
-from .models import Attachment, ConfigRevision, Conversation, Event, MemoryItem, Message, Space, utcnow
-from .schemas import MessageAttachmentOut, MessageOut, PublicAgentOutput
+from .documents import document_content_url
+from .models import (
+    Attachment,
+    ConfigRevision,
+    Conversation,
+    Document,
+    Event,
+    MemoryItem,
+    Message,
+    Space,
+    utcnow,
+)
+from .schemas import MessageAttachmentOut, MessageDocumentOut, MessageOut, PublicAgentOutput
 
 
 def list_messages(db: Session, *, account_id: str, conversation_id: str) -> list[Message]:
@@ -72,6 +88,47 @@ def list_public_image_inputs(
     return result
 
 
+def list_public_document_inputs(
+    db: Session,
+    *,
+    account_id: str,
+    space_id: str,
+    conversation_id: str,
+    messages: list[Message],
+    trigger_message_id: str,
+) -> list[PublicDocumentInput]:
+    message_ids = [message.id for message in messages[-40:]]
+    if not message_ids:
+        return []
+    documents = db.scalars(
+        select(Document)
+        .where(
+            Document.account_id == account_id,
+            Document.space_id == space_id,
+            Document.conversation_id == conversation_id,
+            Document.message_id.in_(message_ids),
+            Document.scope == "conversation",
+            Document.status == "ready",
+        )
+        .order_by(Document.created_at, Document.id)
+    ).all()
+    return [
+        PublicDocumentInput(
+            document_id=document.id,
+            message_id=document.message_id or "",
+            original_name=document.original_name,
+            media_type=document.media_type,
+            extracted_text=(
+                document.extracted_text[:24_000]
+                if document.message_id == trigger_message_id
+                else None
+            ),
+        )
+        for document in documents
+        if document.message_id
+    ]
+
+
 def serialize_messages(
     db: Session,
     settings: Settings,
@@ -112,11 +169,27 @@ def serialize_messages(
     for attachment in attachments:
         if attachment.message_id:
             by_message.setdefault(attachment.message_id, attachment)
+    documents = db.scalars(
+        select(Document)
+        .where(
+            Document.account_id == account_id,
+            Document.conversation_id == conversation_id,
+            Document.message_id.in_(message_ids),
+            Document.scope == "conversation",
+            Document.status == "ready",
+        )
+        .order_by(Document.created_at, Document.id)
+    ).all()
+    documents_by_message: dict[str, Document] = {}
+    for document in documents:
+        if document.message_id:
+            documents_by_message.setdefault(document.message_id, document)
 
     result: list[MessageOut] = []
     for message in scoped_messages:
         attachment = by_message.get(message.id)
         projection = None
+        document_projection = None
         if attachment:
             projection = MessageAttachmentOut(
                 id=attachment.id,
@@ -124,8 +197,19 @@ def serialize_messages(
                 name=attachment.original_name,
                 url=attachment_content_url(attachment),
             )
+        document = documents_by_message.get(message.id)
+        if document:
+            document_projection = MessageDocumentOut(
+                id=document.id,
+                name=document.original_name,
+                media_type=document.media_type,
+                size_bytes=document.size_bytes,
+                url=document_content_url(document),
+            )
         result.append(
-            MessageOut.model_validate(message).model_copy(update={"attachment": projection})
+            MessageOut.model_validate(message).model_copy(
+                update={"attachment": projection, "document": document_projection}
+            )
         )
     return result
 
@@ -213,6 +297,14 @@ async def generate_public_reply(
         # the same private bytes, and could multiply memory use inside the bounded API container.
         messages=[trigger_message],
     )
+    document_inputs = list_public_document_inputs(
+        db,
+        account_id=conversation.account_id,
+        space_id=conversation.space_id,
+        conversation_id=conversation.id,
+        messages=history,
+        trigger_message_id=trigger_message.id,
+    )
     # Release the synchronous SQLAlchemy connection before the external model await. The
     # detached inputs remain usable because SessionLocal uses expire_on_commit=False.
     db.commit()
@@ -220,10 +312,12 @@ async def generate_public_reply(
         result = await assistant.public_turn(
             account_id=conversation.account_id,
             space_id=space.id,
+            conversation_id=conversation.id,
             professional_name=space.professional_name,
             configuration=revision.document,
             messages=history,
             image_inputs=image_inputs,
+            document_inputs=document_inputs,
         )
         answer = result.output.answer
         response_id = result.response_id

@@ -50,12 +50,25 @@ Mauro starts from the highest-weighted backend template: conversations with peop
 
 The Studio prepares a proposed change and shows Mauro its effect. Mauro decides when that change becomes active. Previous revisions remain recoverable.
 
+When the professional explicitly asks, the private Studio can search the public web for current
+information such as the professional's own website or public profiles. Studio cites the sources,
+marks ambiguous identity matches, and treats the findings as untrusted evidence rather than
+silently adding them to memory or configuration. The public assistant has no web-search capability
+and continues to answer only from the professional's active configuration.
+
 The same conversational control pattern can prepare professional correspondence. Mauro asks
 Studio to write an email; Studio seals an exact, read-only artifact; Mauro either asks for another
 version or explicitly authorizes that artifact. Replies return to the same private Studio context
 as untrusted external content. This is not a conventional inbox or a third email agent.
 
-The public assistant is the expression and proof of that configuration. It holds natural, persistent conversations in Italian using only Mauro's active space; it can work with text, voice notes, and photographs; maintain useful memory; surface corrections; and help Mauro understand where his attention may be valuable. Visitor information and conversations belong to Mauro's private account context, and Mauro can enter the same conversation without forcing the person through a separate handoff flow.
+The public assistant is the expression and proof of that configuration. It holds natural, persistent conversations in Italian using only Mauro's active space; it can work with text, voice notes, photographs, approved Studio sources, and documents shared inside one conversation; maintain useful memory; surface corrections; and help Mauro understand where his attention may be valuable. Visitor information and conversations belong to Mauro's private account context, and Mauro can enter the same conversation without forcing the person through a separate handoff flow.
+
+The private Studio includes a source library for PDF, DOCX, text, Markdown, and CSV documents. Studio
+can inspect every source owned by that tenant. A source affects the public assistant only after the
+professional prepares and explicitly activates a configuration revision that references it. Public
+conversations also have a document room: the visitor and professional can each share a file, and the
+two assistants can inspect it only inside the authorization boundary that owns it. This is shared
+conversation context, not transaction-document orchestration or a CRM workflow.
 
 ## What LAGGENTE is not
 
@@ -82,6 +95,7 @@ Start with the [documentation index](docs/README.md).
 | Hosting | [Hetzner Deployment](docs/operations/HETZNER_DEPLOYMENT.md) |
 | Domains | [Domains and Subdomains](docs/operations/DOMAINS_AND_SUBDOMAINS.md) |
 | Agent-native email | [Email activation runbook](docs/operations/AGENT_NATIVE_EMAIL.md) |
+| Consent-qualified outreach | [Outreach activation runbook](docs/operations/CONSENT_QUALIFIED_OUTREACH.md) |
 | AI collaboration | [ChatGPT Work and Codex](docs/workflows/CHATGPT_WORK_AND_CODEX.md) |
 | Git workflow | [Development Workflow](docs/workflows/DEVELOPMENT_WORKFLOW.md) |
 | Decisions | [Architecture Decision Records](docs/decisions/README.md) |
@@ -101,7 +115,7 @@ tenant active configuration owns the actual public role. Vite produces static as
 gateway serves those assets and proxies same-origin `/api/v1` REST endpoints to FastAPI. There is no
 Node.js web process in the production runtime. Exactly two OpenAI Agents SDK definitions power the
 private Studio assistant and the public assistant. PostgreSQL remains the application-owned source
-of truth for tenant-scoped configuration, conversations, messages, correctable memory, attachments,
+of truth for tenant-scoped configuration, conversations, messages, correctable memory, attachments, documents,
 sealed professional email artifacts, and audit events.
 
 The agent-native email application path is implemented behind the production-safe
@@ -119,6 +133,13 @@ media, and takeover code reads the resolved tenant and contains no Mauro-specifi
 The Studio also exposes a bounded `/studio/grafo` view: it connects the
 professional to existing conversations and to backend-weighted, correctable sets derived from them.
 
+An optional, disabled-by-default Studio outreach capability can combine explicit public-web
+research with the existing sealed-email contract. A public source nominates at most five pilot
+candidates but never authorizes contact. Promotional delivery requires a professional-recorded
+consent basis or the narrow existing-customer/similar-service exception, an exact sealed bundle,
+human authorization, a privacy link, unsubscribe, and suppression checks. This is a bounded action,
+not a CRM pipeline or a bulk cold-email system.
+
 Conversation turns currently use durable, non-streaming request/response transport. ChatKit is
 not part of the implemented runtime or persistence contract. See
 [ADR-0001](docs/decisions/0001-single-hetzner-server.md).
@@ -131,6 +152,7 @@ not part of the implemented runtime or persistence contract. See
 - First weighted vertical and pilot cohort: five real-estate professionals.
 - Initial real-estate template: conversations with people considering selling a property.
 - Relationship graph: tenant-private navigation over conversations and derived sets; no address-book import.
+- Studio outreach: sourced five-recipient pilot packs; no send from public contact data alone.
 - Hosting decision: one existing Hetzner server for the MVP.
 - Repository phase: implemented MVP pilot application and production infrastructure; release checks and
   live deployment state must still be reported separately from repository state.

@@ -4,23 +4,31 @@ import asyncio
 import json
 from weakref import WeakValueDictionary
 
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
 from ..config import Settings
 from ..conversations import active_revision, list_memories, list_messages, serialize_messages
 from ..database import get_db
-from ..dependencies import ProfessionalContext, current_professional, professional_space, runtime_settings
+from ..documents import DocumentExtractionError, validate_knowledge_document_references
+from ..dependencies import (
+    ProfessionalContext,
+    current_professional,
+    professional_space,
+    runtime_settings,
+)
 from ..models import (
     Account,
     ConfigRevision,
     Conversation,
+    Document,
     Event,
     Member,
     MemoryItem,
     Message,
+    OutreachCampaign,
     ProfessionalEmail,
     Space,
     utcnow,
@@ -47,6 +55,7 @@ from ..schemas import (
     StudioTurnOut,
 )
 from ..tenant import normalize_claimed_slug
+from .outreach import campaign_out, latest_campaign
 
 router = APIRouter(prefix="/studio", tags=["studio"])
 
@@ -66,7 +75,7 @@ def _studio_turn_lock(account_id: str, conversation_id: str) -> asyncio.Lock:
 
 
 def _require_text_only_message(body: MessageCreate) -> None:
-    if body.attachment_id or not body.content:
+    if body.attachment_id or body.document_id or not body.content:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="In questo spazio è supportato soltanto un messaggio di testo",
@@ -113,6 +122,7 @@ def _latest_email(db: Session, account_id: str, space_id: str) -> ProfessionalEm
             ProfessionalEmail.account_id == account_id,
             ProfessionalEmail.space_id == space_id,
             ProfessionalEmail.direction == "outbound",
+            ProfessionalEmail.outreach_campaign_id.is_(None),
         )
         .order_by(ProfessionalEmail.created_at.desc())
         .limit(1)
@@ -313,6 +323,15 @@ def create_revision(
     )
     if not space:
         raise HTTPException(status_code=404, detail="Spazio non trovato")
+    try:
+        validate_knowledge_document_references(
+            db,
+            account_id=context.account_id,
+            space_id=space.id,
+            configuration=document,
+        )
+    except DocumentExtractionError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     latest = db.scalar(
         select(func.max(ConfigRevision.revision_number)).where(
             ConfigRevision.account_id == context.account_id,
@@ -375,6 +394,15 @@ def activate_revision(
     )
     if not target:
         raise HTTPException(status_code=404, detail="Revisione non trovata")
+    try:
+        validate_knowledge_document_references(
+            db,
+            account_id=context.account_id,
+            space_id=space.id,
+            configuration=target.document,
+        )
+    except DocumentExtractionError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     current = active_revision(db, space)
     if current and current.id != target.id:
         current.status = "historical"
@@ -435,6 +463,9 @@ def get_studio_messages(
     conversation = _studio_conversation(db, context.account_id, space.id)
     messages = list_messages(db, account_id=context.account_id, conversation_id=conversation.id)
     latest_email = _latest_email(db, context.account_id, space.id)
+    latest_outreach = latest_campaign(
+        db, account_id=context.account_id, space_id=space.id
+    ) if settings.outreach_enabled else None
     return ConversationDetail(
         conversation=ConversationOut.model_validate(conversation),
         messages=serialize_messages(
@@ -448,6 +479,7 @@ def get_studio_messages(
         latest_email=(
             ProfessionalEmailOut.model_validate(latest_email) if latest_email else None
         ),
+        latest_campaign=(campaign_out(db, latest_outreach) if latest_outreach else None),
     )
 
 
@@ -524,6 +556,16 @@ async def post_studio_message(
                         .order_by(ProfessionalEmail.created_at.desc())
                         .limit(1)
                     )
+                    existing_campaign = db.scalar(
+                        select(OutreachCampaign)
+                        .where(
+                            OutreachCampaign.account_id == context.account_id,
+                            OutreachCampaign.space_id == space.id,
+                            OutreachCampaign.source_message_id == professional_message.id,
+                        )
+                        .order_by(OutreachCampaign.created_at.desc())
+                        .limit(1)
+                    )
                     return StudioTurnOut(
                         conversation=ConversationOut.model_validate(conversation),
                         messages=serialize_messages(
@@ -536,6 +578,11 @@ async def post_studio_message(
                         proposed_email=(
                             ProfessionalEmailOut.model_validate(existing_email)
                             if existing_email
+                            else None
+                        ),
+                        proposed_campaign=(
+                            campaign_out(db, existing_campaign)
+                            if existing_campaign
                             else None
                         ),
                     )
@@ -558,6 +605,7 @@ async def post_studio_message(
         db.commit()
         proposed_revision = None
         proposed_email = None
+        proposed_campaign = None
         try:
             reply = await request.app.state.assistant_service.studio_turn(
                 db,
@@ -582,6 +630,14 @@ async def post_studio_message(
                         ProfessionalEmail.id == reply.proposed_email_id,
                         ProfessionalEmail.account_id == context.account_id,
                         ProfessionalEmail.space_id == space.id,
+                    )
+                )
+            if reply.proposed_campaign_id:
+                proposed_campaign = db.scalar(
+                    select(OutreachCampaign).where(
+                        OutreachCampaign.id == reply.proposed_campaign_id,
+                        OutreachCampaign.account_id == context.account_id,
+                        OutreachCampaign.space_id == space.id,
                     )
                 )
         except Exception as exc:
@@ -628,6 +684,9 @@ async def post_studio_message(
             ),
             proposed_email=(
                 ProfessionalEmailOut.model_validate(proposed_email) if proposed_email else None
+            ),
+            proposed_campaign=(
+                campaign_out(db, proposed_campaign) if proposed_campaign else None
             ),
         )
 
@@ -796,7 +855,11 @@ def post_professional_message(
     settings: Settings = Depends(runtime_settings),
     context: ProfessionalContext = Depends(current_professional),
 ):
-    _require_text_only_message(body)
+    if body.attachment_id:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Per questa conversazione usa un documento oppure un messaggio di testo",
+        )
     conversation = _owned_public_conversation(db, context, conversation_id)
     conversation = db.scalar(
         select(Conversation)
@@ -821,6 +884,22 @@ def post_professional_message(
         )
         if existing:
             return _professional_detail(db, settings, conversation)
+    document = None
+    if body.document_id:
+        document = db.scalar(
+            select(Document).where(
+                Document.id == body.document_id,
+                Document.account_id == context.account_id,
+                Document.space_id == conversation.space_id,
+                Document.conversation_id == conversation.id,
+                Document.scope == "conversation",
+                Document.uploader_type == "professional",
+                Document.message_id.is_(None),
+                Document.status == "ready",
+            )
+        )
+        if not document:
+            raise HTTPException(status_code=404, detail="Documento non trovato")
     first_join = not conversation.professional_joined
     conversation.professional_joined = True
     was_enabled = conversation.automatic_ai_enabled
@@ -843,10 +922,14 @@ def post_professional_message(
             f"{context.member.display_name} — "
             f"{_owned_space_role(db, context, conversation.space_id)}"
         ),
-        content=body.content,
+        content=body.content or f"Ho condiviso il documento “{document.original_name}”.",
+        content_type="document" if document else "text",
         client_message_id=body.client_message_id,
     )
     db.add(message)
+    db.flush()
+    if document:
+        document.message_id = message.id
     conversation.last_message_at = utcnow()
     db.add(
         Event(
@@ -856,7 +939,10 @@ def post_professional_message(
             actor_type="professional",
             actor_id=context.member.id,
             event_type="professional_message_sent",
-            payload={"automatic_ai_paused": was_enabled},
+            payload={
+                "automatic_ai_paused": was_enabled,
+                "document_id": document.id if document else None,
+            },
         )
     )
     try:

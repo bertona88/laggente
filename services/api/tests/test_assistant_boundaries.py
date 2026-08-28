@@ -11,6 +11,8 @@ from app.assistants import (
     AgentsAssistantService,
     PublicImageInput,
     StudioRunContext,
+    _public_instructions,
+    _studio_output_with_clickable_citations,
     _studio_instructions,
 )
 from app.models import Message
@@ -26,9 +28,16 @@ def test_exactly_two_bounded_agent_definitions(settings):
         "inspect_active_space_configuration",
         "list_public_conversations",
         "inspect_public_conversation",
+        "list_studio_documents",
+        "inspect_studio_document",
+        "inspect_conversation_document",
         "propose_configuration_revision",
+        "web_search",
     }
-    assert service.public_assistant.tools == []
+    assert {tool.name for tool in service.public_assistant.tools} == {
+        "search_approved_knowledge",
+        "inspect_shared_document",
+    }
     assert service.studio_assistant.model_settings.store is False
     assert service.public_assistant.model_settings.store is False
     assert service.product_positioning.opening_question == "Che lavoro fai?"
@@ -57,6 +66,64 @@ def test_studio_instruction_uses_adaptive_correctable_elicitation():
     assert "Non creare punteggi nascosti" in instructions
     assert "Smetti di fare domande" in instructions
     assert "bozza fino all'attivazione umana" in instructions
+    assert "Usala soltanto quando il professionista chiede" in instructions
+    assert "contenuti privati dello Studio" in instructions
+    assert "materiale esterno non attendibile" in instructions
+    assert "non dispone della ricerca web" in instructions
+
+
+def test_public_instruction_does_not_offer_web_search():
+    context = SimpleNamespace(
+        context=SimpleNamespace(
+            professional_name="Giulia",
+            configuration={"identity": {"role": "Architetta"}},
+        )
+    )
+
+    instructions = _public_instructions(context, None)
+
+    assert "Non hai strumenti di ricerca web" in instructions
+
+
+def test_studio_web_citations_become_clickable_persisted_markdown():
+    text = "Ho trovato un profilo pubblico coerente."
+    result = SimpleNamespace(
+        final_output=text,
+        new_items=[
+            SimpleNamespace(
+                raw_item={
+                    "type": "message",
+                    "role": "assistant",
+                    "content": [
+                        {
+                            "type": "output_text",
+                            "text": text,
+                            "annotations": [
+                                {
+                                    "type": "url_citation",
+                                    "start_index": 13,
+                                    "end_index": len(text),
+                                    "title": "Profilo professionale",
+                                    "url": "https://www.example.com/profilo",
+                                },
+                                {
+                                    "type": "url_citation",
+                                    "start_index": 13,
+                                    "end_index": len(text),
+                                    "title": "Schema non sicuro",
+                                    "url": "javascript:alert(1)",
+                                },
+                            ],
+                        }
+                    ],
+                }
+            )
+        ],
+    )
+
+    assert _studio_output_with_clickable_citations(result) == (
+        f"{text} ([example.com](<https://www.example.com/profilo>))"
+    )
 
 
 def test_agent_mail_adds_tools_to_studio_without_creating_another_agent(settings):
@@ -71,13 +138,71 @@ def test_agent_mail_adds_tools_to_studio_without_creating_another_agent(settings
         "inspect_active_space_configuration",
         "list_public_conversations",
         "inspect_public_conversation",
+        "list_studio_documents",
+        "inspect_studio_document",
+        "inspect_conversation_document",
         "propose_configuration_revision",
+        "web_search",
         "propose_professional_email",
         "list_professional_emails",
         "inspect_professional_email",
     }
-    assert service.public_assistant.tools == []
+    assert {tool.name for tool in service.public_assistant.tools} == {
+        "search_approved_knowledge",
+        "inspect_shared_document",
+    }
     assert service.studio_assistant.handoffs == []
+
+
+def test_outreach_adds_bounded_studio_tools_and_never_public_tools(settings):
+    enabled = settings.model_copy(
+        update={
+            "agent_mail_enabled": True,
+            "agent_mail_inbound_secret": "x" * 32,
+            "outreach_enabled": True,
+            "outreach_max_recipients": 5,
+        }
+    )
+    service = AgentsAssistantService(enabled)
+    tool_names = {tool.name for tool in service.studio_assistant.tools}
+
+    assert {
+        "web_search",
+        "propose_outreach_campaign",
+        "record_outreach_contact_permission",
+        "propose_outreach_email",
+        "list_outreach_campaigns",
+        "inspect_outreach_campaign",
+    }.issubset(tool_names)
+    public_tool_names = {tool.name for tool in service.public_assistant.tools}
+    assert public_tool_names == {
+        "search_approved_knowledge",
+        "inspect_shared_document",
+    }
+    assert public_tool_names.isdisjoint(
+        {
+            "web_search",
+            "propose_outreach_campaign",
+            "record_outreach_contact_permission",
+            "propose_outreach_email",
+            "list_outreach_campaigns",
+            "inspect_outreach_campaign",
+        }
+    )
+    context = StudioRunContext(
+        account_id="account",
+        space_id="space",
+        member_id="member",
+        product_positioning={"opening_question": "Che lavoro fai?", "featured_verticals": []},
+        mail_enabled=True,
+        outreach_enabled=True,
+        runtime_settings=enabled,
+    )
+    instructions = _studio_instructions(SimpleNamespace(context=context), None)
+    assert "Un indirizzo pubblicato online" in instructions
+    assert "NON costituiscono consenso" in instructions
+    assert "existing_customer_similar_services" in instructions
+    assert "tu non puoi inviare" in instructions
 
 
 def test_public_input_embeds_integrity_checked_private_image(settings):

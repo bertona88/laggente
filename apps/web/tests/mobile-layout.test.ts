@@ -11,4 +11,11 @@ describe("mobile Studio overflow", () => {
       /\.inbox-page, \.space-page\s*\{[^}]*height:\s*100%;[^}]*min-height:\s*0;[^}]*overflow-y:\s*auto;[^}]*overscroll-behavior:\s*contain;/s,
     );
   });
+
+  it("keeps the document library scrollable inside the fixed mobile frame", () => {
+    const documentRules = styles.slice(styles.indexOf("/* Private source library"));
+    expect(documentRules).toMatch(
+      /@media \(max-width: 899px\)[\s\S]*\.documents-page\s*\{[^}]*height:\s*100%;[^}]*min-height:\s*0;[^}]*overflow-y:\s*auto;[^}]*overscroll-behavior:\s*contain;/s,
+    );
+  });
 });

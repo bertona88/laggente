@@ -125,7 +125,19 @@ The Studio can shape, within platform-provided capabilities:
 - bounded page structure, components, and visual choices;
 - starter templates and their guidance.
 
+The Studio also has a private source library for PDF, DOCX, text, Markdown, and CSV. Its assistant
+can list and inspect every source owned by that tenant. Upload is not publication: making a source
+available to the public assistant produces an ordinary configuration draft and still requires
+explicit professional activation. Extracted file content is treated as quoted, untrusted data.
+
 The Studio does not impose its own real-estate doctrine. It may point out ambiguity, risk, or uncertainty, but its job is to help the professional express their intent safely and visibly.
+
+When the professional explicitly asks, Studio can search public web sources for current facts,
+including the professional's own website and public professional profiles. Search never starts
+automatically during onboarding. Queries use only the minimum public identifiers needed; private
+Studio material, visitor data, email bodies, credentials, and secrets stay out of them. Results are
+untrusted external evidence with visible source links, not verified identity or configuration. The
+professional confirms any useful finding before Studio can place it into a draft revision.
 
 What the Studio learns becomes an evolving, document-shaped space configuration. The product keeps stable types for ownership, activation, permissions, capabilities, and safety, but it does not constrain the professional's identity or way of working to a narrow profile schema. New meaning can be represented as the conversation evolves, remains inspectable, and can be corrected.
 
@@ -141,6 +153,14 @@ change request is another Studio message and produces another sealed version rat
 the artifact in place. Incoming email is quoted, untrusted material and never an instruction to
 the assistant or an automatic-reply trigger.
 
+When the separately gated outreach capability is enabled, Studio may turn explicit public-web
+research into a maximum-five candidate pack for sharing a LAGGENTE link. Sources nominate; they do
+not authorize. Candidates remain research-only until the professional records exact consent or the
+narrow existing-customer/similar-service basis. Studio can then seal one immutable email per
+recipient. The application adds privacy and opaque-token unsubscribe links, checks suppression, and lets
+the professional authorize only the complete exact bundle. The bundle describes one action and
+never becomes a lead pipeline.
+
 ---
 
 ## 5. The public space
@@ -154,7 +174,8 @@ It displays:
 - the professional's name, portrait, agency, territory, and human role;
 - a clear label identifying the public assistant as AI;
 - a persistent conversation;
-- text, voice-note, and limited photograph input;
+- text, voice-note, limited photograph, and document input;
+- a conversation-scoped document room shared with the professional;
 - useful interactive elements when the conversation benefits from them;
 - an obvious way for the professional to participate;
 - visible authorship for every AI, visitor, human, and system message.
@@ -167,7 +188,7 @@ The first message clearly says, in Italian, that LAGGENTE is Mauro's AI assistan
 
 ## 6. Natural conversation, not a hidden form
 
-The public assistant follows the person's intent. It can ask a useful question, answer from approved knowledge, acknowledge uncertainty, accept a voice note or photograph, surface what it understood, or invite Mauro.
+The public assistant follows the person's intent. It can ask a useful question, answer from approved active knowledge, acknowledge uncertainty, accept a voice note, photograph, or document, inspect a document shared only in its current conversation, surface what it understood, or invite Mauro.
 
 It should not dump a questionnaire, insist on completing a field set, or force every person through the same sequence.
 
@@ -279,10 +300,14 @@ The application, not the model, determines:
 - whether automatic replies are enabled;
 - whether a tool call is authorized;
 - whether an exact email artifact has human authorization to be delivered;
+- whether every outreach recipient has a permitted contact basis and is absent from suppression;
 - retention and deletion execution;
 - immutable disclosure and safety rules.
 
 The design goal is not maximum autonomy. It is useful agency inside trustworthy boundaries.
+
+The public assistant has no web-search tool. It answers from the active, professionally approved
+configuration and does not perform open-web research for visitors.
 
 ---
 
@@ -293,6 +318,8 @@ The accepted MVP topology is:
 - a **bespoke Vite/React single-page interface** for the brand surface, Studio, conversation workspace, and public spaces, compiled to static assets during the gateway image build;
 - **same-origin REST** under `/api/v1` for conversations, configuration, authentication, attachments, and application actions;
 - **FastAPI/Python and the OpenAI Agents SDK** for application logic, authorized tools, interpretation, and exactly two assistant roles;
+- a hosted, read-only **web-search tool available only to the private Studio**, with cited results
+  persisted in the Studio transcript; the public assistant has no corresponding tool;
 - **PostgreSQL** for multi-tenant configuration, conversations, messages, memory, and events;
 - **private filesystem storage** on the Hetzner server for MVP uploads;
 - optional **email delivery** for signed Studio magic links when that authentication mode is configured;
@@ -337,7 +364,10 @@ The MVP begins with a compact persistent model:
 | Conversation | Persistent private Studio or public thread |
 | Message | Immutable authored conversational item |
 | Attachment | Private supported media and metadata |
+| Document | Private Studio source or message-bound conversation file with bounded extracted text |
 | Professional email | Sealed inbound or outbound correspondence plus delivery state |
+| Outreach campaign | Bounded sourced candidate pack and exact bundle-authorization state |
+| Outreach recipient | Campaign-local source, contact basis, sealed artifact link, and suppression state |
 | Memory item | Correctable interpretation linked to source messages |
 | Event | Auditable configuration, tool, consent, speaker-control, and deletion action |
 
@@ -345,15 +375,16 @@ Do not create a table for every possible interpretation. Summaries, signals, and
 
 In the implemented pilot, participant identity and visible authorship are carried by conversation
 state and immutable message fields rather than a separate participant table. The schema also has
-a `magic_links` support record for the optional email authentication mode and a
-`professional_emails` record for immutable correspondence artifacts. These storage choices
+a `magic_links` support record for the optional email authentication mode, a
+`professional_emails` record for immutable correspondence artifacts, and bounded outreach
+campaign/recipient records when that capability is explicitly enabled. These storage choices
 do not change the conceptual roles above.
 
 Every tenant-owned record contains `account_id`. Public records also bind to the resolved professional space. The hostname selects context but never substitutes for server-side authorization.
 
 ---
 
-## 14. Audio and photographs
+## 14. Audio, photographs, and documents
 
 Voice notes belong in the first credible product because Italian professional work, especially the first real-estate vertical, already happens through audio messages.
 
@@ -369,6 +400,14 @@ The MVP uses one reasoning path:
 Raw audio is deleted after transcription by default unless an explicit retained-audio policy applies.
 
 Photographs are private attachments to a conversation. The MVP limits file types, size, and count; serves them through stable same-origin endpoints that authorize every request from the current visitor or professional session; and never presents an image-derived claim as certain professional judgment. When a photograph is attached to an AI-assisted turn, its verified bytes are processed by the configured AI provider for that turn only, as disclosed in the versioned visitor privacy notice; the private attachment URL is not shared and historical photographs are not replayed on later text turns.
+
+Documents follow two bounded lifecycles. Studio sources remain private to the professional and
+private assistant until an active configuration references them. Conversation documents are
+uploaded by the visitor or professional, bound to an authored message, and readable only inside
+that tenant/space/conversation authorization boundary. Unbound conversation drafts expire after
+one hour. Deleting a conversation deletes its document rows, extracted text, files, and scoped
+events. This shared room does not implement signatures, checklists, transaction stages, or a
+property dossier.
 
 ---
 
@@ -407,8 +446,14 @@ The MVP also requires:
 - separate marketing consent where applicable;
 - configurable retention and executable deletion paths;
 - access control for conversations and files;
+- explicit configuration activation before a private Studio source becomes public-assistant knowledge;
 - recorded consent and speaker-control events;
 - product-specific legal and privacy review before public launch.
+
+Public web content is treated as untrusted input. Studio must not follow instructions found in a
+page or use a page to authorize another tool, and it must distinguish a plausible identity match
+from a professional-confirmed one. Search queries exclude private Studio, visitor, and email
+content. Citations remain visible and clickable in the private transcript.
 
 This blueprint is a product specification, not legal advice.
 
@@ -426,7 +471,7 @@ The product begins on the professional side and becomes real through the public 
 6. Giulia chooses the available username `giulia`, reserving `giulia.laggente.com` globally.
 7. She reviews the concrete public effect, corrects the Studio if needed, and explicitly activates the revision.
 8. The first activation makes the dormant space public. It changes PostgreSQL state; it does not deploy code, create infrastructure, or load a Giulia-specific environment file.
-9. `giulia.laggente.com` now uses the same public assistant, seller template, conversation persistence, voice-note, photograph, memory, and human-control machinery as Mauro's space, scoped to Giulia's `account_id` and active configuration.
+9. `giulia.laggente.com` now uses the same public assistant, seller template, conversation persistence, voice-note, photograph, document-sharing, memory, and human-control machinery as Mauro's space, scoped to Giulia's `account_id` and active configuration.
 10. A visitor starts a natural, persistent Italian conversation without creating an account.
 11. The resulting conversation and derived, correctable context are privately available only to Giulia's account.
 12. Giulia can join the same thread as a visible human; automatic AI replies pause when she writes and can be explicitly re-enabled.
@@ -477,7 +522,7 @@ The initial commercial signal remains qualified valuation appointments per profe
 - renovation rendering;
 - transaction-document orchestration;
 - cross-professional network behavior;
-- address-book import, external contact enrichment, or cross-account relationship clustering;
+- address-book import, bulk scraping, purchased contact lists, inferred cold-email permission, or cross-account relationship clustering;
 - customer-provided code or OpenAI keys;
 - property passports, blockchain proofs, crypto, payments, or title transfer;
 - multi-agent swarms;
