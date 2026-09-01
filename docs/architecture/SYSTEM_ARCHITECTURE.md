@@ -30,7 +30,7 @@ authenticated professional
 private Studio assistant
           ↕ authorized tools
 LAGGENTE coordination layer
-  configuration · conversations · memory · files · email · permissions
+  configuration · conversations · memory · files · email · calendar · permissions
           ↕ active space context
 public assistant
           ↕
@@ -109,6 +109,13 @@ instructions, participants, and access contexts; shared infrastructure must neve
 permission boundaries or expose private Studio material publicly.
 
 Redis, Kubernetes, Vercel, Railway, and a managed database are not part of the accepted MVP topology.
+
+Google Calendar is an optional external provider behind the FastAPI capability boundary. OAuth
+credentials are encrypted in tenant-owned records; provider event details are never loaded into
+assistant context. The public assistant can request bounded free/busy-derived slots and create one
+event only after an exact visitor selection. FastAPI rechecks availability, performs the provider
+write, persists an idempotent booking linked to the public conversation, and records an audit event.
+See [ADR-0007](../decisions/0007-google-calendar-appointments.md).
 
 Conversation turns currently complete as durable, non-streaming HTTP request/response operations.
 The FastAPI service runs the relevant assistant through the Agents SDK and persists authored

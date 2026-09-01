@@ -329,7 +329,9 @@ The accepted MVP topology is:
 - **Docker Compose** on the existing Hetzner server;
 - **wildcard DNS and TLS** for `*.laggente.com`;
 - a public **backend positioning contract** for the opening Studio question and ordered, weighted vertical examples;
-- an authenticated, bounded **relationship graph projection** over tenant-owned conversations and correctable memory.
+- an authenticated, bounded **relationship graph projection** over tenant-owned conversations and correctable memory;
+- an optional, tenant-scoped **Google Calendar capability** for free/busy lookup and confirmed event
+  creation after an exact visitor selection, without exposing private event details.
 
 The production web runtime is the existing internal nginx gateway. It serves the immutable Vite
 build with an SPA history fallback and proxies `/api/v1` to FastAPI; there is no separate Node.js
@@ -370,6 +372,8 @@ The MVP begins with a compact persistent model:
 | Outreach recipient | Campaign-local source, contact basis, sealed artifact link, and suppression state |
 | Memory item | Correctable interpretation linked to source messages |
 | Event | Auditable configuration, tool, consent, speaker-control, and deletion action |
+| Calendar connection | Encrypted tenant authorization plus the professional's explicit bookable-hours policy |
+| Calendar booking | Idempotent provider confirmation linked to its originating conversation |
 
 Do not create a table for every possible interpretation. Summaries, signals, and possible opportunities may begin as typed memory items or generated views. Add independent lifecycles only after real product behavior requires them.
 
@@ -518,7 +522,7 @@ The initial commercial signal remains qualified valuation appointments per profe
 - automated valuation presented as certainty;
 - full CRM and configurable sales pipelines;
 - rigid lead taxonomies;
-- calendar automation beyond simple requests or links;
+- calendar aggregation, rescheduling, cancellation, or providers beyond the accepted first Google Calendar capability;
 - renovation rendering;
 - transaction-document orchestration;
 - cross-professional network behavior;

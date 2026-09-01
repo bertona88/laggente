@@ -116,7 +116,7 @@ gateway serves those assets and proxies same-origin `/api/v1` REST endpoints to 
 Node.js web process in the production runtime. Exactly two OpenAI Agents SDK definitions power the
 private Studio assistant and the public assistant. PostgreSQL remains the application-owned source
 of truth for tenant-scoped configuration, conversations, messages, correctable memory, attachments, documents,
-sealed professional email artifacts, and audit events.
+sealed professional email artifacts, optional calendar authorizations and confirmed bookings, and audit events.
 
 The agent-native email application path is implemented behind the production-safe
 `AGENT_MAIL_ENABLED=false` default. Live provider activation and acceptance evidence are tracked

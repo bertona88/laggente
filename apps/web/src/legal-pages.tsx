@@ -20,6 +20,8 @@ export function PrivacyPage() {
         <p>Il testo, le note vocali, le fotografie e il testo estratto dai documenti necessari a rispondere possono essere elaborati dal fornitore AI di LAGGENTE. Una fotografia viene inviata soltanto nel turno a cui è allegata; il suo indirizzo privato non viene condiviso. I documenti della conversazione restano accessibili soltanto ai partecipanti e agli assistenti autorizzati di quello spazio. LAGGENTE non usa la funzione di archiviazione delle risposte del fornitore.</p>
         <h2>Le tue scelte</h2>
         <p>Puoi chiedere al professionista l’accesso, la correzione o la cancellazione dei tuoi dati. Non è necessario fornire recapiti per iniziare una conversazione.</p>
+        <h2>Se scegli un appuntamento</h2>
+        <p>Quando il professionista ha attivato Google Calendar, LAGGENTE legge soltanto gli intervalli occupati necessari a proporre orari liberi: non mostra titoli o dettagli degli altri eventi. Nome, indirizzo email e orario scelto vengono inviati a Google esclusivamente per creare l’evento e spedire l’invito.</p>
         <h2>Se ricevi una presentazione di LAGGENTE</h2>
         <p>Una campagna pilot conserva la fonte pubblica usata per nominare il professionista e non consente l’invio finché chi opera lo Studio non registra un consenso esplicito o il limitato rapporto cliente già esistente previsto per servizi analoghi. Ogni email include un collegamento personale per bloccare altri invii da quello spazio. Un candidato rimasto soltanto in ricerca viene eliminato automaticamente dopo il breve periodo configurato.</p>
         <p className="legal-page__notice">Questa informativa sintetica accompagna il pilot. L’informativa legale completa e i contatti del titolare saranno pubblicati prima dell’apertura al pubblico.</p>
@@ -38,7 +40,7 @@ export function TermsPage() {
         <h1>Una conversazione, non una consulenza automatica.</h1>
         <p className="legal-page__lead">LAGGENTE aiuta a iniziare e continuare una conversazione con un professionista. L’assistente AI non sostituisce il suo giudizio.</p>
         <h2>Identità trasparente</h2>
-        <p>L’assistente dichiara sempre di essere un sistema di intelligenza artificiale. Non può assumere impegni, confermare appuntamenti, sostituire una valutazione professionale o parlare come se fosse il professionista.</p>
+        <p>L’assistente dichiara sempre di essere un sistema di intelligenza artificiale. Non può assumere impegni del professionista, sostituire una valutazione professionale o parlare come se fosse il professionista. Un appuntamento è confermato soltanto quando il calendario collegato accetta l’evento e invia l’invito.</p>
         <h2>Uso responsabile</h2>
         <p>Condividi soltanto informazioni pertinenti. Non caricare documenti d’identità, dati di pagamento o materiali di terzi senza averne il diritto.</p>
         <h2>Risposte e verifiche</h2>

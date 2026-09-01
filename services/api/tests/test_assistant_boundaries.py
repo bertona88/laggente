@@ -7,13 +7,13 @@ from types import SimpleNamespace
 import pytest
 
 from app.assistants import (
-    AssistantUnavailable,
     AgentsAssistantService,
+    AssistantUnavailable,
     PublicImageInput,
     StudioRunContext,
     _public_instructions,
-    _studio_output_with_clickable_citations,
     _studio_instructions,
+    _studio_output_with_clickable_citations,
 )
 from app.models import Message
 
@@ -83,6 +83,36 @@ def test_public_instruction_does_not_offer_web_search():
     instructions = _public_instructions(context, None)
 
     assert "Non hai strumenti di ricerca web" in instructions
+
+
+def test_google_calendar_adds_only_bounded_public_tools(settings):
+    enabled = settings.model_copy(
+        update={
+            "google_calendar_enabled": True,
+            "google_calendar_client_id": "client-id",
+            "google_calendar_client_secret": "client-secret",
+        }
+    )
+    service = AgentsAssistantService(enabled)
+    assert {tool.name for tool in service.public_assistant.tools} == {
+        "search_approved_knowledge",
+        "inspect_shared_document",
+        "get_calendar_availability",
+        "book_calendar_appointment",
+    }
+    assert {tool.name for tool in service.studio_assistant.tools}.isdisjoint(
+        {"get_calendar_availability", "book_calendar_appointment"}
+    )
+    context = SimpleNamespace(
+        context=SimpleNamespace(
+            professional_name="Giulia",
+            configuration={"identity": {"role": "Agente immobiliare"}},
+            runtime_settings=enabled,
+        )
+    )
+    instructions = _public_instructions(context, None)
+    assert "soltanto dopo che la persona ha scelto un orario esatto" in instructions
+    assert "Non dichiarare confermato" in instructions
 
 
 def test_studio_web_citations_become_clickable_persisted_markdown():

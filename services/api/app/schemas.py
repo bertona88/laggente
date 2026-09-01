@@ -164,6 +164,90 @@ class SpaceDetail(BaseModel):
     latest_draft: RevisionOut | None
 
 
+class CalendarConnectionOut(APIModel):
+    connected: bool = True
+    provider: Literal["google"] = "google"
+    provider_email: EmailStr
+    status: str
+    booking_enabled: bool
+    timezone: str
+    work_days: list[int]
+    day_start: str
+    day_end: str
+    duration_minutes: int
+    slot_interval_minutes: int
+    buffer_minutes: int
+    minimum_notice_minutes: int
+    appointment_title: str
+    location: str | None
+    updated_at: datetime
+
+
+class CalendarStatusOut(BaseModel):
+    available: bool
+    connection: CalendarConnectionOut | None = None
+
+
+class CalendarOAuthStartOut(BaseModel):
+    authorization_url: str
+
+
+class CalendarSettingsUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    booking_enabled: bool
+    timezone: str = Field(min_length=1, max_length=80)
+    work_days: list[int] = Field(min_length=1, max_length=7)
+    day_start: str = Field(pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
+    day_end: str = Field(pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
+    duration_minutes: Literal[15, 30, 45, 60, 90, 120]
+    slot_interval_minutes: Literal[15, 30, 60]
+    buffer_minutes: int = Field(ge=0, le=120)
+    minimum_notice_minutes: int = Field(ge=0, le=10_080)
+    appointment_title: str = Field(min_length=1, max_length=200)
+    location: str | None = Field(default=None, max_length=500)
+
+    @model_validator(mode="after")
+    def validate_calendar_policy(self):
+        if sorted(set(self.work_days)) != sorted(self.work_days) or any(
+            day < 0 or day > 6 for day in self.work_days
+        ):
+            raise ValueError("I giorni prenotabili devono essere unici e compresi tra 0 e 6")
+        if self.day_start >= self.day_end:
+            raise ValueError("L'orario finale deve essere successivo a quello iniziale")
+        return self
+
+
+class CalendarSlotOut(BaseModel):
+    start: datetime
+    end: datetime
+    timezone: str
+
+
+class CalendarAvailabilityOut(BaseModel):
+    appointment_title: str
+    location: str | None
+    slots: list[CalendarSlotOut]
+
+
+class CalendarBookingCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    visitor_name: str = Field(min_length=2, max_length=200)
+    visitor_email: EmailStr
+    start: datetime
+
+
+class CalendarBookingOut(APIModel):
+    id: str
+    conversation_id: str
+    visitor_name: str
+    visitor_email: EmailStr
+    start_at: datetime
+    end_at: datetime
+    timezone: str
+    status: str
+    created_at: datetime
+
+
 AuthorType = Literal["visitor", "professional", "studio_assistant", "public_assistant", "system"]
 
 

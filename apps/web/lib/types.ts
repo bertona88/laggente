@@ -283,6 +283,30 @@ export interface StudioSession {
   space: StudioSpaceState | null;
 }
 
+export interface CalendarConnection {
+  connected: true;
+  provider: "google";
+  provider_email: string;
+  status: string;
+  booking_enabled: boolean;
+  timezone: string;
+  work_days: number[];
+  day_start: string;
+  day_end: string;
+  duration_minutes: 15 | 30 | 45 | 60 | 90 | 120;
+  slot_interval_minutes: 15 | 30 | 60;
+  buffer_minutes: number;
+  minimum_notice_minutes: number;
+  appointment_title: string;
+  location?: string | null;
+  updated_at: string;
+}
+
+export interface CalendarStatus {
+  available: boolean;
+  connection: CalendarConnection | null;
+}
+
 export interface ApiErrorBody {
   detail?: string | { msg?: string }[];
   message?: string;

@@ -5,12 +5,12 @@ from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     DateTime,
     ForeignKey,
     Index,
     Integer,
-    JSON,
     LargeBinary,
     String,
     Text,
@@ -334,6 +334,86 @@ class OutreachSuppression(Base):
     reason: Mapped[str] = mapped_column(String(80), nullable=False)
     source: Mapped[str] = mapped_column(String(40), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+
+class CalendarConnection(Base, TimestampMixin):
+    """One tenant-owned Google Calendar authorization and booking policy."""
+
+    __tablename__ = "calendar_connections"
+    __table_args__ = (
+        UniqueConstraint("space_id", name="uq_calendar_connection_space"),
+        Index("ix_calendar_connection_account_space", "account_id", "space_id"),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    account_id: Mapped[str] = mapped_column(
+        ForeignKey("accounts.id", ondelete="CASCADE"), index=True
+    )
+    space_id: Mapped[str] = mapped_column(
+        ForeignKey("spaces.id", ondelete="CASCADE"), index=True
+    )
+    connected_by_member_id: Mapped[str] = mapped_column(
+        ForeignKey("members.id", ondelete="CASCADE"), index=True
+    )
+    provider: Mapped[str] = mapped_column(String(24), default="google", nullable=False)
+    provider_email: Mapped[str] = mapped_column(String(320), nullable=False)
+    refresh_token_encrypted: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    access_token_encrypted: Mapped[bytes | None] = mapped_column(LargeBinary)
+    token_expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    status: Mapped[str] = mapped_column(String(24), default="connected", nullable=False)
+    booking_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    timezone: Mapped[str] = mapped_column(String(80), default="Europe/Rome", nullable=False)
+    work_days: Mapped[list[int]] = mapped_column(JSON, default=lambda: [0, 1, 2, 3, 4], nullable=False)
+    day_start: Mapped[str] = mapped_column(String(5), default="09:00", nullable=False)
+    day_end: Mapped[str] = mapped_column(String(5), default="18:00", nullable=False)
+    duration_minutes: Mapped[int] = mapped_column(Integer, default=30, nullable=False)
+    slot_interval_minutes: Mapped[int] = mapped_column(Integer, default=30, nullable=False)
+    buffer_minutes: Mapped[int] = mapped_column(Integer, default=15, nullable=False)
+    minimum_notice_minutes: Mapped[int] = mapped_column(Integer, default=180, nullable=False)
+    appointment_title: Mapped[str] = mapped_column(
+        String(200), default="Prima conversazione", nullable=False
+    )
+    location: Mapped[str | None] = mapped_column(String(500))
+
+
+class CalendarBooking(Base, TimestampMixin):
+    """A confirmed provider event grounded in one public conversation."""
+
+    __tablename__ = "calendar_bookings"
+    __table_args__ = (
+        UniqueConstraint("account_id", "idempotency_key", name="uq_calendar_booking_idempotency"),
+        UniqueConstraint(
+            "account_id",
+            "calendar_connection_id",
+            "start_at",
+            name="uq_calendar_booking_slot",
+        ),
+        UniqueConstraint(
+            "calendar_connection_id", "provider_event_id", name="uq_calendar_booking_provider_event"
+        ),
+        Index("ix_calendar_booking_account_conversation", "account_id", "conversation_id"),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    account_id: Mapped[str] = mapped_column(
+        ForeignKey("accounts.id", ondelete="CASCADE"), index=True
+    )
+    space_id: Mapped[str] = mapped_column(
+        ForeignKey("spaces.id", ondelete="CASCADE"), index=True
+    )
+    conversation_id: Mapped[str] = mapped_column(
+        ForeignKey("conversations.id", ondelete="CASCADE"), index=True
+    )
+    calendar_connection_id: Mapped[str | None] = mapped_column(
+        ForeignKey("calendar_connections.id", ondelete="SET NULL"), index=True
+    )
+    visitor_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    visitor_email: Mapped[str] = mapped_column(String(320), nullable=False)
+    start_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    end_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    timezone: Mapped[str] = mapped_column(String(80), nullable=False)
+    status: Mapped[str] = mapped_column(String(24), nullable=False)
+    provider_event_id: Mapped[str | None] = mapped_column(String(998))
+    provider_event_link: Mapped[str | None] = mapped_column(String(2000))
+    idempotency_key: Mapped[str] = mapped_column(String(64), nullable=False)
 
 
 class ProfessionalEmail(Base, TimestampMixin):

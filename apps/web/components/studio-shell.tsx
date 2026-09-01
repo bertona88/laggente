@@ -4,6 +4,7 @@ import { useLocation } from "wouter";
 import { AppLink as Link, useAppNavigate } from "@/components/app-link";
 import {
   CloseIcon,
+  CalendarIcon,
   ConversationIcon,
   DocumentIcon,
   LayersIcon,
@@ -23,6 +24,7 @@ const navItems = [
   { href: "/studio", label: "Studio", icon: StudioIcon, exact: true },
   { href: "/studio/conversazioni", label: "Conversazioni", icon: ConversationIcon },
   { href: "/studio/documenti", label: "Documenti", icon: DocumentIcon },
+  { href: "/studio/calendario", label: "Calendario", icon: CalendarIcon },
   { href: "/studio/grafo", label: "Grafo", icon: NetworkIcon },
   { href: "/studio/spazio", label: "Spazio pubblico", icon: LayersIcon },
 ];

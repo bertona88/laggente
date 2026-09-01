@@ -9,6 +9,7 @@ describe("SPA route titles", () => {
     expect(documentTitleForRoute("/studio/conversazioni/conversation-1", null)).toBe("Conversazione — Studio");
     expect(documentTitleForRoute("/studio/grafo", null)).toBe("Grafo — Studio");
     expect(documentTitleForRoute("/studio/documenti", null)).toBe("Documenti — Studio");
+    expect(documentTitleForRoute("/studio/calendario", null)).toBe("Calendario — Studio");
     expect(documentTitleForRoute("/studio/spazio", null)).toBe("Spazio pubblico — Studio");
   });
 

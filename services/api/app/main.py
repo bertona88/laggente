@@ -13,6 +13,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from . import __version__
 from .assistants import AgentsAssistantService
+from .calendar import GoogleCalendarGateway
 from .config import Settings, get_settings
 from .database import Base, configure_database
 from .email import AuthEmailSender
@@ -33,6 +34,7 @@ from .retention import (
 from .routes import (
     attachments,
     auth,
+    calendar,
     documents,
     invitations,
     outreach,
@@ -163,6 +165,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.professional_mail_transport = build_professional_mail_transport(runtime_settings)
     app.state.resend_inbound_source = build_resend_inbound_source(runtime_settings)
     app.state.assistant_service = AgentsAssistantService(runtime_settings)
+    app.state.calendar_gateway = GoogleCalendarGateway()
     app.state.audio_transcriber = OpenAIAudioTranscriber(runtime_settings)
     app.state.upload_slots = asyncio.Semaphore(MAX_CONCURRENT_UPLOAD_REQUESTS)
 
@@ -230,6 +233,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return response
 
     app.include_router(auth.router, prefix="/api/v1")
+    app.include_router(calendar.router, prefix="/api/v1")
     app.include_router(product.router, prefix="/api/v1")
     app.include_router(public.router, prefix="/api/v1")
     app.include_router(studio.router, prefix="/api/v1")

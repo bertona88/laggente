@@ -688,6 +688,32 @@ img { max-width: 100%; }
 .graph-toolbar > button { min-height: 36px; padding: 0 12px; border: 1px solid var(--line); background: transparent; display: inline-flex; align-items: center; gap: 9px; color: var(--ink); font-size: 8px; text-transform: uppercase; letter-spacing: .08em; cursor: pointer; }
 .graph-toolbar > button:hover { background: var(--ink); color: var(--paper-light); }
 .graph-toolbar > button svg { width: 13px; }
+
+.calendar-page { min-height: 100%; background: var(--paper-light); }
+.calendar-connection-state { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 11px; }
+.calendar-connection-state i { width: 7px; height: 7px; border-radius: 50%; background: #4f8b5d; }
+.calendar-intro { padding: clamp(34px, 6vw, 76px) clamp(28px, 6vw, 88px) 34px; max-width: 900px; }
+.calendar-intro h2 { max-width: 700px; margin: 10px 0 16px; font-family: var(--font-serif); font-size: clamp(30px, 4vw, 52px); font-weight: 400; line-height: 1.04; }
+.calendar-intro > p:last-child { max-width: 690px; color: var(--muted); line-height: 1.65; }
+.calendar-feedback { margin: 0 clamp(28px, 6vw, 88px) 18px; padding: 13px 16px; border-left: 2px solid #4f8b5d; background: rgba(79,139,93,.08); font-size: 13px; }
+.calendar-feedback.is-error { border-color: #9f4237; background: rgba(159,66,55,.08); }
+.calendar-empty, .calendar-settings { margin: 0 clamp(28px, 6vw, 88px) 72px; padding: clamp(24px, 4vw, 42px); border: 1px solid var(--line); background: var(--paper); }
+.calendar-empty h3 { margin: 0 0 10px; font-family: var(--font-serif); font-size: 28px; font-weight: 400; }
+.calendar-empty p { max-width: 620px; margin: 0 0 24px; color: var(--muted); line-height: 1.6; }
+.calendar-toggle { display: flex; gap: 16px; align-items: flex-start; padding-bottom: 28px; border-bottom: 1px solid var(--line); cursor: pointer; }
+.calendar-toggle input { margin-top: 4px; accent-color: var(--ink); }
+.calendar-toggle span { display: grid; gap: 6px; }
+.calendar-toggle strong { font-family: var(--font-serif); font-size: 21px; font-weight: 400; }
+.calendar-toggle small { color: var(--muted); }
+.calendar-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px 28px; padding: 30px 0; }
+.calendar-form-grid label { display: grid; gap: 8px; }
+.calendar-form-grid label > span, .calendar-days legend { color: var(--muted); font-size: 9px; letter-spacing: .08em; text-transform: uppercase; }
+.calendar-form-grid input, .calendar-form-grid select { width: 100%; min-height: 45px; padding: 0 12px; border: 1px solid var(--line); border-radius: 0; background: var(--paper-light); color: var(--ink); font: inherit; }
+.calendar-days { margin: 0; padding: 0 0 30px; border: 0; }
+.calendar-days legend { margin-bottom: 10px; }
+.calendar-days button { min-width: 50px; height: 38px; margin: 0 7px 7px 0; border: 1px solid var(--line); background: transparent; color: var(--ink); cursor: pointer; }
+.calendar-days button.is-selected { background: var(--ink); color: var(--paper-light); }
+.calendar-actions { display: flex; gap: 12px; align-items: center; }
 .graph-search-results { width: 100%; max-height: 350px; overflow-y: auto; position: absolute; z-index: 15; top: 51px; left: 0; padding: 7px; border: 1px solid var(--line); background: var(--paper-light); box-shadow: var(--shadow-soft); }
 .graph-search-results button { width: 100%; padding: 11px 12px; border: 0; border-bottom: 1px solid var(--line); background: transparent; display: grid; gap: 3px; text-align: left; cursor: pointer; }
 .graph-search-results button:last-of-type { border-bottom: 0; }
@@ -881,6 +907,9 @@ img { max-width: 100%; }
   .graph-toolbar > label { width: 100%; }
   .graph-toolbar > label > span { display: none; }
   .graph-toolbar > button { flex: 0 0 auto; }
+  .calendar-form-grid { grid-template-columns: 1fr; }
+  .calendar-empty, .calendar-settings { margin-inline: 20px; padding: 22px; }
+  .calendar-intro { padding-inline: 22px; }
   .graph-layout { display: block; min-height: 0; }
   .graph-canvas { min-height: 560px; }
   .graph-inspector { min-height: 320px; border-left: 0; border-top: 1px solid var(--line); padding: 34px 22px; }

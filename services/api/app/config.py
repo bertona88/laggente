@@ -78,6 +78,20 @@ class Settings(BaseSettings):
     outreach_candidate_retention_days: int = Field(
         default=30, ge=1, le=90, alias="OUTREACH_CANDIDATE_RETENTION_DAYS"
     )
+    google_calendar_enabled: bool = Field(default=False, alias="GOOGLE_CALENDAR_ENABLED")
+    google_calendar_client_id: str | None = Field(
+        default=None, alias="GOOGLE_CALENDAR_CLIENT_ID"
+    )
+    google_calendar_client_secret: str | None = Field(
+        default=None, alias="GOOGLE_CALENDAR_CLIENT_SECRET"
+    )
+    google_calendar_redirect_uri: str = Field(
+        default="https://app.laggente.com/api/v1/studio/calendar/oauth/callback",
+        alias="GOOGLE_CALENDAR_REDIRECT_URI",
+    )
+    google_calendar_encryption_key: str | None = Field(
+        default=None, alias="GOOGLE_CALENDAR_ENCRYPTION_KEY"
+    )
     aws_access_key_id: str | None = Field(default=None, alias="AWS_ACCESS_KEY_ID")
     aws_secret_access_key: str | None = Field(default=None, alias="AWS_SECRET_ACCESS_KEY")
     aws_session_token: str | None = Field(default=None, alias="AWS_SESSION_TOKEN")
@@ -87,7 +101,7 @@ class Settings(BaseSettings):
         default=365, ge=1, le=3650, alias="CONVERSATION_RETENTION_DAYS"
     )
     privacy_notice_version: str = Field(
-        default="2026-08-27.1", min_length=1, max_length=50, alias="PRIVACY_NOTICE_VERSION"
+        default="2026-09-01.1", min_length=1, max_length=50, alias="PRIVACY_NOTICE_VERSION"
     )
     version: str = Field(default="0.1.0", alias="APP_VERSION")
     git_sha: str = Field(default="unknown", alias="GIT_SHA")
@@ -170,6 +184,19 @@ class Settings(BaseSettings):
                 )
         if self.outreach_enabled and not self.agent_mail_enabled:
             raise RuntimeError("OUTREACH_ENABLED requires AGENT_MAIL_ENABLED")
+        if self.google_calendar_enabled:
+            if not self.google_calendar_client_id or not self.google_calendar_client_secret:
+                raise RuntimeError(
+                    "GOOGLE_CALENDAR_CLIENT_ID and GOOGLE_CALENDAR_CLIENT_SECRET are required"
+                )
+            if not self.google_calendar_redirect_uri.startswith("https://") and self.is_production:
+                raise RuntimeError("GOOGLE_CALENDAR_REDIRECT_URI must use HTTPS in production")
+            if self.is_production and not self.google_calendar_encryption_key:
+                raise RuntimeError(
+                    "GOOGLE_CALENDAR_ENCRYPTION_KEY is required when Calendar is enabled in production"
+                )
+            if self.google_calendar_encryption_key and len(self.google_calendar_encryption_key) < 32:
+                raise RuntimeError("GOOGLE_CALENDAR_ENCRYPTION_KEY must contain at least 32 characters")
         if self.is_production:
             if self.session_secret == "development-only-change-me" or len(self.session_secret) < 32:
                 raise RuntimeError("SESSION_SECRET must be a strong, project-specific value in production")
