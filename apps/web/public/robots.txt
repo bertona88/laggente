@@ -1,6 +1,7 @@
 User-agent: *
 Allow: /
 Disallow: /login
+Disallow: /short123
 Disallow: /studio
 Disallow: /spazio/
 

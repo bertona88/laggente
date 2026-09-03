@@ -19,7 +19,9 @@ describe("tenant routing", () => {
     expect(tenantSlugFromHost("static.laggente.com")).toBeNull();
     expect(tenantSlugFromHost("bad_slug.laggente.com")).toBeNull();
     expect(isReservedTenantSlug("Blog")).toBe(true);
+    expect(isReservedTenantSlug("short123")).toBe(true);
     expect(canonicalProductRedirect("laggente.com", "/blog/article")).toBeNull();
+    expect(canonicalProductRedirect("laggente.com", "/short123")).toBeNull();
   });
 
   it("redirects apex and www product entry points to their cookie-owning hosts", () => {

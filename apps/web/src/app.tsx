@@ -9,6 +9,7 @@ import { LoginForm } from "@/components/login-form";
 import { Logo } from "@/components/logo";
 import { PublicSpace } from "@/components/public-space";
 import { RelationshipGraph } from "@/components/relationship-graph";
+import { ShortInvitationPage } from "@/components/short-invitation-page";
 import { SpaceRevisions } from "@/components/space-revisions";
 import { StudioShell } from "@/components/studio-shell";
 import { StudioWorkspace } from "@/components/studio-workspace";
@@ -20,6 +21,7 @@ export function documentTitleForRoute(location: string, tenantSlug: string | nul
   if (location === "/privacy") return "Privacy";
   if (location === "/terms") return "Condizioni d’uso";
   if (location === "/login") return "Accesso allo Studio";
+  if (location === "/short123") return "Prova LAGGENTE";
   if (location === "/studio" || location === "/studio/") return "Studio privato";
   if (location === "/studio/conversazioni") return "Conversazioni — Studio";
   if (location.startsWith("/studio/conversazioni/")) return "Conversazione — Studio";
@@ -75,6 +77,7 @@ function StudioArea({ location }: { location: string }) {
 
 function LocalRoutes({ location }: { location: string }) {
   if (location === "/") return <LandingPage />;
+  if (location === "/short123") return <ShortInvitationPage />;
   if (location === "/login") return <LoginForm />;
   if (location === "/privacy") return <PrivacyPage />;
   if (location === "/terms") return <TermsPage />;

@@ -9,6 +9,7 @@ const RESERVED = new Set([
   "mail",
   "privacy",
   "send",
+  "short123",
   "spazio",
   "support",
   "staging",
