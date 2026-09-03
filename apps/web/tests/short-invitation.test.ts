@@ -15,7 +15,8 @@ describe("short product invitation", () => {
     expect(page).toContain("Ti lascia entrare");
     expect(page).toContain("Scegli tu l’indirizzo disponibile");
     expect(page).toContain('studioHref("/login")');
-    expect(page).toContain("/media/laggente-extension-it.mp4");
+    expect(page).toContain("/media/laggente-extension-it-v1.mp4");
+    expect(page).toContain("/media/laggente-extension-poster-v1.png");
   });
 
   it("keeps the private sharing path out of the crawler allow-list", () => {
