@@ -16,11 +16,13 @@ describe("tenant routing", () => {
   it("does not treat reserved or malformed subdomains as tenants", () => {
     expect(tenantSlugFromHost("app.laggente.com")).toBeNull();
     expect(tenantSlugFromHost("assets.laggente.com")).toBeNull();
+    expect(tenantSlugFromHost("outreach.laggente.com")).toBeNull();
     expect(tenantSlugFromHost("static.laggente.com")).toBeNull();
     expect(tenantSlugFromHost("bad_slug.laggente.com")).toBeNull();
     expect(isReservedTenantSlug("Blog")).toBe(true);
     expect(isReservedTenantSlug("short123")).toBe(true);
     expect(canonicalProductRedirect("laggente.com", "/blog/article")).toBeNull();
+    expect(canonicalProductRedirect("app.laggente.com", "/outreach/unsubscribe")).toBeNull();
     expect(canonicalProductRedirect("laggente.com", "/short123")).toBeNull();
   });
 
