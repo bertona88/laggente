@@ -7,6 +7,11 @@ outbound Resend transport, signed Resend receiving and delivery-event ingestion,
 capture transport, and the retained Amazon SES/S3 path for a later provider switch.
 `AGENT_MAIL_ENABLED=false` remains the production-safe configuration default.
 
+Promotional campaign use is a separate capability and stays disabled through
+`OUTREACH_ENABLED=false` even when professional correspondence is live. See the
+[consent-qualified outreach runbook](CONSENT_QUALIFIED_OUTREACH.md); ordinary email activation is
+not permission to source or contact promotional recipients.
+
 The Resend sending domain `laggente.com` is verified, and its DKIM, sending CNAME, and DMARC records
 have been published without changing the apex Namecheap forwarding records. Namecheap's
 `EmailType=FWD` API mode did not retain a custom subdomain MX, so the safe pilot reply domain is the

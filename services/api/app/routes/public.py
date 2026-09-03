@@ -12,7 +12,7 @@ from ..config import Settings
 from ..conversations import active_revision, generate_public_reply, list_messages, serialize_messages
 from ..database import get_db
 from ..dependencies import authorize_public_conversation, conversation_token, runtime_settings
-from ..models import Attachment, Conversation, Event, Message, Space, utcnow
+from ..models import Attachment, Conversation, Document, Event, Message, Space, utcnow
 from ..rate_limit import client_ip
 from ..retention import delete_conversation_data
 from ..schemas import (
@@ -78,6 +78,15 @@ def _prune_and_bound_unengaged_conversations(
         )
         .exists()
     )
+    has_document = (
+        select(Document.id)
+        .where(
+            Document.account_id == space.account_id,
+            Document.conversation_id == Conversation.id,
+            Document.message_id.is_not(None),
+        )
+        .exists()
+    )
     base = (
         Conversation.account_id == space.account_id,
         Conversation.space_id == space.id,
@@ -85,6 +94,7 @@ def _prune_and_bound_unengaged_conversations(
         Conversation.professional_joined.is_(False),
         ~has_human_message,
         ~has_attachment,
+        ~has_document,
     )
     stale_cutoff = utcnow() - UNENGAGED_CONVERSATION_TTL
     stale = db.scalars(
@@ -405,6 +415,7 @@ async def post_public_message(
 
         if visitor_message is None:
             attachment = None
+            document = None
             if body.attachment_id:
                 attachment = db.scalar(
                     select(Attachment).where(
@@ -418,6 +429,21 @@ async def post_public_message(
                 )
                 if not attachment:
                     raise HTTPException(status_code=404, detail="Allegato non trovato")
+            if body.document_id:
+                document = db.scalar(
+                    select(Document).where(
+                        Document.id == body.document_id,
+                        Document.account_id == conversation.account_id,
+                        Document.space_id == conversation.space_id,
+                        Document.conversation_id == conversation.id,
+                        Document.scope == "conversation",
+                        Document.uploader_type == "visitor",
+                        Document.message_id.is_(None),
+                        Document.status == "ready",
+                    )
+                )
+                if not document:
+                    raise HTTPException(status_code=404, detail="Documento non trovato")
             message_content = body.content
             if not message_content and attachment:
                 message_content = (
@@ -425,6 +451,8 @@ async def post_public_message(
                     if attachment.transcript
                     else "[La persona ha condiviso una fotografia privata.]"
                 )
+            if not message_content and document:
+                message_content = f"Ho condiviso il documento “{document.original_name}”."
             if conversation.automatic_ai_enabled:
                 request.app.state.rate_limiter.check(
                     f"public-model-space:{conversation.space_id}",
@@ -437,7 +465,13 @@ async def post_public_message(
                 author_type="visitor",
                 author_label="Tu",
                 content=message_content,
-                content_type="audio_transcript" if attachment and attachment.transcript else "text",
+                content_type=(
+                    "audio_transcript"
+                    if attachment and attachment.transcript
+                    else "document"
+                    if document
+                    else "text"
+                ),
                 client_message_id=body.client_message_id,
                 assistant_reply_state=(
                     "pending" if conversation.automatic_ai_enabled else "not_requested"
@@ -451,6 +485,8 @@ async def post_public_message(
                     # The visitor edits the generated transcript before sending. Keep only that
                     # corrected, inspectable text instead of retaining a stale hidden interpretation.
                     attachment.transcript = message_content
+            if document:
+                document.message_id = visitor_message.id
             conversation.last_message_at = utcnow()
             if not conversation.title or conversation.title == "Nuova conversazione":
                 conversation.title = message_content[:120]

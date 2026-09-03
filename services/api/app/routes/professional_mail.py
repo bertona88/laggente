@@ -24,7 +24,16 @@ from ..dependencies import (
     professional_space,
     runtime_settings,
 )
-from ..models import Conversation, Event, Message, ProfessionalEmail, Space, utcnow
+from ..models import (
+    Conversation,
+    Event,
+    Message,
+    OutreachRecipient,
+    OutreachSuppression,
+    ProfessionalEmail,
+    Space,
+    utcnow,
+)
 from ..professional_email import (
     PreparedProfessionalEmail,
     ProfessionalEmailError,
@@ -135,6 +144,32 @@ def _record_resend_delivery_event(
         if next_status in {"failed", "bounced", "suppressed", "complained"}
         else None
     )
+    if email.outreach_recipient_id:
+        recipient = db.scalar(
+            select(OutreachRecipient).where(
+                OutreachRecipient.id == email.outreach_recipient_id,
+                OutreachRecipient.account_id == email.account_id,
+                OutreachRecipient.space_id == email.space_id,
+            )
+        )
+        if recipient:
+            recipient.status = next_status
+            if next_status in {"bounced", "suppressed", "complained"}:
+                existing = db.scalar(
+                    select(OutreachSuppression).where(
+                        OutreachSuppression.account_id == email.account_id,
+                        OutreachSuppression.email == email.to_address,
+                    )
+                )
+                if not existing:
+                    db.add(
+                        OutreachSuppression(
+                            account_id=email.account_id,
+                            email=email.to_address,
+                            reason=f"provider_{next_status}",
+                            source="resend_webhook",
+                        )
+                    )
     db.add(
         Event(
             account_id=email.account_id,
@@ -212,6 +247,11 @@ async def authorize_professional_email(
     )
     if not email or email.direction != "outbound":
         raise HTTPException(status_code=404, detail="Email non trovata")
+    if email.outreach_campaign_id:
+        raise HTTPException(
+            status_code=409,
+            detail="Questa email appartiene a una campagna: autorizza il pacchetto esatto.",
+        )
     if email.status in {"sent", "simulated", "delivery_delayed", "delivered"}:
         return ProfessionalEmailOut.model_validate(email)
     if email.status != "draft":

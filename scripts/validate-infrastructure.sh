@@ -10,6 +10,65 @@ sh -n "$repo_root"/infra/backup/*.sh
     cd "$repo_root/infra/email-relay"
     python3 -m unittest -q
 )
+bash -n "$repo_root"/infra/acme-dns/*.sh
+for python_file in \
+    "$repo_root/infra/acme-dns/laggente-acme-dns-auth.py" \
+    "$repo_root/scripts/configure-namecheap-acme-delegation.py"; do
+    python3 -c 'from pathlib import Path; import sys; compile(Path(sys.argv[1]).read_text(), sys.argv[1], "exec")' \
+        "$python_file"
+done
+python3 -c '
+import runpy
+import sys
+namespace = runpy.run_path(sys.argv[1])
+compile(namespace["REMOTE_RUNNER"], "<remote-namecheap-runner>", "exec")
+' "$repo_root/scripts/configure-namecheap-acme-delegation.py"
+
+acme_dns_config="$repo_root/infra/acme-dns/config.cfg"
+acme_dns_service="$repo_root/infra/acme-dns/acme-dns.service"
+for acme_dns_contract in \
+    'listen = "116.203.123.0:53"' \
+    'domain = "auth.laggente.com"' \
+    'engine = "sqlite"' \
+    'ip = "127.0.0.1"' \
+    'disable_registration = true' \
+    'port = "5399"'; do
+    if ! grep -Fq "$acme_dns_contract" "$acme_dns_config"; then
+        printf 'acme-dns config is missing: %s\n' "$acme_dns_contract" >&2
+        exit 1
+    fi
+done
+for service_contract in \
+    'User=acme_dns' \
+    'AmbientCapabilities=CAP_NET_BIND_SERVICE' \
+    'NoNewPrivileges=true' \
+    'ProtectSystem=strict' \
+    'ReadWritePaths=/var/lib/acme-dns'; do
+    if ! grep -Fq "$service_contract" "$acme_dns_service"; then
+        printf 'acme-dns service is missing: %s\n' "$service_contract" >&2
+        exit 1
+    fi
+done
+if grep -R -E 'NAMECHEAP_(API_KEY|USERNAME)[[:space:]]*=' \
+    "$repo_root/infra/acme-dns" "$repo_root/scripts"; then
+    printf 'tracked infrastructure contains a Namecheap credential assignment\n' >&2
+    exit 1
+fi
+if [[ $(grep -Fc '/etc/letsencrypt/live/laggente-wildcard/' \
+    "$repo_root/infra/nginx/laggente.conf") -ne 4 ]]; then
+    printf 'host nginx is not consistently pinned to the wildcard certificate lineage\n' >&2
+    exit 1
+fi
+if ! grep -Fq "acme_dns_sha256=ff7aa309fb916012fc08dc7bd992c329b3930705ecb04161e57a5d910e80e9f0" \
+    "$repo_root/scripts/install-acme-dns.sh"; then
+    printf 'acme-dns installer is missing the pinned artifact digest\n' >&2
+    exit 1
+fi
+if ! grep -Fq -- '--domains '\''*.laggente.com'\''' \
+    "$repo_root/scripts/issue-wildcard-certificate.sh"; then
+    printf 'wildcard certificate issuer is missing the wildcard domain\n' >&2
+    exit 1
+fi
 
 bootstrap_script="$repo_root/scripts/bootstrap-server.sh"
 if ! grep -Eq '^[[:space:]]+slirp4netns[[:space:]]*\\$' "$bootstrap_script"; then
@@ -111,7 +170,7 @@ for nginx_file in \
 done
 if grep -Eq '^[[:space:]]*location[[:space:]]+\^~[[:space:]]+/api/v1/[[:space:]]*\{' \
     "$repo_root/infra/nginx/laggente.conf"; then
-    printf 'host nginx /api/v1 prefix would bypass the attachment regex limiter\n' >&2
+    printf 'host nginx /api/v1 prefix would bypass the private-upload regex limiter\n' >&2
     exit 1
 fi
 if [[ $(grep -Fc 'limit_req zone=laggente_api burst=5 nodelay;' \
@@ -148,15 +207,15 @@ if grep -q '/api/v1/uploads/' "$repo_root/infra/nginx/laggente.conf"; then
     printf 'host nginx still contains the obsolete upload route\n' >&2
     exit 1
 fi
-if ! grep -Eq 'location ~ \^/api/v1/public/conversations/\[\^/\]\+/attachments/\?\$' \
+if ! grep -Fq 'location ~ ^/api/v1/(?:public/conversations/[^/]+/(?:attachments|documents)|studio/documents|studio/conversations/[^/]+/documents)/?$' \
     "$repo_root/infra/nginx/laggente.conf"; then
-    printf 'host nginx is missing the public-conversation attachment limiter\n' >&2
+    printf 'host nginx is missing one or more private multipart upload limiters\n' >&2
     exit 1
 fi
 if ! grep -Fq 'limit_conn laggente_upload_connections 2;' \
     "$repo_root/infra/nginx/laggente.conf" || \
    ! grep -Fq 'MAX_CONCURRENT_UPLOAD_REQUESTS = 2' "$repo_root/services/api/app/main.py"; then
-    printf 'public multipart concurrency is not bounded consistently at edge and API\n' >&2
+    printf 'private multipart concurrency is not bounded consistently at edge and API\n' >&2
     exit 1
 fi
 
@@ -253,10 +312,12 @@ fi
 archive_test_uploads="$validation_tmp/uploads"
 archive_test_output="$validation_tmp/uploads.tar.gz"
 mkdir -p "$archive_test_uploads/account/conversation" \
+    "$archive_test_uploads/documents/account/studio/space" \
     "$archive_test_uploads/account/tmp" \
     "$archive_test_uploads/account/.transcription-tmp"
 printf 'image' >"$archive_test_uploads/account/conversation/photo.jpg"
 printf 'image' >"$archive_test_uploads/account/conversation/planimetria.PNG"
+printf 'document' >"$archive_test_uploads/documents/account/studio/space/guida.pdf"
 printf 'audio' >"$archive_test_uploads/account/conversation/voice.wav"
 printf 'audio' >"$archive_test_uploads/account/conversation/VOICE.MP3"
 printf 'temporary image' >"$archive_test_uploads/account/tmp/not-durable.jpg"
@@ -266,6 +327,7 @@ sh "$repo_root/infra/backup/archive-uploads.sh" create \
 archive_listing=$(tar -tzf "$archive_test_output")
 printf '%s\n' "$archive_listing" | grep -q 'account/conversation/photo.jpg'
 printf '%s\n' "$archive_listing" | grep -q 'account/conversation/planimetria.PNG'
+printf '%s\n' "$archive_listing" | grep -q 'documents/account/studio/space/guida.pdf'
 if printf '%s\n' "$archive_listing" | grep -Eqi \
     '[.](mp3|wav|webm|ogg|oga|opus|m4a|mp4|aac|flac|amr|aiff|aif|caf|mpeg|mpga)$|/(tmp|[.]transcription-tmp)/'; then
     printf 'upload archive contains raw audio or temporary content\n' >&2
@@ -433,6 +495,9 @@ printf '%s\n' \
     'AGENT_MAIL_AWS_REGION=eu-south-1' \
     'AGENT_MAIL_INBOUND_SECRET=' \
     'AGENT_MAIL_MAX_INBOUND_BYTES=5242880' \
+    'OUTREACH_ENABLED=false' \
+    'OUTREACH_MAX_RECIPIENTS=5' \
+    'OUTREACH_CANDIDATE_RETENTION_DAYS=30' \
     'AWS_ACCESS_KEY_ID=' \
     'AWS_SECRET_ACCESS_KEY=' \
     'AWS_SESSION_TOKEN=' \
@@ -476,8 +541,9 @@ for production_line in \
     }
 done
 grep -q '^CONVERSATION_RETENTION_DAYS=365$' "$application_env"
-grep -q '^PRIVACY_NOTICE_VERSION=2026-08-22[.]2$' "$application_env"
+grep -q '^PRIVACY_NOTICE_VERSION=2026-08-27[.]1$' "$application_env"
 grep -q '^AGENT_MAIL_ENABLED=false$' "$application_env"
+grep -q '^OUTREACH_ENABLED=false$' "$application_env"
 grep -q '^PRODUCT_POSITIONING_JSON={"audience":"Professionisti"' "$application_env"
 (
     # Exercise the same exact production-origin/host contract used by deploy and audit.

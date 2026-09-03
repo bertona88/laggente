@@ -3,6 +3,7 @@ import {
   ApiError,
   attachmentFromUploadResponse,
   attachmentIdFromResponse,
+  documentFromUploadResponse,
   normalizeMessage,
   reconcileMessages,
   resolveMessageResponse,
@@ -62,6 +63,39 @@ describe("API adapters", () => {
     });
   });
 
+  it("normalizes a conversation document without exposing storage or extracted text", () => {
+    const message = normalizeMessage({
+      id: "v-document",
+      author_type: "visitor",
+      content: "Ho condiviso un documento.",
+      document: {
+        id: "document-1",
+        name: "situazione.pdf",
+        media_type: "application/pdf",
+        size_bytes: 2048,
+        url: "/api/v1/documents/document-1/content",
+        storage_key: "never-project-this",
+        extracted_text: "never-project-this-either",
+      },
+    });
+    expect(message.document).toEqual({
+      id: "document-1",
+      name: "situazione.pdf",
+      media_type: "application/pdf",
+      size_bytes: 2048,
+      url: "/api/v1/documents/document-1/content",
+    });
+    expect(documentFromUploadResponse({
+      document: {
+        id: "document-1",
+        original_name: "situazione.pdf",
+        media_type: "application/pdf",
+        size_bytes: 2048,
+        download_url: "/api/v1/documents/document-1/content",
+      },
+    })).toEqual(message.document);
+  });
+
   it("adapts image and audio multipart responses", () => {
     expect(attachmentFromUploadResponse({
       attachment: { id: "image-1", original_name: "casa.webp", media_type: "image/webp" },
@@ -94,6 +128,20 @@ describe("API adapters", () => {
     const reconciled = reconcileMessages([previous, pending], [incoming]);
     expect(reconciled[0].attachment?.url).toBe("/stable/content");
     expect(reconciled[1]).toMatchObject({ id: "pending", pending: true });
+  });
+
+  it("keeps an authorized document URL stable during polling reconciliation", () => {
+    const previous = normalizeMessage({
+      id: "document-message",
+      author_type: "professional",
+      document: { id: "document", name: "guida.txt", size_bytes: 20, url: "/stable/document" },
+    });
+    const incoming = normalizeMessage({
+      id: "document-message",
+      author_type: "professional",
+      document: { id: "document", name: "guida.txt", size_bytes: 20, url: "/replacement/document" },
+    });
+    expect(reconcileMessages([previous], [incoming])[0].document?.url).toBe("/stable/document");
   });
 
   it("forgets a saved thread only when authorization says it is definitively gone", () => {

@@ -33,6 +33,8 @@ Expected:
 - the most recent backup checksum passes;
 - disk and memory have operating margin;
 - public apex, Studio, and Mauro hosts respond over valid HTTPS.
+- `acme-dns.service` and `certbot.timer` are active, public delegation resolves, and the active
+  certificate contains both `laggente.com` and `*.laggente.com`.
 
 The public `/api/health`, `/api/healthz`, and `/api/readyz` routes use the existing modest API rate
 zone; readiness reaches PostgreSQL and is not an unbounded public probe. Container and deployment
@@ -47,13 +49,11 @@ The entry UI is not a TLS readiness check. Before enabling live signup or sendin
 - confirm the signup-link migration is applied and expired pre-tenant proofs are being pruned;
 - for curated invitations, confirm the operator session reports invitation permission;
 - confirm wildcard DNS resolves a proposed slug to `116.203.123.0`;
-- confirm the active certificate covers `*.laggente.com`, or deliberately add the exact invited
-  slug to the named SAN lineage before the professional publishes;
+- confirm the active certificate covers `*.laggente.com`;
 - verify a controlled non-Mauro host reaches the shared gateway without resolving another tenant.
 
-Do not publish a new slug merely because the database flow succeeds. Without wildcard or
-exact SAN coverage, the browser must reject that hostname even though application routing is
-correct.
+Do not publish a new slug merely because the database flow succeeds. A missing wildcard SAN means
+the open signup release is operationally incomplete even when application routing is correct.
 
 ## Read logs without leaking secrets
 
@@ -124,11 +124,49 @@ sudo nginx -t
 sudo systemctl status nginx --no-pager
 sudo journalctl -u nginx --since '30 min ago' --no-pager
 sudo certbot certificates
+sudo systemctl status acme-dns certbot.timer --no-pager
+dig +short A auth.laggente.com @1.1.1.1
+dig +short NS auth.laggente.com @1.1.1.1
+dig +short CNAME _acme-challenge.laggente.com @1.1.1.1
 dig +short A laggente.com
 dig +short A mauro.laggente.com
 ```
 
 Run `systemctl reload nginx` only after `nginx -t` succeeds and a host-config change actually requires it.
+
+### Wildcard renewal unhealthy
+
+The Namecheap account credential is not part of renewal and must not be copied to the server. Check
+the narrowly delegated path instead. First prove the provider firewall and delegation from a
+workstation outside the VPS; the loopback health endpoint bypasses the Hetzner Cloud firewall:
+
+```bash
+dig +norecurse @116.203.123.0 auth.laggente.com SOA
+dig +tcp +norecurse @116.203.123.0 auth.laggente.com SOA
+dig @1.1.1.1 auth.laggente.com SOA
+```
+
+Both direct transports must return `NOERROR` with the zone SOA, and the recursive query must not
+return `SERVFAIL`. If either direct query times out, confirm that the Cloud Firewall attached to
+`116.203.123.0` admits inbound TCP and UDP port `53` from `0.0.0.0/0` and `::/0`. Do not open the
+loopback update API on port `5399`.
+
+Then check the service, limited credential, timer path, and complete renewal from the VPS:
+
+```bash
+sudo systemctl status acme-dns --no-pager
+sudo journalctl -u acme-dns --since '30 min ago' --no-pager
+curl -fsS http://127.0.0.1:5399/health
+sudo stat -c '%U:%G %a %n' /etc/letsencrypt/laggente-acme-dns.json
+sudo certbot renew --dry-run --cert-name laggente-wildcard
+```
+
+Expected credential ownership is `root:root 600`; never print the file. The registration endpoint
+must remain disabled. If the SQLite database is damaged, stop `acme-dns.service`, restore
+`/var/backups/laggente-acme-dns/registration.db` to `/var/lib/acme-dns/acme-dns.db` with owner and
+group `acme_dns`, mode `600`, restart the service, and repeat the public DNS plus dry-run checks.
+Do not change the `_acme-challenge` CNAME or use the broad Namecheap credential unless the limited
+registration itself must be deliberately replaced.
 
 ### Backup unhealthy
 
@@ -143,11 +181,11 @@ backup_id=$(docker compose --env-file "$current_env" exec -T backup \
 Do not prune backups to make a failed backup appear healthy. Diagnose capacity, credentials, database readiness, permissions, and checksum errors.
 
 The database dump and upload archive are captured sequentially while the application can still
-accept writes. Do not deliberately delete or manually purge attachments while a backup is running.
+accept writes. Do not deliberately delete or manually purge attachments or documents while a backup is running.
 The API's automatic six-hour retention cycle can theoretically overlap this capture; that is part
 of the controlled-pilot cross-store caveat until writer quiescence or reconciliation is implemented. A normal
 completed set proves each payload is readable and intact, but it does not prove that database rows
-and upload files came from one atomic application snapshot. Before claiming complete attachment
+and upload files came from one atomic application snapshot. Before claiming complete private-file
 consistency, either quiesce all application writers for the backup or produce and verify a
 database-to-archive reconciliation manifest. See [Backup and Restore](BACKUP_AND_RESTORE.md).
 
@@ -179,15 +217,15 @@ Treat root disk above 85%, less than 2 GiB free before a build, repeated kernel 
 
 The application ceilings operators should expect are:
 
-- 512 MiB of durable image data per account and 50 MiB per conversation;
-- 20 attachment records per conversation;
+- 512 MiB of combined durable image and document data per account and 50 MiB per conversation;
+- 20 attachment/document records per conversation and 100 source documents per Studio;
 - 12 audio transcriptions per account in a rolling hour;
-- one hour for a visitor to bind an uploaded photograph or corrected transcript before an
+- one hour to bind an uploaded photograph, corrected transcript, or conversation document before an
   abandoned draft is reclaimed;
 - 60 model-backed public turns and 60 new public conversations per space in a rolling hour;
 - at most 60 unengaged conversations per space, with one-hour expiry before pruning on a later
   creation attempt unless a visitor/professional has written, the professional has joined, or an
-  attachment has been bound to a durable message;
+  attachment or document has been bound to a durable message;
 - Studio inbox pages of up to 100 public conversations, with older pages reachable from the UI;
 - automatic application of `CONVERSATION_RETENTION_DAYS` after a five-minute startup grace and
   every six hours thereafter.

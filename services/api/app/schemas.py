@@ -171,11 +171,14 @@ class MessageCreate(BaseModel):
     content: str = Field(default="", max_length=12_000)
     client_message_id: str | None = Field(default=None, max_length=100)
     attachment_id: str | None = Field(default=None, max_length=36)
+    document_id: str | None = Field(default=None, max_length=36)
 
     @model_validator(mode="after")
     def content_or_attachment(self):
         self.content = self.content.strip()
-        if not self.content and not self.attachment_id:
+        if self.attachment_id and self.document_id:
+            raise ValueError("Invia un solo allegato per messaggio")
+        if not self.content and not self.attachment_id and not self.document_id:
             raise ValueError("Il messaggio o un allegato è obbligatorio")
         return self
 
@@ -189,6 +192,16 @@ class MessageAttachmentOut(BaseModel):
     url: str | None = None
 
 
+class MessageDocumentOut(BaseModel):
+    """Conversation-safe document metadata embedded in a durable message."""
+
+    id: str
+    name: str
+    media_type: str
+    size_bytes: int
+    url: str
+
+
 class MessageOut(APIModel):
     id: str
     account_id: str
@@ -200,6 +213,7 @@ class MessageOut(APIModel):
     client_message_id: str | None
     created_at: datetime
     attachment: MessageAttachmentOut | None = None
+    document: MessageDocumentOut | None = None
 
 
 class ConversationOut(APIModel):
@@ -220,6 +234,7 @@ class ConversationDetail(BaseModel):
     messages: list[MessageOut]
     memories: list["MemoryOut"] = Field(default_factory=list)
     latest_email: "ProfessionalEmailOut | None" = None
+    latest_campaign: "OutreachCampaignOut | None" = None
 
 
 class StudioTurnOut(BaseModel):
@@ -227,6 +242,7 @@ class StudioTurnOut(BaseModel):
     messages: list[MessageOut]
     proposed_revision: RevisionOut | None = None
     proposed_email: "ProfessionalEmailOut | None" = None
+    proposed_campaign: "OutreachCampaignOut | None" = None
 
 
 class ProfessionalEmailOut(APIModel):
@@ -244,12 +260,55 @@ class ProfessionalEmailOut(APIModel):
     provider: str | None
     provider_message_id: str | None
     in_reply_to_email_id: str | None
+    outreach_campaign_id: str | None
+    outreach_recipient_id: str | None
     authorized_at: datetime | None
     sent_at: datetime | None
     received_at: datetime | None
     failure_code: str | None
     created_at: datetime
     updated_at: datetime
+
+
+class OutreachRecipientOut(APIModel):
+    id: str
+    campaign_id: str
+    name: str
+    email: EmailStr | None
+    source_url: str
+    source_label: str | None
+    personalization_note: str | None
+    permission_basis: str
+    permission_evidence: str | None
+    status: str
+    unsubscribe_requested_at: datetime | None
+    retention_until: datetime
+    professional_email: ProfessionalEmailOut | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class OutreachCampaignOut(APIModel):
+    id: str
+    name: str
+    landing_url: str
+    status: str
+    recipient_cap: int
+    authorized_at: datetime | None
+    completed_at: datetime | None
+    created_at: datetime
+    updated_at: datetime
+    recipients: list[OutreachRecipientOut] = Field(default_factory=list)
+
+
+class OutreachUnsubscribeRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    token: str = Field(min_length=20, max_length=200)
+
+
+class OutreachUnsubscribeOut(BaseModel):
+    accepted: bool = True
+    message: str = "La richiesta è stata registrata."
 
 
 class InboundProfessionalEmail(BaseModel):
@@ -384,6 +443,37 @@ class PublicAgentOutput(BaseModel):
     answer: str = Field(min_length=1, max_length=5000)
     summary: str = Field(min_length=1, max_length=2000)
     memory_items: list[PublicMemoryProposal] = Field(default_factory=list, max_length=8)
+
+
+class DocumentOut(BaseModel):
+    id: str
+    conversation_id: str | None
+    message_id: str | None
+    scope: Literal["studio", "conversation"]
+    uploader_type: Literal["visitor", "professional"]
+    original_name: str
+    media_type: str
+    size_bytes: int
+    sha256: str
+    status: str
+    extracted_characters: int
+    public_state: Literal["private", "draft", "active"]
+    download_url: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class DocumentCreated(BaseModel):
+    document: DocumentOut
+
+
+class DocumentPublicationProposal(BaseModel):
+    enabled: bool
+
+
+class DocumentPublicationProposalOut(BaseModel):
+    document: DocumentOut
+    revision: RevisionOut
 
 
 class AttachmentOut(APIModel):

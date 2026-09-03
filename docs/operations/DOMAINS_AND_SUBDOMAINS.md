@@ -22,6 +22,9 @@ The same-origin `/api/v1` path reaches the FastAPI service through the reverse p
 | `www` | `CNAME` | `@` | `300` during launch |
 | `app` | `A` | `116.203.123.0` | `300` during launch |
 | `*` | `A` | `116.203.123.0` | `300` during launch |
+| `auth` | `A` | `116.203.123.0` | `300` |
+| `auth` | `NS` | `auth.laggente.com.` | `300` |
+| `_acme-challenge` | `CNAME` | Registered target under `auth.laggente.com.` | `300` |
 
 Before writing, use the `namecheap-dns` helper to fetch and preserve the complete existing record set. Namecheap's `setHosts` operation replaces the whole set, so never issue a hand-written partial API request. Do not alter unrelated `MX`, `TXT`, `CAA`, or verification records.
 
@@ -62,9 +65,9 @@ dig +short A mauro.laggente.com
 
 Every `A` query above should ultimately resolve to `116.203.123.0`. DNS readiness does not prove that nginx or the application is ready.
 
-## Initial pilot TLS
+## Retained named-certificate rollback
 
-DNS may remain wildcard-routed, but the first deployed pilot uses a named SAN certificate covering only the hosts that are live:
+The first deployed pilot used a named SAN certificate covering only these hosts:
 
 ```text
 laggente.com
@@ -73,7 +76,11 @@ app.laggente.com
 mauro.laggente.com
 ```
 
-This avoids storing a broad Namecheap API credential on the server and renews through ordinary HTTP-01. Install the temporary challenge vhost, issue the certificate, then replace it with the full site:
+That `laggente.com` lineage remains on the server as a rollback certificate and renews through
+ordinary HTTP-01. It is no longer the active nginx lineage because it cannot cover a new
+professional hostname. Do not add every new signup to this certificate.
+
+The historical issuance procedure was:
 
 ```bash
 sudo install -d -m 0755 /var/www/letsencrypt/.well-known/acme-challenge
@@ -97,49 +104,92 @@ sudo certbot certonly \
 
 The normal `certbot.timer` can renew this HTTP-01 lineage without a DNS credential as long as the challenge webroot remains reachable. The full HTTPS template includes an HTTP-to-HTTPS redirect, and Certbot follows the same registered webroot during renewal.
 
-The host nginx template expects:
+The active host nginx template now expects:
 
 ```text
-/etc/letsencrypt/live/laggente.com/fullchain.pem
-/etc/letsencrypt/live/laggente.com/privkey.pem
+/etc/letsencrypt/live/laggente-wildcard/fullchain.pem
+/etc/letsencrypt/live/laggente-wildcard/privkey.pem
 ```
 
-When enabling the full site, remove only the temporary site symlink before the syntax check and reload:
+## Automated wildcard TLS
+
+The active certificate covers both `laggente.com` and `*.laggente.com`. DNS-01 is automated without
+placing the broad Namecheap API credential on the VPS:
+
+```text
+Namecheap zone
+  auth.laggente.com A  116.203.123.0
+  auth.laggente.com NS auth.laggente.com.
+  _acme-challenge CNAME <limited-id>.auth.laggente.com.
+
+public TCP/UDP 53
+  self-hosted acme-dns authoritative only for auth.laggente.com
+
+127.0.0.1:5399
+  registration-disabled acme-dns update API
+
+Certbot manual-auth hook
+  one root-owned credential that can update only <limited-id>.auth.laggente.com TXT
+```
+
+The limited credential can answer LAGGENTE's ACME challenge but cannot alter apex, mail, application,
+or verification records. The Namecheap credential stays local and crosses SSH stdin only during the
+one-time delegation update.
+
+Install the pinned service and register its limited record:
 
 ```bash
-sudo install -m 0644 \
-  /opt/laggente/repo/infra/nginx/laggente.conf \
-  /etc/nginx/sites-available/laggente.conf
-sudo ln -sfn /etc/nginx/sites-available/laggente.conf \
-  /etc/nginx/sites-enabled/laggente.conf
-sudo unlink /etc/nginx/sites-enabled/laggente-http-bootstrap.conf
-sudo nginx -t
-sudo systemctl reload nginx
-sudo certbot renew --dry-run
+ssh -i /Users/andreabertoncini/.ssh/hetzner_wofi_ed25519 \
+  -o BatchMode=yes root@116.203.123.0 \
+  'cd /opt/laggente/repo && ./scripts/install-acme-dns.sh'
 ```
 
-Do not activate another professional hostname until TLS covers it. A small named pilot can expand the SAN lineage deliberately. The target remains a wildcard certificate once renewal can be automated safely.
+Copy the printed public CNAME target, dry-run the full-record Namecheap update, then apply it. The
+helper reads the local credential file, performs the API call from the allowlisted Hetzner origin,
+and never writes or prints the credential:
 
-The application can create, configure, and publish verified tenants without a DNS write or another
-deployment because the wildcard `A` record already routes every valid slug. Browser availability
-still depends on certificate coverage. Before professionals publish arbitrary live slugs,
-either complete the wildcard TLS plan below or add each approved slug to the named SAN lineage.
-A successful database activation does not prove TLS readiness.
+```bash
+./scripts/configure-namecheap-acme-delegation.py \
+  --env /Users/andreabertoncini/.codex/skills/namecheap-dns/assets/namecheap.env \
+  --ssh-key /Users/andreabertoncini/.ssh/hetzner_wofi_ed25519 \
+  --fulldomain LIMITED_ID.auth.laggente.com
 
-## Wildcard TLS plan
+./scripts/configure-namecheap-acme-delegation.py \
+  --env /Users/andreabertoncini/.codex/skills/namecheap-dns/assets/namecheap.env \
+  --ssh-key /Users/andreabertoncini/.ssh/hetzner_wofi_ed25519 \
+  --fulldomain LIMITED_ID.auth.laggente.com \
+  --apply
+```
 
-A wildcard certificate must cover both `laggente.com` and `*.laggente.com` and requires DNS-01. The Namecheap-compatible controlled procedure is:
+Verify delegation from a public recursive resolver before issuance:
 
-1. Start Certbot's manual DNS challenge for the apex and wildcard.
-2. Use the `namecheap-dns` helper through the stable Hetzner-origin workflow to add every exact `_acme-challenge` TXT value while preserving the complete host set.
-3. Confirm the TXT values through public DNS, finish issuance, then remove only those challenge values.
-4. Install the resulting lineage at the same `/etc/letsencrypt/live/laggente.com/` paths used by nginx.
+```bash
+dig +short A auth.laggente.com @1.1.1.1
+dig +short NS auth.laggente.com @1.1.1.1
+dig +short CNAME _acme-challenge.laggente.com @1.1.1.1
+```
 
-Manual DNS certificates do not renew unattended without a hook. Do not replace the auto-renewing named pilot certificate until either a reviewed hook can use Namecheap credentials through an approved secret mechanism or `_acme-challenge` is delegated to DNS with a narrowly scoped renewal credential. The upstream `acme.sh` project has a Namecheap hook, but it re-submits the complete record set and normally persists account credentials; adopting it is a separate security decision.
+Then issue the separate rollback-safe wildcard lineage and prove unattended renewal:
+
+```bash
+ssh -i /Users/andreabertoncini/.ssh/hetzner_wofi_ed25519 \
+  -o BatchMode=yes root@116.203.123.0 \
+  'cd /opt/laggente/repo && ./scripts/issue-wildcard-certificate.sh'
+```
+
+The ordinary `certbot.timer` reuses the stored manual-auth and deploy hooks. On successful renewal,
+the deploy hook runs `nginx -t` before reloading nginx. The acme-dns registration endpoint remains
+disabled, its update API is loopback-only, and `/var/backups/laggente-acme-dns/registration.db`
+retains a root-only closed-database snapshot of the limited registration state.
+
+The application can now create, configure, and publish a verified tenant without a DNS write,
+certificate change, or application deployment per professional. A successful database activation
+still does not prove TLS readiness by itself; the production audit and smoke checks enforce the
+wildcard SAN.
 
 ## Host nginx activation
 
-After the certificate exists and the Compose gateway is healthy on loopback:
+After the wildcard certificate exists and the Compose gateway is healthy on loopback:
 
 ```bash
 sudo install -m 0644 \
@@ -218,11 +268,13 @@ curl -I https://laggente.com/
 curl -I https://www.laggente.com/
 curl -I https://app.laggente.com/
 curl -I https://mauro.laggente.com/
+secondary_slug=REPLACE_WITH_ACTIVE_SLUG
+curl -I "https://$secondary_slug.laggente.com/"
 curl -I 'https://laggente.com/studio?source=verification'
 curl -I 'https://app.laggente.com/giulia?source=verification'
 curl --insecure -I https://does-not-exist.laggente.com/
 
-openssl s_client -connect laggente.com:443 -servername mauro.laggente.com </dev/null 2>/dev/null \
+openssl s_client -connect laggente.com:443 -servername tls-probe.laggente.com </dev/null 2>/dev/null \
   | openssl x509 -noout -dates -ext subjectAltName
 ```
 
@@ -232,10 +284,13 @@ Expected outcomes:
 - `www` redirects permanently to `https://laggente.com`;
 - canonical Studio and generic professional paths land on `app.laggente.com` and the slug-owned
   professional host respectively while retaining the verification query argument;
-- the initial certificate includes the apex, `www`, `app`, and `mauro` SANs; after wildcard cutover it includes `DNS:*.laggente.com` and the apex SAN;
-- an unknown slug never falls into another nginx site or resolves tenant data; before wildcard TLS, its certificate mismatch prevents ordinary browser navigation;
+- the active certificate includes the apex SAN and `DNS:*.laggente.com`;
+- a controlled published non-Mauro hostname and every other valid single-label professional hostname receive valid HTTPS;
+- an unknown slug receives valid edge TLS but never resolves tenant data or falls into another nginx site;
 - no LAGGENTE container service is publicly reachable on `5432`, `8000`, or `45200`; the container
-  gateway binds `45200` on host loopback only.
+  gateway binds `45200` on host loopback only;
+- public TCP/UDP `53` serves only the delegated `auth.laggente.com` challenge zone; its update API
+  remains bound to `127.0.0.1:5399`.
 
 ## Local and preview behavior
 

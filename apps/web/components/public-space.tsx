@@ -4,17 +4,20 @@ import { AppLink as Link } from "@/components/app-link";
 import {
   ArrowLeftIcon,
   ArrowUpRightIcon,
+  DocumentIcon,
   ImageIcon,
   LockIcon,
   MicIcon,
   SendIcon,
 } from "@/components/icons";
+import { ConversationDocument } from "@/components/conversation-document";
 import { ConversationPhoto } from "@/components/conversation-photo";
 import { Logo } from "@/components/logo";
 import { MessageContent } from "@/components/message-markdown";
 import { InlineError, LoadingLine } from "@/components/status";
 import {
   apiRequest,
+  documentFromUploadResponse,
   isInactiveConversation,
   normalizeMessages,
   reconcileMessages,
@@ -33,7 +36,13 @@ import {
 } from "@/lib/media-capture";
 import { normalizeSpace } from "@/lib/space-adapter";
 import { createSingleFlight } from "@/lib/single-flight";
-import type { ConversationAttachment, ConversationMessage, ProfessionalSpace, PublicConversation } from "@/lib/types";
+import type {
+  ConversationAttachment,
+  ConversationDocument as ConversationDocumentValue,
+  ConversationMessage,
+  ProfessionalSpace,
+  PublicConversation,
+} from "@/lib/types";
 import { startVisiblePolling } from "@/lib/visible-polling";
 import {
   pendingAudioDraftFromUpload,
@@ -91,6 +100,7 @@ export function MessageBubble({ message }: { message: ConversationMessage }) {
       )}
       <div className="chat-message__body">
         <ConversationPhoto attachment={message.attachment} surface="public" />
+        <ConversationDocument document={message.document} />
         <MessageContent authorType={message.author_type} content={message.content} />
         {message.created_at && <time dateTime={message.created_at}>{formatTime(message.created_at)}</time>}
       </div>
@@ -113,11 +123,13 @@ export function PublicSpace({ slug }: { slug: string }) {
   const [uploading, setUploading] = useState(false);
   const [pendingAudioAttachmentId, setPendingAudioAttachmentId] = useState<string | null>(null);
   const [pendingImageAttachment, setPendingImageAttachment] = useState<ConversationAttachment | null>(null);
+  const [pendingDocument, setPendingDocument] = useState<ConversationDocumentValue | null>(null);
   const [recording, setRecording] = useState(false);
   const [requestingMicrophone, setRequestingMicrophone] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [privacyOpen, setPrivacyOpen] = useState(false);
   const [identityOpen, setIdentityOpen] = useState(false);
+  const [documentsOpen, setDocumentsOpen] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const threadRef = useRef<HTMLDivElement>(null);
   const nearBottomRef = useRef(true);
@@ -127,6 +139,7 @@ export function PublicSpace({ slug }: { slug: string }) {
   const conversationIdRef = useRef<string | null>(null);
   const conversationCreationRef = useRef(createSingleFlight<string>());
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const documentInputRef = useRef<HTMLInputElement>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const recordingStreamRef = useRef<MediaStream | null>(null);
   const disposedRef = useRef(false);
@@ -235,6 +248,10 @@ export function PublicSpace({ slug }: { slug: string }) {
   }, [lastMessageId, sending, reduceMotion]);
 
   const visibleMessages = messages.length ? messages : [welcomeMessage(space)];
+  const sharedDocuments = useMemo(
+    () => messages.flatMap((message) => message.document ? [message.document] : []),
+    [messages],
+  );
   const professionalFirstName = space.professional_name.trim().split(/\s+/)[0] || "Il professionista";
   const assistantStatus = automaticRepliesEnabled
     ? "Disponibile ora"
@@ -290,27 +307,30 @@ export function PublicSpace({ slug }: { slug: string }) {
     attachmentId?: string,
     optimisticAttachment?: ConversationAttachment | null,
     resolvedConversationId?: string,
+    documentId?: string,
+    optimisticDocument?: ConversationDocumentValue | null,
   ) {
     const content = value.trim();
     if (shouldBlockPublicMessageSubmission({
       hasContent: Boolean(content),
-      hasAttachment: Boolean(attachmentId),
+      hasAttachment: Boolean(attachmentId || documentId),
       sending,
       uploading,
       captureActive: Boolean(recorderRef.current) || mediaCaptureRequestGateRef.current.busy,
       isResolvedUploadContinuation: Boolean(resolvedConversationId),
     })) return;
-    const clientMessageId = attemptTrackerRef.current.idFor(content, attachmentId);
+    const clientMessageId = attemptTrackerRef.current.idFor(content, attachmentId || documentId);
     setSending(true);
     setComposerError(null);
     const optimistic: ConversationMessage = {
       id: `pending-${clientMessageId}`,
       author_type: "visitor",
       author_name: "Tu",
-      content: content || "Fotografia condivisa",
+      content: content || (optimisticDocument ? `Documento condiviso: ${optimisticDocument.name}` : "Fotografia condivisa"),
       created_at: new Date().toISOString(),
       pending: true,
       attachment: optimisticAttachment,
+      document: optimisticDocument,
     };
     setMessages((current) => [...(current.length ? current : [welcomeMessage(space)]), optimistic]);
     setInput("");
@@ -322,6 +342,7 @@ export function PublicSpace({ slug }: { slug: string }) {
           content,
           client_message_id: clientMessageId,
           ...(attachmentId ? { attachment_id: attachmentId } : {}),
+          ...(documentId ? { document_id: documentId } : {}),
         }),
       });
       const conversation = normalizeConversation(data, slug);
@@ -341,6 +362,9 @@ export function PublicSpace({ slug }: { slug: string }) {
       if (attachmentId && attachmentId === pendingImageAttachment?.id) {
         setPendingImageAttachment(null);
       }
+      if (documentId && documentId === pendingDocument?.id) {
+        setPendingDocument(null);
+      }
       attemptTrackerRef.current.complete(clientMessageId);
     } catch (error) {
       setMessages((current) => current.filter((message) => message.id !== optimistic.id));
@@ -348,6 +372,7 @@ export function PublicSpace({ slug }: { slug: string }) {
       if (optimisticAttachment?.kind === "image") {
         setPendingImageAttachment(optimisticAttachment);
       }
+      if (optimisticDocument) setPendingDocument(optimisticDocument);
       setComposerError(error instanceof Error ? error.message : "Il messaggio non è partito. Riprova.");
     } finally {
       setSending(false);
@@ -356,6 +381,17 @@ export function PublicSpace({ slug }: { slug: string }) {
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
+    if (pendingDocument) {
+      await submitMessage(
+        input,
+        undefined,
+        null,
+        undefined,
+        pendingDocument.id,
+        pendingDocument,
+      );
+      return;
+    }
     if (pendingImageAttachment) {
       await submitMessage(input, pendingImageAttachment.id, pendingImageAttachment);
       return;
@@ -368,7 +404,7 @@ export function PublicSpace({ slug }: { slug: string }) {
       setComposerError("Termina prima la registrazione vocale.");
       return;
     }
-    if (pendingAudioAttachmentId || pendingImageAttachment) {
+    if (pendingAudioAttachmentId || pendingImageAttachment || pendingDocument) {
       setComposerError("Invia prima l’allegato già pronto, poi potrai aggiungerne un altro.");
       return;
     }
@@ -393,6 +429,32 @@ export function PublicSpace({ slug }: { slug: string }) {
       }
     } catch (error) {
       setComposerError(error instanceof Error ? error.message : "Non è stato possibile caricare il file.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function uploadDocument(file: File) {
+    if (recording || requestingMicrophone || sending || uploading) return;
+    if (pendingAudioAttachmentId || pendingImageAttachment || pendingDocument) {
+      setComposerError("Invia prima l’allegato già pronto, poi potrai aggiungerne un altro.");
+      return;
+    }
+    setUploading(true);
+    setComposerError(null);
+    try {
+      const id = await ensureConversation();
+      const form = new FormData();
+      form.append("file", file, file.name);
+      const result = await apiRequest<unknown>(
+        `/public/conversations/${encodeURIComponent(id)}/documents`,
+        { method: "POST", body: form },
+      );
+      const document = documentFromUploadResponse(result);
+      if (!document) throw new Error("Il documento caricato non è disponibile.");
+      setPendingDocument(document);
+    } catch (error) {
+      setComposerError(error instanceof Error ? error.message : "Non è stato possibile caricare il documento.");
     } finally {
       setUploading(false);
     }
@@ -462,6 +524,7 @@ export function PublicSpace({ slug }: { slug: string }) {
       setInput("");
       setPendingAudioAttachmentId(null);
       setPendingImageAttachment(null);
+      setPendingDocument(null);
       attemptTrackerRef.current.invalidate();
       setPrivacyOpen(false);
       setComposerError("La conversazione e i suoi allegati sono stati eliminati.");
@@ -519,6 +582,9 @@ export function PublicSpace({ slug }: { slug: string }) {
             <span className="speaker-mark speaker-mark--ai" aria-hidden="true">AI</span>
             <div><strong>{space.assistant_disclosure}</strong><span>{assistantStatus}</span></div>
           </div>
+          <button type="button" onClick={() => setDocumentsOpen((value) => !value)} aria-expanded={documentsOpen} aria-controls="public-shared-documents">
+            <DocumentIcon /> Documenti{sharedDocuments.length ? ` (${sharedDocuments.length})` : ""}
+          </button>
           <button type="button" onClick={() => setPrivacyOpen((value) => !value)} aria-expanded={privacyOpen}>
             <LockIcon /> Privacy
           </button>
@@ -549,6 +615,20 @@ export function PublicSpace({ slug }: { slug: string }) {
                 <p><strong>Questa conversazione è privata.</strong> I messaggi sono conservati nello spazio di {space.professional_name} per darti continuità. Ogni autore è sempre identificato. <Link href="/privacy">Come trattiamo i dati <ArrowUpRightIcon /></Link></p>
                 {conversationId && <button type="button" disabled={shouldDisableConversationDeletion({ deleting, sending, uploading, captureActive: recording || requestingMicrophone })} onClick={() => void deleteConversation()}>{deleting ? "Eliminazione…" : "Elimina questa conversazione"}</button>}
               </div>
+            </motion.aside>
+          )}
+          {documentsOpen && (
+            <motion.aside
+              id="public-shared-documents"
+              className="shared-documents-panel"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+            >
+              <div><DocumentIcon /><p><strong>Documenti condivisi</strong><span>Visibili a te, a {professionalFirstName} e agli assistenti di questo spazio.</span></p></div>
+              {sharedDocuments.length
+                ? <div>{sharedDocuments.map((document) => <ConversationDocument key={document.id} document={document} compact />)}</div>
+                : <p className="shared-documents-panel__empty">Non avete ancora condiviso documenti in questa conversazione.</p>}
             </motion.aside>
           )}
         </AnimatePresence>
@@ -588,8 +668,9 @@ export function PublicSpace({ slug }: { slug: string }) {
           {recording && <div className="recording-state" role="status"><i /> Registrazione in corso… <span>tocca il microfono per terminare</span></div>}
           {pendingAudioAttachmentId && !recording && <div className="recording-state" role="status"><i /> Trascrizione pronta <span>puoi correggerla prima di inviarla</span></div>}
           {pendingImageAttachment && <div className="recording-state" role="status"><i /> Fotografia pronta <span>riprova l’invio senza ricaricarla</span></div>}
+          {pendingDocument && <div className="document-draft" role="status"><ConversationDocument document={pendingDocument} compact /><span>Puoi aggiungere un messaggio, poi inviare.</span></div>}
           {uploading && <LoadingLine label="Preparo il file in modo privato…" />}
-          <p className="upload-notice">Continuando confermi di aver ricevuto l’<Link href="/privacy">informativa privacy</Link>; non è un consenso marketing. Non inviare documenti d’identità o dati non necessari. Foto e audio non sono pubblici e vengono elaborati dal fornitore AI; l’audio viene eliminato dopo la trascrizione.</p>
+          <p className="upload-notice">Continuando confermi di aver ricevuto l’<Link href="/privacy">informativa privacy</Link>; non è un consenso marketing. Condividi solo dati necessari. Foto, audio e documenti restano in questa conversazione; gli assistenti possono elaborarli secondo gli accessi indicati. L’audio viene eliminato dopo la trascrizione.</p>
           <form className="chat-composer" onSubmit={onSubmit}>
             <input
               ref={imageInputRef}
@@ -602,13 +683,27 @@ export function PublicSpace({ slug }: { slug: string }) {
                 event.currentTarget.value = "";
               }}
             />
+            <input
+              ref={documentInputRef}
+              type="file"
+              accept=".pdf,.docx,.txt,.md,.markdown,.csv,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown,text/csv"
+              hidden
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) void uploadDocument(file);
+                event.currentTarget.value = "";
+              }}
+            />
+            <button type="button" className="chat-composer__utility" onClick={() => documentInputRef.current?.click()} disabled={recording || requestingMicrophone || uploading || sending || Boolean(pendingAudioAttachmentId || pendingImageAttachment || pendingDocument)} aria-label="Allega un documento">
+              <DocumentIcon />
+            </button>
             {space.capabilities.photographs && (
-              <button type="button" className="chat-composer__utility" onClick={() => imageInputRef.current?.click()} disabled={recording || requestingMicrophone || uploading || sending || Boolean(pendingAudioAttachmentId || pendingImageAttachment)} aria-label="Allega una fotografia">
+              <button type="button" className="chat-composer__utility" onClick={() => imageInputRef.current?.click()} disabled={recording || requestingMicrophone || uploading || sending || Boolean(pendingAudioAttachmentId || pendingImageAttachment || pendingDocument)} aria-label="Allega una fotografia">
                 <ImageIcon />
               </button>
             )}
             {space.capabilities.voice_notes && (
-              <button type="button" className={`chat-composer__utility${recording ? " is-recording" : ""}`} onClick={() => void toggleRecording()} disabled={shouldDisableMicrophoneControl({ recording, requesting: requestingMicrophone, sending, uploading, hasPendingAttachment: Boolean(pendingAudioAttachmentId || pendingImageAttachment) })} aria-label={requestingMicrophone ? "Attendo il permesso per il microfono" : recording ? "Termina la registrazione" : "Registra una nota vocale"}>
+              <button type="button" className={`chat-composer__utility${recording ? " is-recording" : ""}`} onClick={() => void toggleRecording()} disabled={shouldDisableMicrophoneControl({ recording, requesting: requestingMicrophone, sending, uploading, hasPendingAttachment: Boolean(pendingAudioAttachmentId || pendingImageAttachment || pendingDocument) })} aria-label={requestingMicrophone ? "Attendo il permesso per il microfono" : recording ? "Termina la registrazione" : "Registra una nota vocale"}>
                 <MicIcon />
               </button>
             )}
@@ -637,7 +732,7 @@ export function PublicSpace({ slug }: { slug: string }) {
               type="submit"
               disabled={shouldDisablePublicComposerSubmit({
                 hasContent: Boolean(input.trim()),
-                hasPendingAttachment: Boolean(pendingImageAttachment || pendingAudioAttachmentId),
+                hasPendingAttachment: Boolean(pendingImageAttachment || pendingAudioAttachmentId || pendingDocument),
                 recording,
                 requestingMicrophone,
                 sending,

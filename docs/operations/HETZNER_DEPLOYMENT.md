@@ -25,6 +25,10 @@ published. The Vite compiler runs only while the gateway image is built; nginx s
 static files and proxies same-origin API requests at runtime. The existing host PostgreSQL on
 localhost is unrelated; the container database is reachable only on the Compose network.
 
+Wildcard certificate renewal also uses one host-level `acme-dns.service`. It is authoritative only
+for the delegated `auth.laggente.com` zone on public TCP/UDP 53, while its update API remains on
+`127.0.0.1:5399`. It is certificate infrastructure, not an application container or AI role.
+
 The API container healthcheck connects over its own loopback address but deliberately sends
 `Host: laggente.com`, which is inside the exact production `TRUSTED_HOSTS` contract. Do not solve an
 internal healthcheck failure by admitting `127.0.0.1`, `*`, or arbitrary container names as trusted
@@ -45,7 +49,7 @@ ssh -i /Users/andreabertoncini/.ssh/hetzner_wofi_ed25519 \
 Do not run concurrent image builds on this host. The initial `--build-on-host` path serializes builds with `COMPOSE_PARALLEL_LIMIT=1`. If a build is killed for measured memory pressure, stop and either build immutable images elsewhere or add temporary swap as an explicit, monitored operational action; do not assume swap is required in advance.
 
 Do not treat the preflight's free-space snapshot as long-term capacity. A single account at the
-512 MiB durable-image ceiling represents about 7 GiB of upload payload across 14 full local backup
+512 MiB combined durable-image-and-document ceiling represents about 7 GiB of upload payload across 14 full local backup
 sets, before live data, PostgreSQL dumps, images, build cache, and additional accounts. Provider
 backups or an independently controlled off-host copy must still be enabled and sized for the
 retention policy. See [Backup and Restore](BACKUP_AND_RESTORE.md).
@@ -58,6 +62,7 @@ retention policy. See [Backup and Restore](BACKUP_AND_RESTORE.md).
 | `infra/gateway/` | Non-root nginx static runtime and internal `/api/v1` gateway |
 | `infra/backup/` | Logical database and private-upload backup job |
 | `infra/nginx/laggente.conf` | Existing host nginx site template |
+| `infra/acme-dns/` | Limited DNS service, systemd unit, and Certbot hooks for wildcard renewal |
 | `infra/secrets/database.env.example` | Database-only production secret template |
 | `infra/secrets/application.env.example` | API-only application secret template |
 | `scripts/generate-production-env.sh` | Generate new split files or safely split the legacy combined local file |
@@ -226,7 +231,32 @@ Expected ownership and mode are `root:laggente 640` for both. A pre-existing `/o
 
 ## 4. Configure DNS and TLS
 
-Complete [Domains and Subdomains](DOMAINS_AND_SUBDOMAINS.md) before enabling the host nginx site. Certificate issuance does not require stopping any existing service.
+Complete [Domains and Subdomains](DOMAINS_AND_SUBDOMAINS.md) before enabling the host nginx site.
+The wildcard procedure installs the pinned `acme-dns.service`, performs one full-record-preserving
+Namecheap delegation from the allowlisted Hetzner origin, issues `laggente-wildcard`, and proves a
+dry-run renewal. Certificate issuance does not stop application containers or neighboring services.
+
+The Hetzner Cloud firewall is provider-side state and is not changed by the repository scripts or
+the host firewall. The firewall attached to `116.203.123.0` (currently `firewall-1`) must retain
+these inbound authoritative-DNS rules in addition to the established SSH and web rules:
+
+| Protocol | Port | Sources |
+| --- | --- | --- |
+| TCP | `53` | `0.0.0.0/0`, `::/0` |
+| UDP | `53` | `0.0.0.0/0`, `::/0` |
+
+Do not expose the acme-dns update API on port `5399`; it remains bound to loopback. After attaching
+or replacing a Cloud Firewall, verify both DNS transports from a machine outside the VPS:
+
+```bash
+dig +norecurse @116.203.123.0 auth.laggente.com SOA
+dig +tcp +norecurse @116.203.123.0 auth.laggente.com SOA
+dig @1.1.1.1 auth.laggente.com SOA
+```
+
+The two direct queries must return `NOERROR` with the zone SOA, and the recursive query must return
+the delegated zone rather than `SERVFAIL`. A loopback service health check alone cannot prove that
+the Hetzner Cloud firewall admits public DNS traffic.
 
 ## 5. First application release
 
@@ -276,7 +306,7 @@ All production migrations must be backward-compatible with the previously deploy
 
 ## 6. Enable the host nginx site
 
-Only after the named pilot certificate or later wildcard certificate files exist:
+Only after `/etc/letsencrypt/live/laggente-wildcard/` exists with the apex and wildcard SANs:
 
 ```bash
 sudo install -m 0644 \
@@ -291,7 +321,7 @@ sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-The template adds host preservation, body limits, connection and route-specific rate limits, security headers, a `www` canonical redirect, streaming-friendly proxy settings, and routing for the apex, Studio, Mauro, and later wildcard hosts. Both nginx layers use a dedicated JSON access format with method, normalized `$uri`, status, timing, client, and request ID; query arguments and referers are deliberately omitted so magic-link and signed-download tokens do not enter access logs. It does not open another public port. The initial named certificate covers the deployed Mauro pilot; activate another professional hostname only after it is covered by TLS.
+The template adds host preservation, body limits, connection and route-specific rate limits, security headers, a `www` canonical redirect, streaming-friendly proxy settings, and routing for the apex, Studio, Mauro, and every published wildcard host. Both nginx layers use a dedicated JSON access format with method, normalized `$uri`, status, timing, client, and request ID; query arguments and referers are deliberately omitted so magic-link and signed-download tokens do not enter access logs. The active certificate covers the apex and `*.laggente.com`; no certificate or nginx change occurs per professional.
 
 ## 7. Verify the release
 
@@ -317,7 +347,8 @@ perform the browser acceptance journey on real HTTPS hosts:
 4. The public assistant reflects only the active revision, not an unactivated proposal.
 5. Mauro sees and joins the same public conversation as a visibly human author; automatic AI replies pause.
 6. A second browser profile cannot read the first visitor's conversation without its continuation identity.
-7. Unknown and reserved subdomains return a safe response and never resolve tenant data from a client-supplied account ID.
+7. A second published professional host passes ordinary browser TLS and resolves only its own tenant.
+8. Unknown and reserved subdomains pass edge TLS but return a safe response and never resolve tenant data from a client-supplied account ID.
 
 Browser acceptance and taste remain separate from container health.
 
@@ -341,5 +372,7 @@ Rollback takes a fresh logical backup, activates the selected images, checks loo
 - Never run `docker system prune` or unbounded release deletion on this shared disk.
 - Never put Namecheap, OpenAI, database, or email credentials in Git, image layers, build arguments, or browser environment variables.
 - Run `nginx -t` before every host nginx reload.
-- Inspect the Hetzner Cloud firewall separately. Docker publishes only loopback here, but the firewall must still remain limited to the established SSH source plus public `80/443`.
+- Inspect the Hetzner Cloud firewall separately. Docker publishes only loopback here. Public access is
+  limited to the established SSH source, HTTP/HTTPS `80/443`, and authoritative DNS TCP/UDP `53` for
+  `auth.laggente.com`; the acme-dns HTTP API remains loopback-only on `127.0.0.1:5399`.
 - Enable Hetzner provider backups or another off-host copy before treating the local backup job as disk-loss protection.
