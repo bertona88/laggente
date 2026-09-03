@@ -175,6 +175,10 @@ def test_invite_build_publish_and_operate_a_second_tenant(client, app):
         "/api/v1/studio/space/slug", json={"slug": "short123"}
     )
     assert private_preview.status_code == 409
+    static_media = client.patch(
+        "/api/v1/studio/space/slug", json={"slug": "media"}
+    )
+    assert static_media.status_code == 409
     unsubscribe_namespace = client.patch(
         "/api/v1/studio/space/slug", json={"slug": "outreach"}
     )

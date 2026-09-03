@@ -833,6 +833,8 @@ if [[ ${1:-} == --build ]]; then
     require_gateway_header laggente.com /admin/not-an-index-route X-Robots-Tag 'noindex, nofollow'
     require_gateway_status laggente.com /short123 200
     require_gateway_header laggente.com /short123 X-Robots-Tag 'noindex, nofollow'
+    require_gateway_status laggente.com /media/laggente-extension-it.mp4 200
+    require_gateway_header laggente.com /media/laggente-extension-it.mp4 Content-Type 'video/mp4'
     require_gateway_status app.laggente.com /outreach/unsubscribe 200
     require_gateway_header app.laggente.com /outreach/unsubscribe X-Robots-Tag 'noindex, nofollow'
     require_gateway_header app.laggente.com /studio X-Robots-Tag 'noindex, nofollow'
