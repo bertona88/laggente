@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  shouldShowPublicAddressPicker,
   shouldShowStudioStarterPrompts,
   studioStarterPrompts,
   suggestPublicSlug,
@@ -10,6 +11,18 @@ import {
 const webRoot = path.resolve(import.meta.dirname, "..");
 
 describe("invited professional provisioning", () => {
+  const buildingSpace = {
+    id: "space",
+    account_id: "account",
+    slug: "pending-space",
+    professional_name: "Giulia Bianchi",
+    public_role: "Architetta",
+    locale: "it-IT",
+    is_active: false,
+    slug_claimed: false,
+    onboarding_state: "building",
+  };
+
   it("suggests a short stable public username from an Italian professional name", () => {
     expect(suggestPublicSlug("Giulia Bianchi")).toBe("giulia");
     expect(suggestPublicSlug("Èlia D’Amico")).toBe("elia");
@@ -39,6 +52,14 @@ describe("invited professional provisioning", () => {
         },
       ]),
     ).toBe(false);
+  });
+
+  it("removes the public address picker as soon as the professional selects a name", () => {
+    expect(shouldShowPublicAddressPicker(buildingSpace)).toBe(true);
+    expect(shouldShowPublicAddressPicker({
+      ...buildingSpace,
+      slug_claimed: true,
+    })).toBe(false);
   });
 
   it("keeps shared Studio and tenant adapters free of seeded-professional assumptions", () => {

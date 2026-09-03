@@ -47,6 +47,12 @@ export function shouldShowStudioStarterPrompts(messages: ConversationMessage[]) 
   return !messages.some((message) => message.author_type === "professional");
 }
 
+export function shouldShowPublicAddressPicker(
+  space: Pick<StudioSpaceState, "onboarding_state" | "slug_claimed"> | null,
+) {
+  return Boolean(space && space.onboarding_state !== "published" && !space.slug_claimed);
+}
+
 export function suggestPublicSlug(value: string) {
   return value
     .normalize("NFD")
@@ -242,7 +248,7 @@ export function StudioWorkspace() {
             <button type="button" className="workspace-panel-toggle" onClick={() => setInspectorOpen(true)} aria-expanded={inspectorOpen} aria-controls="studio-revision-panel">Bozza{proposed ? " pronta" : ""}</button>
           </div>
         </header>
-        {spaceState && spaceState.onboarding_state !== "published" && (
+        {spaceState && shouldShowPublicAddressPicker(spaceState) && (
           <section className="studio-onboarding" aria-label="Preparazione dello spazio pubblico">
             <div className="studio-onboarding__copy">
               <p>Il tuo spazio sta prendendo forma</p>
