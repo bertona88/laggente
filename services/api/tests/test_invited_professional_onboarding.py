@@ -171,6 +171,10 @@ def test_invite_build_publish_and_operate_a_second_tenant(client, app):
     }
     reserved = client.patch("/api/v1/studio/space/slug", json={"slug": "studio"})
     assert reserved.status_code == 409
+    private_preview = client.patch(
+        "/api/v1/studio/space/slug", json={"slug": "short123"}
+    )
+    assert private_preview.status_code == 409
     already_used = client.patch("/api/v1/studio/space/slug", json={"slug": "mauro"})
     assert already_used.status_code == 409
     temporary_claim = client.patch(
