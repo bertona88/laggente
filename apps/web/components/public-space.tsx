@@ -715,12 +715,6 @@ export function PublicSpace({ slug }: { slug: string }) {
                 event.currentTarget.style.height = "0px";
                 event.currentTarget.style.height = `${Math.min(event.currentTarget.scrollHeight, 112)}px`;
               }}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" && !event.shiftKey) {
-                  event.preventDefault();
-                  event.currentTarget.form?.requestSubmit();
-                }
-              }}
               placeholder={automaticRepliesEnabled ? "Scrivi ciò che hai in mente…" : `Scrivi a ${professionalFirstName}…`}
               aria-label="Il tuo messaggio"
               rows={1}
