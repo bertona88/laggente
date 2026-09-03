@@ -7,6 +7,7 @@ const RESERVED = new Set([
   "blog",
   "status",
   "mail",
+  "media",
   "outreach",
   "privacy",
   "send",
