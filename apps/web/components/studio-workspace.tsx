@@ -321,19 +321,13 @@ export function StudioWorkspace() {
               attemptTrackerRef.current.invalidate();
               setInput(event.target.value);
             }}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" && !event.shiftKey) {
-                event.preventDefault();
-                event.currentTarget.form?.requestSubmit();
-              }
-            }}
             rows={2}
             maxLength={5000}
             placeholder="Racconta, correggi o chiedi una modifica…"
             aria-label="Messaggio per lo Studio"
             disabled={sending}
           />
-          <div><span>Invio ↵ · nuova riga ⇧↵</span><button type="submit" disabled={!input.trim() || sending} aria-label="Invia allo Studio"><SendIcon /></button></div>
+          <div><span>Invia dal pulsante</span><button type="submit" disabled={!input.trim() || sending} aria-label="Invia allo Studio"><SendIcon /></button></div>
         </form>
       </section>
       <div id="studio-revision-panel" className={`studio-revision-panel${inspectorOpen ? " is-open" : ""}`}>
