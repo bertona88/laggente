@@ -199,8 +199,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 request_path.startswith("/api/v1/public/conversations/")
                 or request_path.startswith("/api/v1/studio/documents")
                 or request_path.startswith("/api/v1/studio/conversations/")
+                or request_path.rstrip("/") == "/api/v1/studio/dictation"
             )
-            and request_path.rstrip("/").endswith(("/attachments", "/documents"))
+            and request_path.rstrip("/").endswith(
+                ("/attachments", "/documents", "/dictation")
+            )
         )
         upload_slot_acquired = False
         if is_private_upload:

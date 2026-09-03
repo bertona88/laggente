@@ -19,6 +19,7 @@ from ..database import get_db
 from ..dependencies import authorize_public_conversation, runtime_settings
 from ..media import (
     ALLOWED_MEDIA_TYPES,
+    MAX_ACCOUNT_AUDIO_TRANSCRIPTIONS_PER_HOUR,
     attachment_content_url,
     media_magic_matches,
 )
@@ -38,10 +39,6 @@ router = APIRouter(tags=["attachments"])
 # unbounded transcription spend even when source-IP limits are distributed across a botnet.
 MAX_DURABLE_ACCOUNT_UPLOAD_BYTES = 512 * 1024 * 1024
 MAX_DURABLE_CONVERSATION_UPLOAD_BYTES = 50 * 1024 * 1024
-MAX_ACCOUNT_AUDIO_TRANSCRIPTIONS_PER_HOUR = 12
-AUDIO_MEDIA_TYPES = tuple(
-    media_type for media_type, (media_kind, _) in ALLOWED_MEDIA_TYPES.items() if media_kind == "audio"
-)
 _upload_locks: WeakValueDictionary[str, asyncio.Lock] = WeakValueDictionary()
 
 

@@ -2,9 +2,13 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
+import tempfile
+from datetime import timedelta
+from pathlib import Path
 from weakref import WeakValueDictionary
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile, status
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -18,6 +22,11 @@ from ..dependencies import (
     current_professional,
     professional_space,
     runtime_settings,
+)
+from ..media import (
+    ALLOWED_MEDIA_TYPES,
+    MAX_ACCOUNT_AUDIO_TRANSCRIPTIONS_PER_HOUR,
+    media_magic_matches,
 )
 from ..models import (
     Account,
@@ -34,6 +43,7 @@ from ..models import (
     utcnow,
 )
 from ..positioning import load_product_positioning
+from ..rate_limit import client_ip
 from ..relationship_graph import build_relationship_graph
 from ..retention import delete_conversation_data, purge_expired_conversations
 from ..schemas import (
@@ -52,6 +62,7 @@ from ..schemas import (
     SlugClaim,
     SpaceDetail,
     SpaceOut,
+    StudioDictationOut,
     StudioTurnOut,
 )
 from ..tenant import normalize_claimed_slug
@@ -481,6 +492,147 @@ def get_studio_messages(
         ),
         latest_campaign=(campaign_out(db, latest_outreach) if latest_outreach else None),
     )
+
+
+@router.post("/dictation", response_model=StudioDictationOut)
+async def transcribe_studio_dictation(
+    request: Request,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(runtime_settings),
+    context: ProfessionalContext = Depends(current_professional),
+) -> StudioDictationOut:
+    """Transcribe private Studio audio without creating a message or retaining the recording."""
+
+    request.app.state.rate_limiter.check(
+        f"studio-dictation-ip:{client_ip(request)}", limit=12, window_seconds=10 * 60
+    )
+    request.app.state.rate_limiter.check(
+        f"studio-dictation-member:{context.member.id}", limit=12, window_seconds=60 * 60
+    )
+    space = professional_space(db, context)
+    account_id = context.account_id
+    member_id = context.member.id
+    space_id = space.id
+    # Authentication is complete. Do not hold its transaction while reading multipart data.
+    db.commit()
+
+    declared_type = (file.content_type or "").lower().split(";", 1)[0].strip()
+    media = ALLOWED_MEDIA_TYPES.get(declared_type)
+    if not media or media[0] != "audio":
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail="Serve un file audio per la dettatura",
+        )
+    extension = media[1]
+    chunks: list[bytes] = []
+    total = 0
+    while True:
+        chunk = await file.read(1024 * 1024)
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > settings.max_upload_bytes:
+            raise HTTPException(
+                status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+                detail="File troppo grande",
+            )
+        chunks.append(chunk)
+    data = b"".join(chunks)
+    if not data or not media_magic_matches(data[:64], declared_type):
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail="Contenuto audio non valido",
+        )
+
+    transcription_count = db.scalar(
+        select(func.count(Event.id)).where(
+            Event.account_id == account_id,
+            Event.event_type == "audio_transcription_started",
+            Event.created_at >= utcnow() - timedelta(hours=1),
+        )
+    )
+    if int(transcription_count or 0) >= MAX_ACCOUNT_AUDIO_TRANSCRIPTIONS_PER_HOUR:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Limite temporaneo delle trascrizioni raggiunto. Riprova più tardi.",
+        )
+
+    db.add(
+        Event(
+            account_id=account_id,
+            space_id=space_id,
+            conversation_id=None,
+            actor_type="professional",
+            actor_id=member_id,
+            event_type="audio_transcription_started",
+            payload={"surface": "studio", "size_bytes": total},
+        )
+    )
+    # The attempt survives cancellation for account-wide spend control, and the synchronous
+    # connection is released before the external transcription request.
+    db.commit()
+
+    target: Path | None = None
+    try:
+        descriptor, temporary_name = tempfile.mkstemp(
+            prefix="laggente-studio-dictation-", suffix=extension, dir="/tmp"
+        )
+        os.close(descriptor)
+        target = Path(temporary_name)
+        target.write_bytes(data)
+        target.chmod(0o600)
+        transcript = await request.app.state.audio_transcriber.transcribe(target, declared_type)
+    except asyncio.CancelledError:
+        try:
+            db.add(
+                Event(
+                    account_id=account_id,
+                    space_id=space_id,
+                    conversation_id=None,
+                    actor_type="system",
+                    event_type="audio_transcription_failed",
+                    payload={"surface": "studio", "error_type": "CancelledError"},
+                )
+            )
+            db.commit()
+        except Exception:
+            db.rollback()
+        raise
+    except Exception as exc:
+        db.rollback()
+        db.add(
+            Event(
+                account_id=account_id,
+                space_id=space_id,
+                conversation_id=None,
+                actor_type="system",
+                event_type="audio_transcription_failed",
+                payload={"surface": "studio", "error_type": type(exc).__name__},
+            )
+        )
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Trascrizione non disponibile. Riprova più tardi.",
+        ) from exc
+    finally:
+        if target:
+            target.unlink(missing_ok=True)
+
+    db.add(
+        Event(
+            account_id=account_id,
+            space_id=space_id,
+            conversation_id=None,
+            actor_type="professional",
+            actor_id=member_id,
+            event_type="studio_dictation_transcribed",
+            payload={"size_bytes": total, "raw_audio_deleted": True},
+        )
+    )
+    db.commit()
+    return StudioDictationOut(transcript=transcript)
 
 
 @router.post("/messages", response_model=StudioTurnOut)

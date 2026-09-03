@@ -21,6 +21,8 @@ ALLOWED_MEDIA_TYPES = {
     "audio/mp4": ("audio", ".m4a"),
 }
 
+MAX_ACCOUNT_AUDIO_TRANSCRIPTIONS_PER_HOUR = 12
+
 def attachment_content_url(attachment: Attachment) -> str:
     """Return the stable same-origin URL; the endpoint authorizes every request by cookie/header."""
 
