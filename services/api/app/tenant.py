@@ -21,6 +21,7 @@ RESERVED_SLUGS = {
     "mail",
     "privacy",
     "send",
+    "short123",
     "spazio",
     "staging",
     "static",

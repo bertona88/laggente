@@ -186,7 +186,7 @@ img { max-width: 100%; }
 .short-invite__actions { margin-top: 38px; display: flex; align-items: center; gap: 24px; }
 .short-invite__actions > a:last-child { padding: 8px 0 6px; border-bottom: 1px solid rgba(248, 246, 239, .45); display: inline-flex; align-items: center; gap: 10px; color: rgba(248, 246, 239, .82); font-size: 12px; font-weight: 600; }
 .short-invite__actions > a:last-child svg { width: 15px; }
-.short-invite__reel { width: min(390px, 31vw, calc((100svh - 180px) * .5625)); min-width: 280px; margin: 0; justify-self: end; }
+.short-invite__reel { width: min(390px, 31vw, calc((100svh - 270px) * .5625)); min-width: 240px; margin: 0; justify-self: end; }
 .short-invite__reel > div { min-height: 38px; padding: 0 2px; border-bottom: 1px solid var(--line-light); display: flex; align-items: center; justify-content: space-between; color: rgba(248, 246, 239, .6); font-size: 8px; font-weight: 650; letter-spacing: .1em; text-transform: uppercase; }
 .short-invite__reel video { width: 100%; aspect-ratio: 9 / 16; display: block; background: var(--paper-light); object-fit: cover; box-shadow: 0 34px 80px rgba(4, 10, 7, .38); transition: transform .28s ease, box-shadow .28s ease; }
 .short-invite__reel:hover video { transform: translateY(-4px); box-shadow: 0 42px 95px rgba(4, 10, 7, .46); }
