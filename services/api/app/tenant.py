@@ -19,6 +19,7 @@ RESERVED_SLUGS = {
     "blog",
     "login",
     "mail",
+    "outreach",
     "privacy",
     "send",
     "short123",

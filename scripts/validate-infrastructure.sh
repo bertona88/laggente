@@ -829,9 +829,12 @@ if [[ ${1:-} == --build ]]; then
     require_gateway_status laggente.com /sitemap.xml 200
     require_gateway_header laggente.com / X-Robots-Tag ''
     require_gateway_header laggente.com '/?source=validation' X-Robots-Tag ''
-    require_gateway_header laggente.com /not-an-index-route X-Robots-Tag 'noindex, nofollow'
+    require_gateway_status laggente.com /admin/not-an-index-route 200
+    require_gateway_header laggente.com /admin/not-an-index-route X-Robots-Tag 'noindex, nofollow'
     require_gateway_status laggente.com /short123 200
     require_gateway_header laggente.com /short123 X-Robots-Tag 'noindex, nofollow'
+    require_gateway_status app.laggente.com /outreach/unsubscribe 200
+    require_gateway_header app.laggente.com /outreach/unsubscribe X-Robots-Tag 'noindex, nofollow'
     require_gateway_header app.laggente.com /studio X-Robots-Tag 'noindex, nofollow'
     require_gateway_header mauro.laggente.com / X-Robots-Tag 'noindex, nofollow'
     require_gateway_location \
