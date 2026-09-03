@@ -81,10 +81,10 @@ export function ShortInvitationPage() {
               loop
               muted
               playsInline
-              poster="/media/laggente-extension-poster.png"
+              poster="/media/laggente-extension-poster-v1.png"
               preload="metadata"
             >
-              <source src="/media/laggente-extension-it.mp4" type="video/mp4" />
+              <source src="/media/laggente-extension-it-v1.mp4" type="video/mp4" />
               Il tuo browser non supporta la riproduzione del video.
             </video>
             <figcaption>Un’estensione del professionista.</figcaption>
