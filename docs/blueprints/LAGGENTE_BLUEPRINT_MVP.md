@@ -92,6 +92,11 @@ Indicative URL: `app.laggente.com`
 
 The Studio is the first product experience. The professional signs in, creates their professional identity, chooses an available username that becomes their public subdomain, and shapes the public space through conversation rather than a settings maze.
 
+The professional can type or dictate into the Studio composer. Dictation follows the same
+server-owned transcription boundary as a public voice note, but it creates no attachment or
+message: raw audio is deleted after transcription, editable text returns to the composer, and only
+the professional's later send action creates an authored Studio turn.
+
 Entry is open and email-first. A new professional requests a short-lived, single-use verification
 link; no tenant exists until the recipient proves control of the address by consuming it. LAGGENTE
 then creates an isolated private Studio and inactive placeholder space. A returning professional
@@ -386,11 +391,12 @@ Every tenant-owned record contains `account_id`. Public records also bind to the
 
 ## 14. Audio, photographs, and documents
 
-Voice notes belong in the first credible product because Italian professional work, especially the first real-estate vertical, already happens through audio messages.
+Voice notes and Studio dictation belong in the first credible product because Italian professional
+work, especially the first real-estate vertical, already happens through speech and audio messages.
 
 The MVP uses one reasoning path:
 
-1. record or select a voice note;
+1. record or select a voice note, or begin private Studio dictation;
 2. upload it privately;
 3. transcribe it on the server;
 4. show editable text;
@@ -398,6 +404,7 @@ The MVP uses one reasoning path:
 6. persist and return the assistant's complete response through the current request/response path.
 
 Raw audio is deleted after transcription by default unless an explicit retained-audio policy applies.
+Studio dictation never creates an attachment and never submits the returned text automatically.
 
 Photographs are private attachments to a conversation. The MVP limits file types, size, and count; serves them through stable same-origin endpoints that authorize every request from the current visitor or professional session; and never presents an image-derived claim as certain professional judgment. When a photograph is attached to an AI-assisted turn, its verified bytes are processed by the configured AI provider for that turn only, as disclosed in the versioned visitor privacy notice; the private attachment URL is not shared and historical photographs are not replayed on later text turns.
 

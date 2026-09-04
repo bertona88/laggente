@@ -37,6 +37,10 @@ generated revision, and activates it. Existing members return through the same e
 Studio invitations remain available, but they are no longer a prerequisite. First activation—not a
 code change, deployment, or per-professional environment file—opens the public subdomain.
 
+The Studio composer accepts typed text or private dictation. Dictation is transcribed server-side,
+the raw recording is deleted immediately, and the professional reviews or corrects the text before
+deciding to send it as an ordinary authored Studio message.
+
 The experience begins with the professional, not the visitor. Each professional creates
 their identity, then Studio begins with the backend-owned question “Che lavoro fai?” and adapts its
 examples and starting template to the answer. The professional chooses the public slug that becomes

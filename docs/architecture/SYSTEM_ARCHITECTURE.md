@@ -108,6 +108,12 @@ transport, model integration, and authorized-tool framework. They have different
 instructions, participants, and access contexts; shared infrastructure must never collapse their
 permission boundaries or expose private Studio material publicly.
 
+The authenticated Studio composer can send a bounded multipart recording to
+POST /api/v1/studio/dictation. FastAPI applies the shared account transcription ceiling, writes
+the bytes only to a private temporary file, deletes that file after transcription, and returns
+editable text. The endpoint creates neither an attachment nor a message; a separate professional
+send action is required to create the authored Studio turn.
+
 Redis, Kubernetes, Vercel, Railway, and a managed database are not part of the accepted MVP topology.
 
 Conversation turns currently complete as durable, non-streaming HTTP request/response operations.
@@ -219,7 +225,7 @@ tenant configuration:
 | Private file storage | 512 MiB per account and 50 MiB per conversation across durable images and documents |
 | Conversation files | 20 attachment/document records per conversation |
 | Studio source library | 100 documents per space; each upload also obeys the 10 MiB request ceiling |
-| Audio transcription | 12 attempts per account in a rolling hour |
+| Audio transcription | 12 attempts per account in a rolling hour across public voice notes and private Studio dictation |
 | Public-assistant model use | 60 model-backed turns per space in a rolling hour |
 | Conversation creation | 60 new public conversations per space in a rolling hour |
 | Professional email entry | 8 requests per IP in 15 minutes, 3 per address in one hour, and 60 new-address requests per API process in one hour |

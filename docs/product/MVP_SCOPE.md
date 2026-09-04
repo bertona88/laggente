@@ -22,7 +22,7 @@ The professional enters LAGGENTE and:
 1. enters their email and opens its single-use verification link;
 2. enters a private Studio belonging to the tenant created after that verification;
 3. starts with the backend-owned open question “Che lavoro fai?” and creates a professional identity whose role and starting template follow from the answer;
-4. talks naturally about context, territory, work, experience, style, personality, knowledge, preferences, boundaries, and what they want people to experience;
+4. types or privately dictates natural language about context, territory, work, experience, style, personality, knowledge, preferences, boundaries, and what they want people to experience;
 5. sees a first inspectable revision take shape as the Studio understands more;
 6. chooses an available public username, which reserves `<username>.laggente.com` globally;
 7. reviews the proposed revision and its concrete public effect;
@@ -47,6 +47,9 @@ memory, knowledge, or configuration until the professional confirms them, and an
 configuration change still follows the ordinary proposal and activation path.
 
 After publication, the Studio remains the primary way to evolve the space. The professional can keep talking, correct the Studio's interpretation, add knowledge, change tone or behavior, recover an earlier revision, and activate a new one without deploying code.
+
+Private Studio dictation returns editable text to the composer and never sends automatically. Its
+raw audio is deleted after server-side transcription and is not retained as a Studio attachment.
 
 The professional can also keep a bounded private source library in the Studio. PDF, DOCX, text,
 Markdown, and CSV files are extracted locally into inspectable source text. The private Studio

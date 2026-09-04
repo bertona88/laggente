@@ -1,6 +1,6 @@
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { SendIcon, SparkIcon } from "@/components/icons";
+import { MicIcon, SendIcon, SparkIcon } from "@/components/icons";
 import { MessageContent } from "@/components/message-markdown";
 import { ProfessionalEmailProposal } from "@/components/professional-email-proposal";
 import { OutreachCampaignProposal } from "@/components/outreach-campaign-proposal";
@@ -10,6 +10,13 @@ import { useStudioSession } from "@/components/studio-shell";
 import { apiRequest, normalizeMessages } from "@/lib/api";
 import { createClientMessageAttemptTracker } from "@/lib/client-message-id";
 import { formatTime } from "@/lib/format";
+import {
+  acceptResolvedMediaStream,
+  finishMediaCaptureRequest,
+  releaseMediaCapture,
+  shouldDisableMicrophoneControl,
+  tryBeginMediaCaptureRequest,
+} from "@/lib/media-capture";
 import { normalizeProfessionalEmail } from "@/lib/professional-email";
 import { normalizeOutreachCampaign } from "@/lib/outreach";
 import { normalizeRevision } from "@/lib/revisions";
@@ -79,13 +86,21 @@ export function StudioWorkspace() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [dictationState, setDictationState] = useState<"idle" | "requesting" | "recording" | "transcribing">("idle");
+  const [composerError, setComposerError] = useState<string | null>(null);
   const [authorizingEmail, setAuthorizingEmail] = useState(false);
   const [authorizingCampaign, setAuthorizingCampaign] = useState(false);
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
+  const inputValueRef = useRef("");
   const attemptTrackerRef = useRef(createClientMessageAttemptTracker());
+  const dictationRecorderRef = useRef<MediaRecorder | null>(null);
+  const dictationStreamRef = useRef<MediaStream | null>(null);
+  const dictationChunksRef = useRef<Blob[]>([]);
+  const mediaCaptureRequestGateRef = useRef({ busy: false });
+  const disposedRef = useRef(false);
 
   const load = useCallback(async (background = false) => {
     if (!background) {
@@ -123,10 +138,21 @@ export function StudioWorkspace() {
 
   useEffect(() => { void load(); }, [load]);
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth" }); }, [messages, email, campaign, sending, reduceMotion]);
+  useEffect(() => {
+    const requestGate = mediaCaptureRequestGateRef.current;
+    disposedRef.current = false;
+    return () => {
+      disposedRef.current = true;
+      releaseMediaCapture(dictationRecorderRef.current, dictationStreamRef.current);
+      dictationRecorderRef.current = null;
+      dictationStreamRef.current = null;
+      finishMediaCaptureRequest(requestGate);
+    };
+  }, []);
 
   async function submit(value: string) {
     const content = value.trim();
-    if (!content || sending) return;
+    if (!content || sending || dictationState !== "idle") return;
     const clientMessageId = attemptTrackerRef.current.idFor(content);
     const optimistic: ConversationMessage = {
       id: `pending-${clientMessageId}`,
@@ -137,7 +163,9 @@ export function StudioWorkspace() {
       pending: true,
     };
     setMessages((current) => [...current, optimistic]);
+    inputValueRef.current = "";
     setInput("");
+    setComposerError(null);
     setSending(true);
     setError(null);
     try {
@@ -156,6 +184,7 @@ export function StudioWorkspace() {
       attemptTrackerRef.current.complete(clientMessageId);
     } catch (reason) {
       setMessages((current) => current.filter((message) => message.id !== optimistic.id));
+      inputValueRef.current = content;
       setInput(content);
       setError(reason instanceof Error ? reason.message : "Il messaggio non è partito.");
     } finally {
@@ -166,6 +195,104 @@ export function StudioWorkspace() {
   function onSubmit(event: FormEvent) {
     event.preventDefault();
     void submit(input);
+  }
+
+  async function transcribeDictation(blob: Blob) {
+    if (disposedRef.current) return;
+    setDictationState("transcribing");
+    setComposerError(null);
+    try {
+      const form = new FormData();
+      const mediaType = blob.type || "audio/webm";
+      const filename = mediaType.startsWith("audio/mp4")
+        ? "dettatura.m4a"
+        : mediaType.startsWith("audio/ogg")
+          ? "dettatura.ogg"
+          : "dettatura.webm";
+      form.append("file", blob, filename);
+      const result = await apiRequest<unknown>("/studio/dictation", {
+        method: "POST",
+        body: form,
+      });
+      const transcript = typeof (result as { transcript?: unknown })?.transcript === "string"
+        ? (result as { transcript: string }).transcript.trim()
+        : "";
+      if (!transcript) throw new Error("La trascrizione non contiene testo.");
+      const currentInput = inputValueRef.current;
+      const separator = currentInput && !/\s$/.test(currentInput) ? " " : "";
+      const nextInput = `${currentInput}${separator}${transcript}`;
+      if (nextInput.length > 5000) {
+        throw new Error("La trascrizione è troppo lunga per il messaggio dello Studio.");
+      }
+      attemptTrackerRef.current.invalidate();
+      inputValueRef.current = nextInput;
+      setInput(nextInput);
+      requestAnimationFrame(() => composerRef.current?.focus());
+    } catch (reason) {
+      if (!disposedRef.current) {
+        setComposerError(
+          reason instanceof Error ? reason.message : "Non è stato possibile trascrivere la dettatura.",
+        );
+      }
+    } finally {
+      if (!disposedRef.current) setDictationState("idle");
+    }
+  }
+
+  async function toggleDictation() {
+    if (dictationRecorderRef.current) {
+      if (dictationRecorderRef.current.state !== "inactive") {
+        dictationRecorderRef.current.stop();
+      }
+      return;
+    }
+    if (sending || dictationState !== "idle") return;
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
+      setComposerError("La dettatura non è supportata da questo browser.");
+      return;
+    }
+    if (!tryBeginMediaCaptureRequest(mediaCaptureRequestGateRef.current)) return;
+    setComposerError(null);
+    setDictationState("requesting");
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      if (!acceptResolvedMediaStream(stream, disposedRef.current)) return;
+      dictationStreamRef.current = stream;
+      const recorder = new MediaRecorder(stream);
+      dictationChunksRef.current = [];
+      recorder.ondataavailable = (event) => {
+        if (event.data.size) dictationChunksRef.current.push(event.data);
+      };
+      recorder.onstop = () => {
+        const chunks = dictationChunksRef.current;
+        const mediaType = recorder.mimeType || chunks[0]?.type || "audio/webm";
+        dictationChunksRef.current = [];
+        stream.getTracks().forEach((track) => track.stop());
+        dictationStreamRef.current = null;
+        dictationRecorderRef.current = null;
+        if (disposedRef.current) return;
+        const blob = new Blob(chunks, { type: mediaType });
+        if (!blob.size) {
+          setDictationState("idle");
+          setComposerError("Non ho ricevuto audio. Prova di nuovo.");
+          return;
+        }
+        void transcribeDictation(blob);
+      };
+      dictationRecorderRef.current = recorder;
+      recorder.start();
+      setDictationState("recording");
+    } catch {
+      releaseMediaCapture(dictationRecorderRef.current, dictationStreamRef.current);
+      dictationRecorderRef.current = null;
+      dictationStreamRef.current = null;
+      if (!disposedRef.current) {
+        setDictationState("idle");
+        setComposerError("Per dettare, autorizza l’accesso al microfono.");
+      }
+    } finally {
+      finishMediaCaptureRequest(mediaCaptureRequestGateRef.current);
+    }
   }
 
   async function claimSlug(event: FormEvent<HTMLFormElement>) {
@@ -210,7 +337,10 @@ export function StudioWorkspace() {
 
   function requestEmailChange() {
     if (!email) return;
-    setInput(`Vorrei modificare la bozza email per ${email.to_address}: `);
+    const nextInput = `Vorrei modificare la bozza email per ${email.to_address}: `;
+    inputValueRef.current = nextInput;
+    setInput(nextInput);
+    setComposerError(null);
     requestAnimationFrame(() => composerRef.current?.focus());
   }
 
@@ -235,7 +365,10 @@ export function StudioWorkspace() {
 
   function continueCampaign() {
     if (!campaign) return;
-    setInput(`Continuiamo la campagna “${campaign.name}”. Mostrami esattamente cosa manca prima di poter autorizzare gli invii.`);
+    const nextInput = `Continuiamo la campagna “${campaign.name}”. Mostrami esattamente cosa manca prima di poter autorizzare gli invii.`;
+    inputValueRef.current = nextInput;
+    setInput(nextInput);
+    setComposerError(null);
     requestAnimationFrame(() => composerRef.current?.focus());
   }
   return (
@@ -311,7 +444,7 @@ export function StudioWorkspace() {
               <button
                 type="button"
                 key={prompt}
-                disabled={sending}
+                disabled={sending || dictationState !== "idle"}
                 onClick={() => void submit(prompt)}
               >
                 {prompt}
@@ -320,20 +453,60 @@ export function StudioWorkspace() {
           </div>
         )}
         <form className="studio-composer" onSubmit={onSubmit}>
+          {composerError && <InlineError message={composerError} />}
           <textarea
             ref={composerRef}
             value={input}
             onChange={(event) => {
               attemptTrackerRef.current.invalidate();
+              inputValueRef.current = event.target.value;
               setInput(event.target.value);
+              setComposerError(null);
             }}
             rows={2}
             maxLength={5000}
             placeholder="Racconta, correggi o chiedi una modifica…"
             aria-label="Messaggio per lo Studio"
-            disabled={sending}
+            disabled={sending || dictationState !== "idle"}
           />
-          <div><span>Invia dal pulsante</span><button type="submit" disabled={!input.trim() || sending} aria-label="Invia allo Studio"><SendIcon /></button></div>
+          <div className="studio-composer__footer">
+            <span
+              className={`studio-composer__hint studio-composer__hint--${dictationState}`}
+              role={dictationState === "idle" ? undefined : "status"}
+            >
+              {dictationState === "requesting" && "Attendo il permesso per il microfono…"}
+              {dictationState === "recording" && <><i /> Ti ascolto… tocca di nuovo per terminare</>}
+              {dictationState === "transcribing" && "Trascrivo la dettatura…"}
+              {dictationState === "idle" && "Invia dal pulsante"}
+            </span>
+            <div className="studio-composer__actions">
+              <button
+                type="button"
+                className={`studio-composer__dictate${dictationState === "recording" ? " is-recording" : ""}${dictationState === "transcribing" ? " is-transcribing" : ""}`}
+                onClick={() => void toggleDictation()}
+                disabled={shouldDisableMicrophoneControl({
+                  recording: dictationState === "recording",
+                  requesting: dictationState === "requesting",
+                  sending,
+                  uploading: dictationState === "transcribing",
+                  hasPendingAttachment: false,
+                })}
+                aria-label={
+                  dictationState === "requesting"
+                    ? "Attendo il permesso per il microfono"
+                    : dictationState === "recording"
+                      ? "Termina la dettatura"
+                      : dictationState === "transcribing"
+                        ? "Trascrizione in corso"
+                        : "Inizia la dettatura"
+                }
+                aria-pressed={dictationState === "recording"}
+              >
+                <MicIcon />
+              </button>
+              <button className="studio-composer__send" type="submit" disabled={!input.trim() || sending || dictationState !== "idle"} aria-label="Invia allo Studio"><SendIcon /></button>
+            </div>
+          </div>
         </form>
       </section>
       <div id="studio-revision-panel" className={`studio-revision-panel${inspectorOpen ? " is-open" : ""}`}>

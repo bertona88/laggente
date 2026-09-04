@@ -207,7 +207,7 @@ if grep -q '/api/v1/uploads/' "$repo_root/infra/nginx/laggente.conf"; then
     printf 'host nginx still contains the obsolete upload route\n' >&2
     exit 1
 fi
-if ! grep -Fq 'location ~ ^/api/v1/(?:public/conversations/[^/]+/(?:attachments|documents)|studio/documents|studio/conversations/[^/]+/documents)/?$' \
+if ! grep -Fq 'location ~ ^/api/v1/(?:public/conversations/[^/]+/(?:attachments|documents)|studio/(?:documents|dictation)|studio/conversations/[^/]+/documents)/?$' \
     "$repo_root/infra/nginx/laggente.conf"; then
     printf 'host nginx is missing one or more private multipart upload limiters\n' >&2
     exit 1

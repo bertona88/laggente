@@ -493,6 +493,10 @@ class AttachmentCreated(BaseModel):
     download_url: str | None = None
 
 
+class StudioDictationOut(BaseModel):
+    transcript: str
+
+
 class VersionOut(BaseModel):
     service: str = "laggente-api"
     version: str
