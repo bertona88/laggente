@@ -54,6 +54,12 @@ export function shouldShowStudioStarterPrompts(messages: ConversationMessage[]) 
   return !messages.some((message) => message.author_type === "professional");
 }
 
+export function shouldShowPublicAddressPicker(
+  space: Pick<StudioSpaceState, "onboarding_state" | "slug_claimed"> | null,
+) {
+  return Boolean(space && space.onboarding_state !== "published" && !space.slug_claimed);
+}
+
 export function suggestPublicSlug(value: string) {
   return value
     .normalize("NFD")
@@ -375,7 +381,7 @@ export function StudioWorkspace() {
             <button type="button" className="workspace-panel-toggle" onClick={() => setInspectorOpen(true)} aria-expanded={inspectorOpen} aria-controls="studio-revision-panel">Bozza{proposed ? " pronta" : ""}</button>
           </div>
         </header>
-        {spaceState && spaceState.onboarding_state !== "published" && (
+        {spaceState && shouldShowPublicAddressPicker(spaceState) && (
           <section className="studio-onboarding" aria-label="Preparazione dello spazio pubblico">
             <div className="studio-onboarding__copy">
               <p>Il tuo spazio sta prendendo forma</p>
@@ -457,12 +463,6 @@ export function StudioWorkspace() {
               setInput(event.target.value);
               setComposerError(null);
             }}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" && !event.shiftKey) {
-                event.preventDefault();
-                event.currentTarget.form?.requestSubmit();
-              }
-            }}
             rows={2}
             maxLength={5000}
             placeholder="Racconta, correggi o chiedi una modifica…"
@@ -477,7 +477,7 @@ export function StudioWorkspace() {
               {dictationState === "requesting" && "Attendo il permesso per il microfono…"}
               {dictationState === "recording" && <><i /> Ti ascolto… tocca di nuovo per terminare</>}
               {dictationState === "transcribing" && "Trascrivo la dettatura…"}
-              {dictationState === "idle" && "Invio ↵ · nuova riga ⇧↵"}
+              {dictationState === "idle" && "Invia dal pulsante"}
             </span>
             <div className="studio-composer__actions">
               <button

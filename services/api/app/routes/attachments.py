@@ -23,7 +23,7 @@ from ..media import (
     attachment_content_url,
     media_magic_matches,
 )
-from ..models import Attachment, Conversation, Event, Member, Space, utcnow
+from ..models import Account, Attachment, Conversation, Event, Member, Space, utcnow
 from ..rate_limit import client_ip
 from ..retention import (
     discard_stale_transcription_reservations,
@@ -293,6 +293,13 @@ async def upload_public_attachment(
                     detail="Limite spazio allegati della conversazione raggiunto",
                 )
         else:
+            # Share a database-backed spend reservation boundary with private Studio
+            # dictation, including across API workers.
+            db.scalar(
+                select(Account.id)
+                .where(Account.id == conversation.account_id)
+                .with_for_update()
+            )
             transcription_count = db.scalar(
                 select(func.count(Event.id)).where(
                     Event.account_id == conversation.account_id,

@@ -545,6 +545,13 @@ async def transcribe_studio_dictation(
             detail="Contenuto audio non valido",
         )
 
+    # Serialize the shared account-wide spend reservation with public voice notes. The
+    # database row lock keeps the ceiling authoritative even if API workers are added.
+    db.scalar(
+        select(Account.id)
+        .where(Account.id == account_id)
+        .with_for_update()
+    )
     transcription_count = db.scalar(
         select(func.count(Event.id)).where(
             Event.account_id == account_id,

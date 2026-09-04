@@ -12,6 +12,11 @@ describe("SPA route titles", () => {
     expect(documentTitleForRoute("/studio/spazio", null)).toBe("Spazio pubblico — Studio");
   });
 
+  it("names the private product preview without publishing a canonical URL", () => {
+    expect(documentTitleForRoute("/short123", null)).toBe("Prova LAGGENTE");
+    expect(canonicalUrlForRoute("/short123", null, "laggente.com")).toBeNull();
+  });
+
   it("names public path previews and tenant-host roots", () => {
     expect(documentTitleForRoute("/mauro", null)).toBe("Spazio di Mauro");
     expect(documentTitleForRoute("/", "mauro")).toBe("Spazio di Mauro");

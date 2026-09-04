@@ -342,7 +342,7 @@ export function ConversationDetail({ conversationId }: { conversationId: string 
                   }}
                 />
                 {pendingDocument && <div className="professional-document-draft"><ConversationDocument document={pendingDocument} compact /><button type="button" onClick={() => setPendingDocument(null)}>Rimuovi</button></div>}
-                <textarea ref={inputRef} value={input} onChange={(event) => { attemptTrackerRef.current.invalidate(); setInput(event.target.value); }} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} rows={2} placeholder="Scrivi alla persona…" aria-label={`Messaggio di ${professionalName}`} />
+                <textarea ref={inputRef} value={input} onChange={(event) => { attemptTrackerRef.current.invalidate(); setInput(event.target.value); }} rows={2} placeholder="Scrivi alla persona…" aria-label={`Messaggio di ${professionalName}`} />
                 <div><button className="professional-composer__document" type="button" disabled={sending || uploadingDocument || Boolean(pendingDocument)} onClick={() => documentInputRef.current?.click()}><DocumentIcon /> {uploadingDocument ? "Carico…" : "Documento"}</button><span>L’assistente andrà in pausa automaticamente.</span><button type="submit" disabled={sending || uploadingDocument || (!input.trim() && !pendingDocument)}>{sending ? "Invio…" : `Invia come ${professionalFirstName}`}<SendIcon /></button></div>
               </motion.form>
             )}
