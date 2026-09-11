@@ -376,3 +376,25 @@ Rollback takes a fresh logical backup, activates the selected images, checks loo
   limited to the established SSH source, HTTP/HTTPS `80/443`, and authoritative DNS TCP/UDP `53` for
   `auth.laggente.com`; the acme-dns HTTP API remains loopback-only on `127.0.0.1:5399`.
 - Enable Hetzner provider backups or another off-host copy before treating the local backup job as disk-loss protection.
+
+## Opt-in live voice release
+
+GPT-Live is disabled unless `LIVE_VOICE_ENABLED=true` is explicitly configured in the API's secret
+environment for an authorized release. Set `PRIVACY_NOTICE_VERSION=2026-09-11.1` for the
+updated voice notice. `LIVE_VOICE_MAX_SECONDS=300` bounds each session; its allowed
+range is 30–600. The existing `OPENAI_API_KEY` must have `gpt-live-1` access. No migration or additional
+service is required. Keep one Uvicorn worker: transport leases and conversation locks are process-local.
+Both host nginx and the container gateway must pass `Upgrade`/`Connection` on `/api/v1/voice/connect`.
+No new CSP origin is needed; the AudioWorklet is emitted as a separate same-origin hashed asset.
+
+Before activation, verify an authenticated Studio session and visitor session on their real hosts,
+Italian overlapping speech on desktop and mobile, microphone mute/stop/navigation cleanup, slow
+networks, human reply/AI pause, revision changes, conversation deletion, and graceful close usage.
+Check that proposals still need activation and email drafts still need approval. A short synthetic
+Live API smoke test verifies provider access and audio events only, not device audio quality.
+Voice start attempts are limited to six/account/hour; four sessions can run simultaneously across
+the process. Monitor `live_voice_requested`, `live_voice_backend_result`, and `live_voice_closed`;
+finalization=false means final provider usage was not confirmed. Do not log raw audio, transcripts,
+tickets, or provider error bodies. Conversation deletion also removes voice transcript events.
+Rollback by disabling the capability and replacing the application through the usual release path;
+existing transcript messages require no schema rollback.

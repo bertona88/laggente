@@ -1,3 +1,4 @@
+import { LiveVoice } from "@/components/live-voice";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { AppLink as Link } from "@/components/app-link";
@@ -124,6 +125,8 @@ export function PublicSpace({ slug }: { slug: string }) {
   const [pendingAudioAttachmentId, setPendingAudioAttachmentId] = useState<string | null>(null);
   const [pendingImageAttachment, setPendingImageAttachment] = useState<ConversationAttachment | null>(null);
   const [pendingDocument, setPendingDocument] = useState<ConversationDocumentValue | null>(null);
+  const [voiceActive, setVoiceActive] = useState(false);
+  const [voiceAvailable, setVoiceAvailable] = useState(false);
   const [recording, setRecording] = useState(false);
   const [requestingMicrophone, setRequestingMicrophone] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -310,6 +313,7 @@ export function PublicSpace({ slug }: { slug: string }) {
     documentId?: string,
     optimisticDocument?: ConversationDocumentValue | null,
   ) {
+    if (voiceActive) return;
     const content = value.trim();
     if (shouldBlockPublicMessageSubmission({
       hasContent: Boolean(content),
@@ -671,7 +675,13 @@ export function PublicSpace({ slug }: { slug: string }) {
           {pendingDocument && <div className="document-draft" role="status"><ConversationDocument document={pendingDocument} compact /><span>Puoi aggiungere un messaggio, poi inviare.</span></div>}
           {uploading && <LoadingLine label="Preparo il file in modo privato…" />}
           <p className="upload-notice">Continuando confermi di aver ricevuto l’<Link href="/privacy">informativa privacy</Link>; non è un consenso marketing. Condividi solo dati necessari. Foto, audio e documenti restano in questa conversazione; gli assistenti possono elaborarli secondo gli accessi indicati. L’audio viene eliminato dopo la trascrizione.</p>
+          <LiveVoice endpoint={async () => `/public/conversations/${encodeURIComponent(await ensureConversation())}/voice/sessions`}
+            disabled={sending || uploading || recording || requestingMicrophone || Boolean(pendingAudioAttachmentId || pendingImageAttachment || pendingDocument)}
+            suspended={!automaticRepliesEnabled || deleting || Boolean(spaceError)}
+            onActiveChange={setVoiceActive} onAvailabilityChange={setVoiceAvailable}
+            onSaved={() => { const id = conversationIdRef.current; if (id) void refreshConversation(id).catch(() => undefined); }} />
           <form className="chat-composer" onSubmit={onSubmit}>
+            <fieldset className="voice-composer-fieldset" disabled={voiceActive}>
             <input
               ref={imageInputRef}
               type="file"
@@ -702,7 +712,7 @@ export function PublicSpace({ slug }: { slug: string }) {
                 <ImageIcon />
               </button>
             )}
-            {space.capabilities.voice_notes && (
+            {space.capabilities.voice_notes && !voiceAvailable && (
               <button type="button" className={`chat-composer__utility${recording ? " is-recording" : ""}`} onClick={() => void toggleRecording()} disabled={shouldDisableMicrophoneControl({ recording, requesting: requestingMicrophone, sending, uploading, hasPendingAttachment: Boolean(pendingAudioAttachmentId || pendingImageAttachment || pendingDocument) })} aria-label={requestingMicrophone ? "Attendo il permesso per il microfono" : recording ? "Termina la registrazione" : "Registra una nota vocale"}>
                 <MicIcon />
               </button>
@@ -734,6 +744,7 @@ export function PublicSpace({ slug }: { slug: string }) {
               })}
               aria-label="Invia il messaggio"
             ><SendIcon /></button>
+          </fieldset>
           </form>
           <p className="public-chat__fineprint">
             {automaticRepliesEnabled

@@ -341,11 +341,17 @@ build with an SPA history fallback and proxies `/api/v1` to FastAPI; there is no
 application server or per-tenant frontend process. Hostname routing still selects the public space,
 while FastAPI remains authoritative for tenant resolution and every protected operation.
 
-Conversation turns currently use durable, non-streaming request/response transport. The browser
+Typed conversation turns use durable, non-streaming request/response transport. The browser
 does not call OpenAI directly: FastAPI selects the private Studio assistant or public assistant,
 runs it through the Agents SDK, and persists the authored result before returning it. See the
 [Agents SDK](https://developers.openai.com/api/docs/guides/agents) and
 [ADR-0001](../decisions/0001-single-hetzner-server.md).
+
+The opt-in [GPT-Live transport](../decisions/0007-gpt-live-conversation-transport.md) adds continuous
+voice input and output for the same two roles. A person explicitly starts the microphone session,
+then talks without reviewing and sending each utterance. FastAPI relays audio, preserves original
+transcript fragments, and delegates tasks to the existing authorized backend. Public human control,
+configuration activation, and email approval retain their deterministic boundaries.
 
 The FastAPI service implements the application-owned conversation and file boundary. It passes
 authenticated or anonymous server context into every operation and applies tenant authorization
@@ -394,7 +400,7 @@ Every tenant-owned record contains `account_id`. Public records also bind to the
 Voice notes and Studio dictation belong in the first credible product because Italian professional
 work, especially the first real-estate vertical, already happens through speech and audio messages.
 
-The MVP uses one reasoning path:
+The recorded-audio fallback uses this path:
 
 1. record or select a voice note, or begin private Studio dictation;
 2. upload it privately;
@@ -405,6 +411,9 @@ The MVP uses one reasoning path:
 
 Raw audio is deleted after transcription by default unless an explicit retained-audio policy applies.
 Studio dictation never creates an attachment and never submits the returned text automatically.
+When GPT-Live is enabled, people can instead explicitly start a full-duplex session: audio streams
+continuously and transcripts are saved without per-utterance review. The same two assistant roles
+handle delegated requests; see ADR-0007.
 
 Photographs are private attachments to a conversation. The MVP limits file types, size, and count; serves them through stable same-origin endpoints that authorize every request from the current visitor or professional session; and never presents an image-derived claim as certain professional judgment. When a photograph is attached to an AI-assisted turn, its verified bytes are processed by the configured AI provider for that turn only, as disclosed in the versioned visitor privacy notice; the private attachment URL is not shared and historical photographs are not replayed on later text turns.
 

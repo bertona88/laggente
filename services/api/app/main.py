@@ -17,6 +17,7 @@ from .config import Settings, get_settings
 from .database import Base, configure_database
 from .email import AuthEmailSender
 from .media import OpenAIAudioTranscriber
+from .live_voice import VoiceRegistry, provider_connection
 from .outreach import purge_expired_outreach_candidates
 from .professional_email import (
     build_professional_mail_transport,
@@ -40,6 +41,7 @@ from .routes import (
     professional_mail,
     public,
     studio,
+    voice,
 )
 from .schemas import VersionOut
 from .seed import seed_demo_data
@@ -164,6 +166,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.resend_inbound_source = build_resend_inbound_source(runtime_settings)
     app.state.assistant_service = AgentsAssistantService(runtime_settings)
     app.state.audio_transcriber = OpenAIAudioTranscriber(runtime_settings)
+    app.state.voice_registry = VoiceRegistry()
+    app.state.live_voice_connect = provider_connection
     app.state.upload_slots = asyncio.Semaphore(MAX_CONCURRENT_UPLOAD_REQUESTS)
 
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=runtime_settings.trusted_host_list)
@@ -236,6 +240,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(product.router, prefix="/api/v1")
     app.include_router(public.router, prefix="/api/v1")
     app.include_router(studio.router, prefix="/api/v1")
+    app.include_router(voice.router, prefix="/api/v1")
     app.include_router(invitations.router, prefix="/api/v1")
     app.include_router(attachments.router, prefix="/api/v1")
     app.include_router(documents.router, prefix="/api/v1")

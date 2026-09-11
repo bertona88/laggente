@@ -18,6 +18,8 @@ export function PrivacyPage() {
         <p>Conserviamo i messaggi, le informazioni che scegli di condividere e gli allegati necessari alla conversazione, compresi i documenti condivisi con il professionista. Le interpretazioni generate dall’AI sono visibili e correggibili. Le note vocali vengono eliminate dopo la trascrizione, salvo diversa indicazione esplicita.</p>
         <h2>Come interviene il fornitore AI</h2>
         <p>Il testo, le note vocali, le fotografie e il testo estratto dai documenti necessari a rispondere possono essere elaborati dal fornitore AI di LAGGENTE. Una fotografia viene inviata soltanto nel turno a cui è allegata; il suo indirizzo privato non viene condiviso. I documenti della conversazione restano accessibili soltanto ai partecipanti e agli assistenti autorizzati di quello spazio. LAGGENTE non usa la funzione di archiviazione delle risposte del fornitore.</p>
+        <h2>Conversazione vocale in diretta</h2>
+        <p>Se avvii “Parla con l’assistente”, il microfono trasmette subito l’audio al server LAGGENTE e a OpenAI per consentire all’AI di ascoltare e rispondere a voce. Non devi inviare separatamente ogni frase. Puoi spegnere il microfono o terminare la sessione in qualsiasi momento. LAGGENTE conserva le trascrizioni e i risultati delle richieste nella stessa conversazione, senza conservare l’audio in diretta. Le trascrizioni possono contenere errori e parole generate che non hai sentito durante un’interruzione.</p>
         <h2>Le tue scelte</h2>
         <p>Puoi chiedere al professionista l’accesso, la correzione o la cancellazione dei tuoi dati. Non è necessario fornire recapiti per iniziare una conversazione.</p>
         <h2>Se ricevi una presentazione di LAGGENTE</h2>

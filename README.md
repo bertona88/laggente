@@ -74,6 +74,15 @@ conversations also have a document room: the visitor and professional can each s
 two assistants can inspect it only inside the authorization boundary that owns it. This is shared
 conversation context, not transaction-document orchestration or a CRM workflow.
 
+## Live voice
+
+An opt-in GPT-Live mode lets professionals and visitors talk directly with their existing
+assistant, including while it speaks or runs a request. “Parla con l’assistente” starts microphone
+streaming and transcript persistence immediately; there is no per-utterance dictation/send step.
+Text remains available after ending voice. Public activation and email sends still use their
+explicit approval controls. See [ADR-0007](docs/decisions/0007-gpt-live-conversation-transport.md)
+for the server relay, limits, privacy, and release acceptance boundary.
+
 ## What LAGGENTE is not
 
 LAGGENTE is not Salesforce with an AI chat window. It does not ask the professional to maintain a pipeline, classify leads, update arbitrary stages, or perform data entry for the system.

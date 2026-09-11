@@ -663,6 +663,7 @@ async def post_studio_message(
     # End the dependency/authentication transaction before awaiting the Studio turn lock. The
     # authorization boundary is re-read inside the lock so queued requests do not pin connections.
     db.commit()
+    request.app.state.voice_registry.require_text_available(account_id, conversation_id)
     async with _studio_turn_lock(account_id, conversation_id):
         db.expire_all()
         member = db.scalar(

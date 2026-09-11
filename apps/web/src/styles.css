@@ -1277,3 +1277,18 @@ html, body, #root { min-height: 100%; }
   .professional-composer > div:last-child > span { order: 3; width: 100%; }
   .professional-composer .professional-composer__document { min-height: 40px; }
 }
+
+.voice-composer-fieldset { display: contents; }
+.live-voice { margin: 0.65rem 0; padding: 0.85rem 1rem; border: 1px solid var(--border, #d9dedb); border-radius: 14px; background: var(--surface, #fafbf9); color: inherit; }
+.live-voice.is-active { border-color: #668577; }
+.live-voice__controls { display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem; }
+.live-voice__controls > span { flex: 1 1 180px; font-size: 0.9rem; }
+.live-voice button { display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem; min-height: 44px; padding: 0.55rem 0.85rem; border: 1px solid #cad5ce; border-radius: 24px; background: #edf3ee; color: #244b39; font: inherit; font-size: 0.86rem; cursor: pointer; }
+.live-voice button svg { width: 18px; height: 18px; }
+.live-voice button:disabled { opacity: 0.5; cursor: default; }
+.live-voice button:focus-visible, .live-voice summary:focus-visible { outline: 2px solid #527561; outline-offset: 3px; }
+.live-voice__notice { margin: 0.6rem 0 0; font-size: 0.75rem; line-height: 1.5; opacity: 0.78; }
+.live-voice__captions { margin-top: 0.65rem; font-size: 0.85rem; }
+.live-voice__captions summary { cursor: pointer; padding: 0.5rem 0; }
+.live-voice__captions p { max-height: 9rem; overflow-y: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+.live-voice [role="alert"] { color: #963c36; font-size: 0.85rem; }

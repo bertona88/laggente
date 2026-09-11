@@ -29,7 +29,9 @@ fallback, and proxies the reserved API namespace to FastAPI. Production has no s
 application server. FastAPI owns authentication, tenant authorization, active configuration,
 attachments, and exactly two Agents SDK assistant roles.
 
-Conversation turns are durable, non-streaming request/response operations in this pilot. PostgreSQL
+Typed conversation turns are durable, non-streaming request/response operations.
+[ADR-0007](0007-gpt-live-conversation-transport.md) adds opt-in GPT-Live voice through the same
+server-owned authorization and persistence boundary. PostgreSQL
 application records are the source of truth; OpenAI provider storage and SDK tracing are disabled.
 ChatKit transport, widgets, and provider-owned conversation state are not implemented. A later
 streaming or ChatKit transport must preserve the same application-owned persistence, tenant,

@@ -7,6 +7,7 @@ export default defineConfig(({ mode }) => {
   const apiProxy = {
     target: env.API_PROXY_TARGET || "http://127.0.0.1:8000",
     changeOrigin: false,
+    ws: true,
   };
   return {
     plugins: [react()],

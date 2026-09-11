@@ -184,6 +184,7 @@ export function normalizeMessage(value: unknown): ConversationMessage {
   return {
     id: String(object.id || `message-${Date.now()}-${Math.random().toString(36).slice(2)}`),
     author_type: authorType,
+    ...(typeof object.content_type === "string" ? { content_type: object.content_type } : {}),
     author_name: String(object.author_name || object.author_label || fallbackName),
     content: String(object.content || ""),
     created_at: String(object.created_at || new Date().toISOString()),

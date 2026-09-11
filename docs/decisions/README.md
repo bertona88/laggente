@@ -20,6 +20,8 @@ Architecture Decision Records capture choices that materially constrain implemen
 | [0005](0005-delegated-acme-dns-wildcard-tls.md) | Accepted | Automate wildcard TLS through a narrowly delegated ACME DNS service |
 | [0006](0006-consent-qualified-studio-outreach.md) | Accepted | Bound Studio outreach to sourced research, recorded permission, exact bundle authorization, and suppression |
 
+| [0007](0007-gpt-live-conversation-transport.md) | Accepted for opt-in implementation | GPT-Live voice through the existing two assistant roles and application-owned relay |
+
 ## Creating a new ADR
 
 Use the next sequential number and include:

@@ -541,7 +541,7 @@ for production_line in \
     }
 done
 grep -q '^CONVERSATION_RETENTION_DAYS=365$' "$application_env"
-grep -q '^PRIVACY_NOTICE_VERSION=2026-08-27[.]1$' "$application_env"
+grep -q '^PRIVACY_NOTICE_VERSION=2026-09-11[.]1$' "$application_env"
 grep -q '^AGENT_MAIL_ENABLED=false$' "$application_env"
 grep -q '^OUTREACH_ENABLED=false$' "$application_env"
 grep -q '^PRODUCT_POSITIONING_JSON={"audience":"Professionisti"' "$application_env"

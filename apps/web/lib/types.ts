@@ -93,6 +93,7 @@ export interface ConversationMessage {
   id: string;
   author_type: AuthorType;
   author_name: string;
+  content_type?: string;
   content: string;
   created_at: string;
   pending?: boolean;

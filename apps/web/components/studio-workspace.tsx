@@ -1,3 +1,4 @@
+import { LiveVoice } from "@/components/live-voice";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { MicIcon, SendIcon, SparkIcon } from "@/components/icons";
@@ -34,7 +35,7 @@ function StudioMessage({ message }: { message: ConversationMessage }) {
     >
       {assistant && <span className="speaker-mark speaker-mark--studio" aria-hidden="true"><SparkIcon /></span>}
       <div>
-        <header><strong>{assistant ? "Studio LAGGENTE" : message.author_name}</strong><time dateTime={message.created_at}>{formatTime(message.created_at)}</time></header>
+        <header><strong>{assistant && !message.content_type?.startsWith("voice_") ? "Studio LAGGENTE" : message.author_name}</strong><time dateTime={message.created_at}>{formatTime(message.created_at)}</time></header>
         <MessageContent authorType={message.author_type} content={message.content} />
       </div>
     </motion.article>
@@ -86,6 +87,8 @@ export function StudioWorkspace() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [voiceActive, setVoiceActive] = useState(false);
+  const [voiceAvailable, setVoiceAvailable] = useState(false);
   const [dictationState, setDictationState] = useState<"idle" | "requesting" | "recording" | "transcribing">("idle");
   const [composerError, setComposerError] = useState<string | null>(null);
   const [authorizingEmail, setAuthorizingEmail] = useState(false);
@@ -152,7 +155,7 @@ export function StudioWorkspace() {
 
   async function submit(value: string) {
     const content = value.trim();
-    if (!content || sending || dictationState !== "idle") return;
+    if (!content || sending || voiceActive || dictationState !== "idle") return;
     const clientMessageId = attemptTrackerRef.current.idFor(content);
     const optimistic: ConversationMessage = {
       id: `pending-${clientMessageId}`,
@@ -444,7 +447,7 @@ export function StudioWorkspace() {
               <button
                 type="button"
                 key={prompt}
-                disabled={sending || dictationState !== "idle"}
+                disabled={sending || voiceActive || dictationState !== "idle"}
                 onClick={() => void submit(prompt)}
               >
                 {prompt}
@@ -452,7 +455,12 @@ export function StudioWorkspace() {
             ))}
           </div>
         )}
+        <LiveVoice endpoint={async () => "/studio/voice/sessions"}
+          disabled={sending || dictationState !== "idle"}
+          onActiveChange={setVoiceActive} onAvailabilityChange={setVoiceAvailable}
+          onSaved={() => { void load(true); }} />
         <form className="studio-composer" onSubmit={onSubmit}>
+          <fieldset className="voice-composer-fieldset" disabled={voiceActive}>
           {composerError && <InlineError message={composerError} />}
           <textarea
             ref={composerRef}
@@ -467,7 +475,7 @@ export function StudioWorkspace() {
             maxLength={5000}
             placeholder="Racconta, correggi o chiedi una modifica…"
             aria-label="Messaggio per lo Studio"
-            disabled={sending || dictationState !== "idle"}
+            disabled={sending || voiceActive || dictationState !== "idle"}
           />
           <div className="studio-composer__footer">
             <span
@@ -480,7 +488,7 @@ export function StudioWorkspace() {
               {dictationState === "idle" && "Invia dal pulsante"}
             </span>
             <div className="studio-composer__actions">
-              <button
+              {!voiceAvailable && <button
                 type="button"
                 className={`studio-composer__dictate${dictationState === "recording" ? " is-recording" : ""}${dictationState === "transcribing" ? " is-transcribing" : ""}`}
                 onClick={() => void toggleDictation()}
@@ -503,10 +511,11 @@ export function StudioWorkspace() {
                 aria-pressed={dictationState === "recording"}
               >
                 <MicIcon />
-              </button>
+              </button>}
               <button className="studio-composer__send" type="submit" disabled={!input.trim() || sending || dictationState !== "idle"} aria-label="Invia allo Studio"><SendIcon /></button>
             </div>
           </div>
+          </fieldset>
         </form>
       </section>
       <div id="studio-revision-panel" className={`studio-revision-panel${inspectorOpen ? " is-open" : ""}`}>

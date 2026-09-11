@@ -366,6 +366,7 @@ async def post_public_message(
     # per-conversation lock so queued requests cannot occupy the whole connection pool while the
     # request holding the lock is waiting on the model.
     db.commit()
+    request.app.state.voice_registry.require_text_available(lock_account_id, lock_conversation_id)
     async with _public_turn_lock(lock_account_id, lock_conversation_id):
         db.expire_all()
         conversation = authorize_public_conversation(request, db, conversation_id)

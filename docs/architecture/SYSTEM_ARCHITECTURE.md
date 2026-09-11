@@ -116,7 +116,8 @@ send action is required to create the authored Studio turn.
 
 Redis, Kubernetes, Vercel, Railway, and a managed database are not part of the accepted MVP topology.
 
-Conversation turns currently complete as durable, non-streaming HTTP request/response operations.
+Typed conversation turns complete as durable, non-streaming HTTP request/response operations.
+The opt-in voice transport is described below and in ADR-0007.
 The FastAPI service runs the relevant assistant through the Agents SDK and persists authored
 messages and derived interpretations in the application database. Provider-side conversation
 storage and SDK tracing are disabled; private reasoning is not persisted. ChatKit is not an
@@ -341,6 +342,22 @@ generic chat transport cannot infer safely: account, space, authenticated member
 visitor continuation identity, authorship, attachment/document ownership, revision activation, and
 AI-response control. Adding streaming or ChatKit later must preserve this boundary and must not
 create a second chat database.
+
+## Optional GPT-Live transport
+
+[ADR-0007](../decisions/0007-gpt-live-conversation-transport.md) adds an opt-in same-origin
+WebSocket alongside REST. FastAPI binds a short-lived ticket to an authorized conversation, relays
+PCM audio to `gpt-live-1`, persists original transcript fragments and immutable message batches,
+and handles client delegations through the existing Studio or public assistant. Browser commands
+cannot change model instructions, impersonate transcript authors, or execute tools. The API key
+stays server-side; raw audio is not retained; `store=false` disables provider session storage for
+forking. No private chain-of-thought is collected.
+
+A session owns its conversation turn lock. Typed turns return a recoverable conflict until it
+ends. Authorization, public reply control, and active revision are checked during the session.
+The existing single-worker process owns the bounded connection registry; PostgreSQL owns durable
+transcripts, account start reservations, derived memory, backend results, and final usage events.
+This is a voice interface for either existing role, not a third coordination agent.
 
 ## Human participation
 

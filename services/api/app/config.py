@@ -47,6 +47,8 @@ class Settings(BaseSettings):
     seed_demo: bool = Field(default=True, alias="SEED_DEMO")
     auto_create_schema: bool = Field(default=True, alias="AUTO_CREATE_SCHEMA")
     openai_api_key: str | None = Field(default=None, alias="OPENAI_API_KEY")
+    live_voice_enabled: bool = Field(default=False, alias="LIVE_VOICE_ENABLED")
+    live_voice_max_seconds: int = Field(default=300, ge=30, le=600, alias="LIVE_VOICE_MAX_SECONDS")
     openai_model: str = Field(default="gpt-5.6", alias="OPENAI_MODEL")
     openai_transcription_model: str = Field(
         default="gpt-4o-mini-transcribe", alias="OPENAI_TRANSCRIPTION_MODEL"
@@ -87,7 +89,7 @@ class Settings(BaseSettings):
         default=365, ge=1, le=3650, alias="CONVERSATION_RETENTION_DAYS"
     )
     privacy_notice_version: str = Field(
-        default="2026-08-27.1", min_length=1, max_length=50, alias="PRIVACY_NOTICE_VERSION"
+        default="2026-09-11.1", min_length=1, max_length=50, alias="PRIVACY_NOTICE_VERSION"
     )
     version: str = Field(default="0.1.0", alias="APP_VERSION")
     git_sha: str = Field(default="unknown", alias="GIT_SHA")
