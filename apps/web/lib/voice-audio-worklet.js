@@ -5,7 +5,9 @@ class LiveVoiceAudio extends AudioWorkletProcessor {
     super();
     this.capture = new Int16Array(480);
     this.captureOffset = 0;
-    this.output = new Float32Array(24000);
+    // WebSocket delivery may batch more than one second of generated speech.
+    // Keep a bounded five-second jitter buffer while playback starts immediately.
+    this.output = new Float32Array(24000 * 5);
     this.readOffset = 0;
     this.writeOffset = 0;
     this.queued = 0;

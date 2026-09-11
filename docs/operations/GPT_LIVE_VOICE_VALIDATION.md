@@ -1,11 +1,12 @@
 # GPT-Live voice validation — 2026-09-11
 
-The feature is opt-in and has not been deployed or enabled in production by this task.
+The feature was initially validated locally, then deployed and enabled on 2026-09-11 after
+explicit release authorization. See the release observations below.
 Implementation and control boundaries are in [ADR-0007](../decisions/0007-gpt-live-conversation-transport.md).
 
 ## Evidence
 
-Final automated runs: **124 API tests** and **88 frontend tests** passed.
+Final automated runs: **124 API tests** and **90 frontend tests** passed.
 
 - API tests cover default-off behavior, authentication, exact origin, single-use and expired
   tickets, cross-host denial, durable account quotas surviving conversation deletion, simultaneous
@@ -44,7 +45,7 @@ Final automated runs: **124 API tests** and **88 frontend tests** passed.
 ## Remaining release acceptance
 
 No physical microphone/speaker conversation, human listening assessment, production gateway
-WebSocket request, or live tenant interaction was performed. Echo cancellation, speakerphone
+WebSocket request, or live tenant interaction was performed during the initial local validation. Echo cancellation, speakerphone
 barge-in, mobile lifecycle, perceived latency, sustained conversations, and human judgment of the
 Italian voice remain device acceptance work. Real voice-to-tool execution is verified for the
 Studio configuration-read tool only; public tools, document tools, and draft-producing tools have
@@ -52,6 +53,16 @@ not been exercised through a real voice session. Existing role/tool authorizatio
 separately by application tests. The earlier interrupted attempt remains an unresolved reliability
 observation.
 
-Live voice starts only after explicit user action. Production needs an authorized deployment,
+Live voice starts only after explicit user action. Production requires an authorized deployment,
 `LIVE_VOICE_ENABLED=true`, provider access, and the updated privacy notice version. No DNS,
-production migration, production secret, or production service was changed.
+production migration, production secret, or production service was changed during local validation.
+
+## Production release observations
+
+The initial release `94ecc8c44a34707e162e187b88c3d7d48c9a0256` passed serialized Docker
+builds, nginx validation, backup validation, container health, public smoke checks, and served
+version verification. The real HTTPS browser test then exposed playback queue overflow after
+122 received audio frames. The one-second queue was too small for burst delivery; the follow-up
+uses a bounded five-second jitter buffer, with immediate playback and unchanged overflow shutdown.
+Regression tests verify a two-second burst plays in order while capture continues, and that an
+excessive backlog still stops output. Real-device listening remains unverified.
