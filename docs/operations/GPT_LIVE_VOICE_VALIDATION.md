@@ -66,3 +66,15 @@ version verification. The real HTTPS browser test then exposed playback queue ov
 uses a bounded five-second jitter buffer, with immediate playback and unchanged overflow shutdown.
 Regression tests verify a two-second burst plays in order while capture continues, and that an
 excessive backlog still stops output. Real-device listening remains unverified.
+
+Corrected production release: `aa29c2318e4b4e7f0169ca818d78b6b3d944e081`, enabled on
+2026-09-11. The public `/api/v1/version` returned that exact SHA, voice capabilities returned
+`enabled: true`, and the production HTTP/TLS smoke suite passed again. Two synthetic Italian
+browser sessions on `https://mauro.laggente.com` completed backend delegation and graceful stop:
+the first sent 1120 PCM frames and received 205 audio frames; the repeat sent 1064 and received
+192. Both had no captured page errors or voice alerts and no horizontal overflow at 390 px.
+Mute/resume/stop passed. The repeat explicitly waited for the saved test transcript after reload;
+visual inspection confirmed both the spoken transcript and the separate backend result about
+Mauro's approved territory. Test utterances identified themselves as technical release checks.
+These sessions used the production assistants, not a substituted business backend. This proves
+the tested public HTTPS path; it does not establish real-device acoustic quality or every tool.
