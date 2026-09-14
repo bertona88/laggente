@@ -32,3 +32,16 @@ and a playback indicator is driven by rendered samples.
 Physical speakers/headphones, the user's browser/output selection, echo cancellation, and subjective
 barge-in quality remain unverified. Receiving audio and even rendering nonzero PCM do not prove
 that a human heard it. The audio test gives the user a direct check of their browser output.
+
+## Production release
+
+Release `199180d0acf7ba4cb4167b8b4b88696b16c94227` was activated on 2026-09-14 and
+confirmed by the public version endpoint. Production smoke and the read-only operational audit
+passed: all containers healthy, loopback-only gateway, and verified backup checksums.
+Unauthenticated private chat history returns HTTP 401.
+
+A real-provider browser voice check on the public Mauro site completed a technical configuration
+question, received the backend result, rendered nonzero PCM (peak 0.306640625), stopped gracefully,
+and retained the conversation after reload. It reported no page errors, no horizontal overflow,
+and no duplicate transcript panel. Authenticated private chat switching was verified locally as
+described above; physical listening on the user's device remains unverified.
