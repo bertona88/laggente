@@ -1,3 +1,4 @@
+import { conversationTimeline, voiceMessage } from "@/lib/conversation-timeline";
 import { LiveVoice } from "@/components/live-voice";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
@@ -24,18 +25,18 @@ import { normalizeRevision } from "@/lib/revisions";
 import type { ConfigRevision, ConversationMessage, OutreachCampaign, ProfessionalEmail, StudioBootstrap, StudioSpaceState } from "@/lib/types";
 
 function StudioMessage({ message }: { message: ConversationMessage }) {
+  if (message.content_type === "voice_result") return <details className="voice-tool-result"><summary>Dettagli della richiesta</summary><MessageContent authorType={message.author_type} content={message.content} /></details>;
   if (message.author_type === "system") return <div className="studio-system-event">{message.content}</div>;
   const assistant = message.author_type === "studio_assistant";
   return (
     <motion.article
-      layout
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: message.pending ? 0.55 : 1, y: 0 }}
       className={`studio-message studio-message--${assistant ? "assistant" : "professional"}`}
     >
       {assistant && <span className="speaker-mark speaker-mark--studio" aria-hidden="true"><SparkIcon /></span>}
       <div>
-        <header><strong>{assistant && !message.content_type?.startsWith("voice_") ? "Studio LAGGENTE" : message.author_name}</strong><time dateTime={message.created_at}>{formatTime(message.created_at)}</time></header>
+        <header><strong>{assistant ? "Studio LAGGENTE" : message.content_type === "voice_transcript" ? "Tu" : message.author_name}</strong><time dateTime={message.created_at}>{formatTime(message.created_at)}</time></header>
         <MessageContent authorType={message.author_type} content={message.content} />
       </div>
     </motion.article>
@@ -75,6 +76,13 @@ export function suggestPublicSlug(value: string) {
 export function StudioWorkspace() {
   const { session, refreshSession } = useStudioSession();
   const reduceMotion = useReducedMotion();
+  const [selectedChat, setSelectedChat] = useState<string | null>(() => new URLSearchParams(window.location.search).get('chat'));
+  const chatRef = useRef(selectedChat);
+  const [chats, setChats] = useState<{id: string; title: string; last_message_at: string}[]>([]);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyMore, setHistoryMore] = useState(false);
+  const [liveMessages, setLiveMessages] = useState<ConversationMessage[]>([]);
+  const activeVoiceRef = useRef(false);
   const [messages, setMessages] = useState<ConversationMessage[]>([]);
   const [proposed, setProposed] = useState<ConfigRevision | null>(null);
   const [active, setActive] = useState<ConfigRevision | null>(null);
@@ -111,16 +119,23 @@ export function StudioWorkspace() {
       setError(null);
     }
     try {
-      const [spaceData, messageData] = await Promise.all([
+      const selected = chatRef.current;
+      const [spaceData, messageData, chatData] = await Promise.all([
         apiRequest<unknown>("/studio/space"),
-        apiRequest<unknown>("/studio/messages"),
+        apiRequest<unknown>(`/studio/messages${selected ? `?conversation_id=${encodeURIComponent(selected)}` : ""}`),
+        apiRequest<{items: typeof chats; has_more: boolean}>("/studio/chats"),
       ]);
+      if (selected !== chatRef.current) return;
+      setChats(chatData?.items || []); setHistoryMore(Boolean(chatData?.has_more));
+      if (!activeVoiceRef.current) setLiveMessages([]);
       const spaceObject = (spaceData || {}) as StudioBootstrap & Record<string, unknown>;
       const messageObject = (messageData || {}) as Record<string, unknown>;
       const loadedMessages = normalizeMessages(messageObject.messages || messageObject.items || messageData);
       const loadedSpace = (spaceObject.space && typeof spaceObject.space === "object" ? spaceObject.space : null) as StudioSpaceState | null;
       const loadedDraft = normalizeRevision(spaceObject.latest_draft || spaceObject.proposed_revision);
-      setMessages(loadedMessages.length ? loadedMessages : normalizeMessages(spaceObject.studio_messages));
+      setMessages(loadedMessages);
+      const loadedConversation = messageObject.conversation as {id?: string} | undefined;
+      if (loadedConversation?.id) { chatRef.current = loadedConversation.id; setSelectedChat(loadedConversation.id); window.history.replaceState(null, "", `/studio?chat=${encodeURIComponent(loadedConversation.id)}`); }
       setSpaceState(loadedSpace);
       setProposed(loadedDraft);
       setActive(normalizeRevision(spaceObject.active_revision));
@@ -140,7 +155,7 @@ export function StudioWorkspace() {
   }, []);
 
   useEffect(() => { void load(); }, [load]);
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth" }); }, [messages, email, campaign, sending, reduceMotion]);
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth" }); }, [messages, liveMessages, email, campaign, sending, reduceMotion]);
   useEffect(() => {
     const requestGate = mediaCaptureRequestGateRef.current;
     disposedRef.current = false;
@@ -172,7 +187,7 @@ export function StudioWorkspace() {
     setSending(true);
     setError(null);
     try {
-      const value = await apiRequest<unknown>("/studio/messages", {
+      const value = await apiRequest<unknown>(`/studio/messages${chatRef.current ? `?conversation_id=${encodeURIComponent(chatRef.current)}` : ""}`, {
         method: "POST",
         body: JSON.stringify({ content, client_message_id: clientMessageId }),
       });
@@ -193,6 +208,22 @@ export function StudioWorkspace() {
     } finally {
       setSending(false);
     }
+  }
+
+  async function selectChat(id: string) {
+    if (sending || voiceActive || dictationState !== 'idle' || input.trim()) return;
+    chatRef.current = id; setSelectedChat(id); setLiveMessages([]); setMessages([]); setHistoryOpen(false);
+    attemptTrackerRef.current.invalidate(); await load();
+  }
+  async function newChat() {
+    if (sending || voiceActive || dictationState !== 'idle' || input.trim()) return;
+    setLoading(true);
+    try { const chat = await apiRequest<{id: string}>('/studio/chats', {method: 'POST'}); await selectChat(chat.id); }
+    catch (reason) { setError(reason instanceof Error ? reason.message : 'Non riesco a creare la chat.'); setLoading(false); }
+  }
+  async function moreChats() {
+    try { const page = await apiRequest<{items: typeof chats; has_more: boolean}>(`/studio/chats?offset=${chats.length}`); setChats(current => [...current, ...page.items]); setHistoryMore(page.has_more); }
+    catch (reason) { setError(reason instanceof Error ? reason.message : 'Cronologia non disponibile.'); }
   }
 
   function onSubmit(event: FormEvent) {
@@ -378,13 +409,22 @@ export function StudioWorkspace() {
     <div className="studio-workspace">
       <section className="studio-conversation" aria-label="Conversazione con lo Studio LAGGENTE">
         <header className="workspace-header">
-          <div><p>Studio privato</p><h1>Costruiamo il tuo spazio</h1></div>
+          <div><p>Studio privato</p><h1>Il tuo Studio</h1></div>
           <div className="workspace-header__actions">
-            <span className="workspace-header__presence"><i /> Studio in ascolto</span>
+            <button type="button" onClick={() => void newChat()} disabled={loading || sending || voiceActive || dictationState !== 'idle' || Boolean(input.trim())}>Nuova chat</button>
+            <button type="button" onClick={() => setHistoryOpen(open => !open)} aria-expanded={historyOpen} aria-controls="studio-chat-history">Cronologia</button>
             <button type="button" className="workspace-panel-toggle" onClick={() => setInspectorOpen(true)} aria-expanded={inspectorOpen} aria-controls="studio-revision-panel">Bozza{proposed ? " pronta" : ""}</button>
           </div>
         </header>
-        {spaceState && shouldShowPublicAddressPicker(spaceState) && (
+        {historyOpen && <nav id="studio-chat-history" className="studio-chat-history" aria-label="Chat private dello Studio">
+          {input.trim() && <p>Invia o cancella il testo prima di cambiare chat.</p>}
+          {chats.map(chat => <button type="button" key={chat.id} aria-current={chat.id === selectedChat ? 'page' : undefined}
+            disabled={loading || sending || voiceActive || dictationState !== 'idle' || Boolean(input.trim())} onClick={() => void selectChat(chat.id)}>
+            <span>{chat.title || 'Chat dello Studio'}</span><time>{new Date(chat.last_message_at).toLocaleDateString('it-IT')}</time>
+          </button>)}
+          {historyMore && <button type="button" onClick={() => void moreChats()}>Carica altre chat</button>}
+        </nav>}
+        {!historyOpen && spaceState && shouldShowPublicAddressPicker(spaceState) && (
           <section className="studio-onboarding" aria-label="Preparazione dello spazio pubblico">
             <div className="studio-onboarding__copy">
               <p>Il tuo spazio sta prendendo forma</p>
@@ -421,7 +461,7 @@ export function StudioWorkspace() {
               <p>Partiamo da “Che lavoro fai?”, poi dal modo in cui ricevi le persone o da qualcosa che non vuoi delegare.</p>
             </div>
           )}
-          {messages.map((message) => <StudioMessage key={message.id} message={message} />)}
+          {conversationTimeline([...messages, ...liveMessages]).map((message) => <StudioMessage key={message.id} message={message} />)}
           {email && email.direction === "outbound" && (
             <ProfessionalEmailProposal
               email={email}
@@ -441,7 +481,7 @@ export function StudioWorkspace() {
           {sending && <div className="studio-thinking" role="status"><span /><span /><span /> Lo Studio sta interpretando…</div>}
           <div ref={bottomRef} />
         </div>
-        {shouldShowStudioStarterPrompts(messages) && !loading && (
+        {!historyOpen && shouldShowStudioStarterPrompts(messages) && !loading && (
           <div className="studio-starters" aria-label="Possibili inizi con Studio">
             {studioStarterPrompts.map((prompt) => (
               <button
@@ -455,11 +495,12 @@ export function StudioWorkspace() {
             ))}
           </div>
         )}
-        <LiveVoice endpoint={async () => "/studio/voice/sessions"}
-          disabled={sending || dictationState !== "idle"}
-          onActiveChange={setVoiceActive} onAvailabilityChange={setVoiceAvailable}
-          onSaved={() => { void load(true); }} />
         <form className="studio-composer" onSubmit={onSubmit}>
+        <LiveVoice key={selectedChat || 'studio'} endpoint={async () => `/studio/voice/sessions${chatRef.current ? `?conversation_id=${encodeURIComponent(chatRef.current)}` : ''}`}
+          disabled={loading || sending || dictationState !== "idle"}
+          onActiveChange={active => { activeVoiceRef.current = active; setVoiceActive(active); }} onAvailabilityChange={setVoiceAvailable}
+          onTranscript={event => setLiveMessages(current => [...current, voiceMessage(event, true)])}
+          onSaved={() => { void load(true); }} />
           <fieldset className="voice-composer-fieldset" disabled={voiceActive}>
           {composerError && <InlineError message={composerError} />}
           <textarea

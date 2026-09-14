@@ -151,3 +151,11 @@ Application code and persistent data coordinate identity, configuration, convers
 The product is not a conventional CRM, mandatory lead workflow, native WhatsApp bot, property portal, automated valuation authority, transaction platform, transaction-document orchestrator, multi-agent swarm, or infrastructure deployment per professional. Billing and purchase, document signing or checklists, uncontrolled invitation propagation, address-book import, external contact enrichment, bulk scraping, purchased contact lists, inferred cold-email permission, cross-professional network behavior, arbitrary tenant code, and customer-provided OpenAI keys are not part of this product now.
 
 The experience we want is simple to recognize: a professional creates a public identity and subdomain, teaches the Studio who they are by talking, activates a space that genuinely reflects them, receives people through its public assistant, and privately understands or joins the resulting conversations without being turned into a data-entry operator.
+
+## Studio conversation continuity
+
+The private Studio supports new chats and a paginated history. Text and live voice share one
+visible timeline in the selected chat. Starting a chat does not reset the professional's space,
+configuration, drafts, or sources. Old conversations remain accessible. Voice controls sit in the
+composer; spoken fragments update grouped messages, while tool details and approval controls stay
+inspectable in the same workspace. An explicit audio test and playback status assist diagnosis.

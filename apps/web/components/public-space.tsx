@@ -1,3 +1,4 @@
+import { conversationTimeline, voiceMessage } from "@/lib/conversation-timeline";
 import { LiveVoice } from "@/components/live-voice";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
@@ -78,6 +79,7 @@ function welcomeMessage(space: ProfessionalSpace): ConversationMessage {
 }
 
 export function MessageBubble({ message }: { message: ConversationMessage }) {
+  if (message.content_type === "voice_result") return <details className="voice-tool-result"><summary>Dettagli della richiesta</summary><MessageContent authorType={message.author_type} content={message.content} /></details>;
   const assistant = message.author_type === "public_assistant";
   const professional = message.author_type === "professional";
   if (message.author_type === "system") {
@@ -115,6 +117,8 @@ export function PublicSpace({ slug }: { slug: string }) {
   const [spaceLoading, setSpaceLoading] = useState(true);
   const [spaceError, setSpaceError] = useState<string | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const [liveMessages, setLiveMessages] = useState<ConversationMessage[]>([]);
+  const activeVoiceRef = useRef(false);
   const [messages, setMessages] = useState<ConversationMessage[]>([]);
   const [automaticRepliesEnabled, setAutomaticRepliesEnabled] = useState(true);
   const [professionalPresent, setProfessionalPresent] = useState(false);
@@ -237,7 +241,7 @@ export function PublicSpace({ slug }: { slug: string }) {
     );
   }, [conversationId, refreshConversation, sending, showInactiveConversation, uploading]);
 
-  const lastMessageId = messages.at(-1)?.id || null;
+  const lastMessageId = liveMessages.at(-1)?.id || messages.at(-1)?.id || null;
   useEffect(() => {
     if (shouldAutoScrollThread(
       previousLastMessageIdRef.current,
@@ -250,7 +254,7 @@ export function PublicSpace({ slug }: { slug: string }) {
     previousLastMessageIdRef.current = lastMessageId;
   }, [lastMessageId, sending, reduceMotion]);
 
-  const visibleMessages = messages.length ? messages : [welcomeMessage(space)];
+  const visibleMessages = conversationTimeline([...((messages.length || liveMessages.length) ? messages : [welcomeMessage(space)]), ...liveMessages]);
   const sharedDocuments = useMemo(
     () => messages.flatMap((message) => message.document ? [message.document] : []),
     [messages],
@@ -678,8 +682,9 @@ export function PublicSpace({ slug }: { slug: string }) {
           <LiveVoice endpoint={async () => `/public/conversations/${encodeURIComponent(await ensureConversation())}/voice/sessions`}
             disabled={sending || uploading || recording || requestingMicrophone || Boolean(pendingAudioAttachmentId || pendingImageAttachment || pendingDocument)}
             suspended={!automaticRepliesEnabled || deleting || Boolean(spaceError)}
-            onActiveChange={setVoiceActive} onAvailabilityChange={setVoiceAvailable}
-            onSaved={() => { const id = conversationIdRef.current; if (id) void refreshConversation(id).catch(() => undefined); }} />
+            onActiveChange={active => { activeVoiceRef.current = active; setVoiceActive(active); }}
+            onTranscript={event => setLiveMessages(current => [...current, voiceMessage(event, false)])} onAvailabilityChange={setVoiceAvailable}
+            onSaved={() => { const id = conversationIdRef.current; if (id) void refreshConversation(id).then(() => { if (!activeVoiceRef.current) setLiveMessages([]); }).catch(() => undefined); }} />
           <form className="chat-composer" onSubmit={onSubmit}>
             <fieldset className="voice-composer-fieldset" disabled={voiceActive}>
             <input

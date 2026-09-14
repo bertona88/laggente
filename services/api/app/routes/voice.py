@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Request, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
 from sqlalchemy.orm import Session
 
 from ..database import get_db
@@ -26,10 +26,10 @@ def capabilities(request: Request):
 
 
 @router.post("/studio/voice/sessions")
-async def studio_session(request: Request, db: Session = Depends(get_db),
+async def studio_session(request: Request, conversation_id: str | None = Query(default=None, max_length=36), db: Session = Depends(get_db),
                    context: ProfessionalContext = Depends(current_professional)):
     space = professional_space(db, context)
-    conversation = _studio_conversation(db, context.account_id, space.id)
+    conversation = _studio_conversation(db, context.account_id, space.id, conversation_id)
     return issue_ticket(request, db, conversation, context.member.id)
 
 

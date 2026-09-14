@@ -70,6 +70,24 @@ describe('live voice lifecycle', () => {
     expect(ws.readyState).toBe(3); expect(listener).toHaveBeenCalledWith({ type: 'stopped' });
   });
 
+  it('resumes audio again when microphone initialization suspends output', async () => {
+    class SuspendedContext extends Context {
+      static current: SuspendedContext;
+      state = 'suspended';
+      constructor() { super(); SuspendedContext.current = this; }
+      resume = vi.fn().mockImplementation(async () => { this.state = 'running'; });
+    }
+    vi.stubGlobal('AudioContext', SuspendedContext);
+    const { stream } = media();
+    vi.mocked(navigator.mediaDevices.getUserMedia).mockImplementation(async () => {
+      SuspendedContext.current.state = 'suspended'; return stream;
+    });
+    const voice = new LiveVoiceConnection(vi.fn());
+    await voice.start(async () => '/studio/voice/sessions');
+    expect(SuspendedContext.current.resume).toHaveBeenCalledTimes(2);
+    expect(SuspendedContext.current.state).toBe('running'); voice.close();
+  });
+
   it('releases a microphone resolved after cancellation without opening a session', async () => {
     let resolve!: (stream: MediaStream) => void;
     const pending = new Promise<MediaStream>(r => { resolve = r; });

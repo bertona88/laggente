@@ -249,3 +249,18 @@ def test_close_drains_pending_append_errors_until_final_usage(professional_clien
     with database.SessionLocal() as db:
         event = db.scalar(select(Event).where(Event.event_type == 'live_voice_closed'))
         assert event.payload['finalized'] is True
+
+
+def test_voice_ticket_binds_selected_private_chat(professional_client, live, app):
+    old = professional_client.get('/api/v1/studio/messages').json()['conversation']['id']
+    new = professional_client.post('/api/v1/studio/chats').json()['id']
+    value = ticket(professional_client, f'/api/v1/studio/voice/sessions?conversation_id={new}')
+    assert app.state.voice_registry.tickets[value].conversation_id == new
+    with professional_client.websocket_connect('/api/v1/voice/connect', headers={'origin':'http://testserver'}) as ws:
+        ws.send_text(value); wait_event(ws, 'ready'); ws.send_bytes(b'\0' * 960)
+        wait_event(ws, 'working'); wait_event(ws, 'working')
+        ws.send_json({'type':'stop'}); wait_event(ws, 'stopped')
+    fresh = professional_client.get(f'/api/v1/studio/messages?conversation_id={new}').json()['messages']
+    original = professional_client.get(f'/api/v1/studio/messages?conversation_id={old}').json()['messages']
+    assert any(m['voice_fragments'] for m in fresh)
+    assert not any(m['voice_fragments'] for m in original)

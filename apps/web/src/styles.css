@@ -1292,3 +1292,32 @@ html, body, #root { min-height: 100%; }
 .live-voice__captions summary { cursor: pointer; padding: 0.5rem 0; }
 .live-voice__captions p { max-height: 9rem; overflow-y: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
 .live-voice [role="alert"] { color: #963c36; font-size: 0.85rem; }
+
+/* One conversational surface; voice controls belong to its composer. */
+.studio-composer .live-voice { margin: 0 0 .6rem; padding: 0 0 .6rem; border: 0; border-bottom: 1px solid #d9dedb; border-radius: 0; background: transparent; }
+.live-voice { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.live-voice__controls { flex: 1 1 240px; }
+.live-voice__privacy { font-size: .75rem; opacity: .8; flex-basis: 100%; }
+.live-voice__privacy p { margin: .5rem 0; max-width: 65ch; }
+.live-voice__audio { font-size: .8rem; }
+.live-voice .live-voice__test { background: transparent; border: 0; }
+.live-voice > [role="status"], .live-voice > [role="alert"] { flex-basis: 100%; font-size: .8rem; }
+.voice-tool-result { margin: .6rem 0 1.1rem 3.5rem; font-size: .86rem; max-width: 65ch; }
+.voice-tool-result summary { cursor: pointer; color: #526658; padding: .35rem 0; }
+.workspace-header__actions { flex-wrap: wrap; }
+.workspace-header__actions > button { background: transparent; color: inherit; border: 1px solid #d1d8d1; border-radius: 6px; padding: .5rem .7rem; font: inherit; font-size: .8rem; cursor: pointer; min-height: 40px; }
+.workspace-header__actions > button:disabled { opacity: .45; cursor: default; }
+.studio-chat-history { flex-shrink: 0; max-height: 35vh; overflow: auto; padding: .5rem 1.5rem; border-bottom: 1px solid #d1d8d1; background: #f5f5ee; }
+.studio-chat-history button { display: flex; justify-content: space-between; gap: 1rem; width: 100%; padding: .7rem; border: 0; background: transparent; text-align: left; font: inherit; color: inherit; cursor: pointer; }
+.studio-chat-history button[aria-current] { background: #e4e9df; }
+.studio-chat-history button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.studio-chat-history time { flex-shrink: 0; font-size: .75rem; opacity: .7; }
+.studio-chat-history button:disabled { opacity: .5; }
+@media (max-width: 700px) {
+  .workspace-header { flex-wrap: wrap; gap: .65rem; }
+  .workspace-header__actions { gap: .4rem; }
+  .voice-tool-result { margin-left: 0; }
+}
+.studio-conversation { display: flex; flex-direction: column; }
+.studio-conversation > .workspace-header, .studio-onboarding, .studio-starters, .studio-composer { flex-shrink: 0; }
+.studio-thread { flex: 1 1 0; }

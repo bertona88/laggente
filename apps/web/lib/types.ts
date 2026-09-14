@@ -89,7 +89,11 @@ export interface RelationshipGraph {
   bounds: Record<string, number>;
 }
 
+export interface VoiceFragment { event_id: string; delta: string; start_ms: number; end_ms: number }
+
 export interface ConversationMessage {
+  voice_session_id?: string;
+  voice_fragments?: VoiceFragment[];
   id: string;
   author_type: AuthorType;
   author_name: string;

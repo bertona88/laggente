@@ -12,7 +12,7 @@ const italianTime = new Intl.DateTimeFormat("it-IT", {
   timeZone: "Europe/Rome",
 });
 
-function apiDate(value: string): Date {
+export function apiDate(value: string): Date {
   // PostgreSQL returns timezone-aware values; SQLite used by local acceptance can
   // round-trip the same UTC columns without an explicit offset.
   const normalized = /(?:z|[+-]\d{2}:\d{2})$/i.test(value) ? value : `${value}Z`;

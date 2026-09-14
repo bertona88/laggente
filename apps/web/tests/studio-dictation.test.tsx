@@ -31,6 +31,7 @@ describe("Studio dictation", () => {
   const stopTrack = vi.fn();
 
   beforeEach(() => {
+    window.history.replaceState(null, "", "/studio");
     stopTrack.mockReset();
     Object.defineProperty(navigator, "mediaDevices", {
       configurable: true,
@@ -75,7 +76,7 @@ describe("Studio dictation", () => {
           latest_draft: null,
         }), { status: 200, headers: { "content-type": "application/json" } });
       }
-      if (path.endsWith("/studio/messages")) {
+      if (path.split("?")[0].endsWith("/studio/messages")) {
         return new Response(JSON.stringify({
           conversation: { id: "studio-1" },
           messages: [],
@@ -89,6 +90,7 @@ describe("Studio dictation", () => {
           transcript: "Lavoro soprattutto a Roma Nord.",
         }), { status: 200, headers: { "content-type": "application/json" } });
       }
+      if (path.endsWith("/studio/chats")) return new Response(JSON.stringify({items: [], has_more: false}), {status: 200});
       throw new Error("Unexpected request: " + path);
     });
 
@@ -112,7 +114,7 @@ describe("Studio dictation", () => {
     expect(requests.some(({ path }) => path.endsWith("/studio/dictation"))).toBe(true);
     expect(
       requests.some(({ path, init }) => (
-        path.endsWith("/studio/messages") && init?.method === "POST"
+        path.split("?")[0].endsWith("/studio/messages") && init?.method === "POST"
       )),
     ).toBe(false);
   });
@@ -134,12 +136,13 @@ describe("Studio dictation", () => {
           },
         }), { status: 200, headers: { "content-type": "application/json" } });
       }
-      if (path.endsWith("/studio/messages")) {
+      if (path.split("?")[0].endsWith("/studio/messages")) {
         return new Response(JSON.stringify({ messages: [] }), {
           status: 200,
           headers: { "content-type": "application/json" },
         });
       }
+      if (path.endsWith("/studio/chats")) return new Response(JSON.stringify({items: [], has_more: false}), {status: 200});
       throw new Error("Unexpected request: " + path);
     });
 

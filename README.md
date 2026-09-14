@@ -74,6 +74,13 @@ conversations also have a document room: the visitor and professional can each s
 two assistants can inspect it only inside the authorization boundary that owns it. This is shared
 conversation context, not transaction-document orchestration or a CRM workflow.
 
+## Private Studio chats
+
+“Nuova chat” opens a separate private conversation; “Cronologia” reopens previous chats. Space
+configuration, drafts, documents, and authorized capabilities stay shared within the tenant.
+The selected chat is retained in the Studio URL. Text and voice use that same chat; original
+voice fragments are grouped for display and backend results remain available under details.
+
 ## Live voice
 
 An opt-in GPT-Live mode lets professionals and visitors talk directly with their existing

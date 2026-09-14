@@ -185,6 +185,11 @@ def serialize_messages(
         if document.message_id:
             documents_by_message.setdefault(document.message_id, document)
 
+    voice_events = db.scalars(select(Event).where(
+        Event.account_id == account_id, Event.conversation_id == conversation_id,
+        Event.event_type == "live_voice_transcript",
+    )).all() if any(m.content_type == "voice_transcript" for m in scoped_messages) else []
+    voice_by_message = {e.payload.get("message_id"): e.payload for e in voice_events}
     result: list[MessageOut] = []
     for message in scoped_messages:
         attachment = by_message.get(message.id)
@@ -208,7 +213,9 @@ def serialize_messages(
             )
         result.append(
             MessageOut.model_validate(message).model_copy(
-                update={"attachment": projection, "document": document_projection}
+                update={"attachment": projection, "document": document_projection,
+                        "voice_session_id": voice_by_message.get(message.id, {}).get("session_id"),
+                        "voice_fragments": voice_by_message.get(message.id, {}).get("fragments")}
             )
         )
     return result

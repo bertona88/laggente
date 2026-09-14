@@ -410,3 +410,25 @@ The hostname is a routing input, never the security boundary.
 ## Design consequence
 
 The architecture should make the product feel simple: two conversations around one living space. Internal services, schemas, and controls exist to preserve that simplicity, not to expose a CRM underneath it.
+
+## Private chat selection and unified voice timeline
+
+Authenticated `/studio/chats` GET/POST endpoints list and create private threads. A selected
+`conversation_id` on `/studio/messages` and `/studio/voice/sessions` is validated against account,
+space, and `kind=studio`; omission retains the original oldest Studio conversation for backwards
+compatibility. Listing is paginated, and creation is limited to 20/member/hour. New chats leave
+configuration, drafts, documents, and other conversations intact. The UI stores selection in the
+URL and blocks switching while a request, recording, or unsent text is active.
+
+Message projections include only same-account, same-conversation transcript event fragments.
+The frontend deduplicates live/persisted fragments by session and event ID and groups adjacent
+same-speaker fragments separated by less than two seconds, or an unfinished sentence with
+a gap under fifteen seconds. Tool details do not split spoken fragments. This is a presentation heuristic,
+not an authoritative speech-turn boundary. Original events and message batches remain immutable.
+Tool results stay inspectable as expandable details; they are not a second spoken response.
+The voice component supplies transport controls and events, not another transcript panel.
+
+Audio is resumed again after microphone/worklet initialization. Worklet playback state reflects
+nonzero rendered samples, not proof that a physical speaker was audible. A user-triggered local
+“Prova audio” tone tests browser output without recording or contacting a model. Physical-device
+hearing, selected output hardware, echo, and mobile interruptions still require device acceptance.

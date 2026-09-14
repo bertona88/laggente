@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { MicIcon } from '@/components/icons';
 import { apiRequest } from '@/lib/api';
-import { LiveVoiceConnection } from '@/lib/live-voice';
+import { LiveVoiceConnection, playVoiceTestTone, type VoiceEvent } from '@/lib/live-voice';
 
 interface Props {
   endpoint: () => Promise<string>;
@@ -10,6 +10,7 @@ interface Props {
   onActiveChange: (active: boolean) => void;
   onAvailabilityChange: (available: boolean) => void;
   onSaved: () => void;
+  onTranscript?: (event: Extract<VoiceEvent, {type: 'transcript'}>) => void;
 }
 
 export function LiveVoice(props: Props) {
@@ -18,7 +19,8 @@ export function LiveVoice(props: Props) {
   const [muted, setMuted] = useState(false);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState('');
-  const [captions, setCaptions] = useState({ user: '', assistant: '' });
+  const [playing, setPlaying] = useState(false);
+  const [audioHint, setAudioHint] = useState('');
   const connection = useRef<LiveVoiceConnection | null>(null);
   const latest = useRef(props);
   useEffect(() => { latest.current = props; });
@@ -43,7 +45,7 @@ export function LiveVoice(props: Props) {
 
   function start() {
     if (connection.current || props.disabled || props.suspended) return;
-    setState('connecting'); setError(''); setMuted(false); setCaptions({ user: '', assistant: '' });
+    setState('connecting'); setError(''); setMuted(false); setPlaying(false);
     latest.current.onActiveChange(true);
     const voice = new LiveVoiceConnection(event => {
       if (connection.current !== voice) return;
@@ -53,12 +55,11 @@ export function LiveVoice(props: Props) {
         setWorking(event.active);
         if (!event.active) latest.current.onSaved();
       }
-      if (event.type === 'transcript') setCaptions(current => ({
-        ...current, [event.speaker]: (current[event.speaker] + event.delta).slice(-20000),
-      }));
+      if (event.type === 'transcript') latest.current.onTranscript?.(event);
+      if (event.type === 'playback') setPlaying(event.active);
       if (event.type === 'stopped') {
         connection.current = null;
-        setState('idle'); setWorking(false);
+        setState('idle'); setWorking(false); setPlaying(false);
         latest.current.onActiveChange(false);
         latest.current.onSaved();
       }
@@ -83,14 +84,12 @@ export function LiveVoice(props: Props) {
         }}>Termina voce</button>
       </>}
     </div>
-    <p className="live-voice__notice">Parli con un’AI. Durante la sessione il microfono resta aperto: le parole vengono inviate subito e trascritte nella conversazione. L’audio non viene conservato da LAGGENTE.</p>
-    {working && <p role="status">L’assistente sta elaborando la tua richiesta. Puoi continuare a parlare.</p>}
-    {(captions.user || captions.assistant) && <details className="live-voice__captions">
-      <summary>Trascrizione vocale — può contenere errori</summary>
-      <p><strong>Tu</strong><br />{captions.user}</p>
-      <p><strong>Assistente AI</strong><br />{captions.assistant}</p>
-      <small>Il testo generato può includere parole che non hai sentito per un’interruzione.</small>
-    </details>}
+    {!active && <button type="button" className="live-voice__test" onClick={() => {
+      setAudioHint(''); void playVoiceTestTone().then(() => setAudioHint('Se non hai sentito il suono, controlla volume, uscita audio e silenziamento della scheda.')).catch(reason => setAudioHint(reason instanceof Error ? reason.message : 'Audio non disponibile.'));
+    }}>Prova audio</button>}
+    {active && <span className="live-voice__audio" role="status">{playing ? 'Audio in riproduzione' : working ? 'Elaboro la richiesta…' : 'Audio pronto'}</span>}
+    <details className="live-voice__privacy"><summary>Informazioni sulla voce AI</summary><p>Il microfono resta aperto durante la sessione. Le parole vengono inviate subito e salvate in questa chat; le trascrizioni possono contenere errori. LAGGENTE non conserva l’audio.</p></details>
+    {audioHint && <p role="status">{audioHint}</p>}
     {error && <p role="alert">{error}</p>}
   </section>;
 }

@@ -11,6 +11,8 @@ class LiveVoiceAudio extends AudioWorkletProcessor {
     this.readOffset = 0;
     this.writeOffset = 0;
     this.queued = 0;
+    this.playing = false;
+    this.playbackTail = 0;
     this.running = false;
     this.port.onmessage = ({ data }) => {
       if (data.type === 'start') this.running = true;
@@ -39,6 +41,7 @@ class LiveVoiceAudio extends AudioWorkletProcessor {
     const input = inputs[0]?.[0];
     const output = outputs[0]?.[0];
     if (!output) return true;
+    let audible = false;
     for (let i = 0; i < output.length; i++) {
       output[i] = 0;
       if (!this.running) continue;
@@ -52,9 +55,16 @@ class LiveVoiceAudio extends AudioWorkletProcessor {
       }
       if (this.queued) {
         output[i] = this.output[this.readOffset];
+        if (Math.abs(output[i]) > 0.0001) audible = true;
         this.readOffset = (this.readOffset + 1) % this.output.length;
         this.queued--;
       }
+    }
+    this.playbackTail = !this.running ? 0 : audible ? 7200 : Math.max(0, this.playbackTail - output.length);
+    audible = this.playbackTail > 0;
+    if (audible !== this.playing) {
+      this.playing = audible;
+      this.port.postMessage({ type: 'playback', active: audible });
     }
     return true;
   }

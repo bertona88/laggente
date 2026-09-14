@@ -3,8 +3,9 @@ import { apiRequest } from '@/lib/api';
 export type VoiceEvent =
   | { type: 'ready' | 'stopped' }
   | { type: 'working'; active: boolean }
+  | { type: 'playback'; active: boolean }
   | { type: 'error'; message: string }
-  | { type: 'transcript'; speaker: 'user' | 'assistant'; delta: string; start_ms: number; end_ms: number };
+  | { type: 'transcript'; speaker: 'user' | 'assistant'; event_id: string; session_id: string; created_at: string; delta: string; start_ms: number; end_ms: number };
 
 export class LiveVoiceConnection {
   private socket: WebSocket | null = null;
@@ -49,7 +50,11 @@ export class LiveVoiceConnection {
       this.source = this.context.createMediaStreamSource(stream);
       this.source.connect(this.processor);
       this.processor.connect(this.context.destination);
+      await this.context.resume();
+      if (this.ended) return;
+      if (this.context.state === 'suspended') throw new Error('Il browser ha bloccato l’audio. Premi Prova audio e riavvia la voce.');
       this.processor.port.onmessage = ({ data }) => {
+        if (data.type === 'playback') this.onEvent({ type: 'playback', active: data.active });
         if (data.type === 'audio' && this.ready && !this.stopping && this.socket?.readyState === WebSocket.OPEN) {
           if (this.socket.bufferedAmount > 48000) { this.fail('La rete è troppo lenta per la voce. Riprova.'); return; }
           this.socket.send(data.buffer);
@@ -131,4 +136,19 @@ export class LiveVoiceConnection {
     this.onEvent({ type: 'error', message });
     this.close();
   }
+}
+
+export async function playVoiceTestTone() {
+  const context = new AudioContext();
+  try {
+    await context.resume();
+    if (context.state !== 'running') throw new Error('Il browser blocca l’audio. Controlla i permessi del sito.');
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    gain.gain.setValueAtTime(0.08, context.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + 0.4);
+    oscillator.frequency.value = 660;
+    oscillator.connect(gain); gain.connect(context.destination);
+    await new Promise<void>(resolve => { oscillator.onended = () => resolve(); oscillator.start(); oscillator.stop(context.currentTime + 0.4); });
+  } finally { await context.close(); }
 }

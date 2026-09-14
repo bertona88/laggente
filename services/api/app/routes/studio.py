@@ -93,24 +93,51 @@ def _require_text_only_message(body: MessageCreate) -> None:
         )
 
 
-def _studio_conversation(db: Session, account_id: str, space_id: str) -> Conversation:
-    conversation = db.scalar(
-        select(Conversation).where(
-            Conversation.account_id == account_id,
-            Conversation.space_id == space_id,
-            Conversation.kind == "studio",
-        )
+def _studio_conversation(db: Session, account_id: str, space_id: str, conversation_id: str | None = None) -> Conversation:
+    query = select(Conversation).where(
+        Conversation.account_id == account_id, Conversation.space_id == space_id,
+        Conversation.kind == "studio",
     )
+    if conversation_id:
+        query = query.where(Conversation.id == conversation_id)
+    conversation = db.scalar(query.order_by(Conversation.created_at, Conversation.id).limit(1))
+    if not conversation and conversation_id:
+        raise HTTPException(404, "Chat dello Studio non trovata")
     if not conversation:
-        conversation = Conversation(
-            account_id=account_id,
-            space_id=space_id,
-            kind="studio",
-            title="Il tuo Studio",
-        )
+        conversation = Conversation(account_id=account_id, space_id=space_id, kind="studio", title="Il tuo Studio")
         db.add(conversation)
         db.commit()
     return conversation
+
+
+@router.get("/chats")
+def list_studio_chats(
+    limit: int = Query(default=50, ge=1, le=100), offset: int = Query(default=0, ge=0),
+    db: Session = Depends(get_db), context: ProfessionalContext = Depends(current_professional),
+):
+    space = professional_space(db, context)
+    _studio_conversation(db, context.account_id, space.id)
+    query = select(Conversation).where(Conversation.account_id == context.account_id,
+        Conversation.space_id == space.id, Conversation.kind == "studio")
+    items = db.scalars(query.order_by(Conversation.last_message_at.desc(), Conversation.id).offset(offset).limit(limit + 1)).all()
+    return {"items": [ConversationOut.model_validate(item) for item in items[:limit]],
+            "has_more": len(items) > limit}
+
+
+@router.post("/chats", response_model=ConversationOut, status_code=201)
+def create_studio_chat(request: Request, db: Session = Depends(get_db),
+                       context: ProfessionalContext = Depends(current_professional)):
+    request.app.state.rate_limiter.check(f"studio-chat:{context.member.id}", limit=20, window_seconds=3600)
+    space = professional_space(db, context)
+    conversation = Conversation(account_id=context.account_id, space_id=space.id,
+                                kind="studio", title="Nuova chat")
+    db.add(conversation)
+    db.flush()
+    db.add(Message(account_id=context.account_id, conversation_id=conversation.id,
+        author_type="studio_assistant", author_label="Studio LAGGENTE",
+        content="Su cosa lavoriamo in questa chat? Configurazione e documenti del tuo spazio restano disponibili."))
+    db.commit()
+    return ConversationOut.model_validate(conversation)
 
 
 def _latest_draft(db: Session, account_id: str, space_id: str) -> ConfigRevision | None:
@@ -466,12 +493,13 @@ def activate_revision(
 
 @router.get("/messages", response_model=ConversationDetail)
 def get_studio_messages(
+    conversation_id: str | None = Query(default=None, max_length=36),
     db: Session = Depends(get_db),
     settings: Settings = Depends(runtime_settings),
     context: ProfessionalContext = Depends(current_professional),
 ) -> ConversationDetail:
     space = professional_space(db, context)
-    conversation = _studio_conversation(db, context.account_id, space.id)
+    conversation = _studio_conversation(db, context.account_id, space.id, conversation_id)
     messages = list_messages(db, account_id=context.account_id, conversation_id=conversation.id)
     latest_email = _latest_email(db, context.account_id, space.id)
     latest_outreach = latest_campaign(
@@ -646,6 +674,7 @@ async def transcribe_studio_dictation(
 async def post_studio_message(
     body: MessageCreate,
     request: Request,
+    conversation_id: str | None = Query(default=None, max_length=36),
     db: Session = Depends(get_db),
     settings: Settings = Depends(runtime_settings),
     context: ProfessionalContext = Depends(current_professional),
@@ -655,7 +684,7 @@ async def post_studio_message(
         f"studio-message:{context.member.id}", limit=30, window_seconds=60
     )
     space = professional_space(db, context)
-    conversation = _studio_conversation(db, context.account_id, space.id)
+    conversation = _studio_conversation(db, context.account_id, space.id, conversation_id)
     account_id = context.account_id
     member_id = context.member.id
     space_id = space.id
@@ -756,6 +785,8 @@ async def post_studio_message(
                 client_message_id=body.client_message_id,
                 assistant_reply_state="pending",
             )
+            if conversation.title == "Nuova chat":
+                conversation.title = body.content[:100]
             db.add(professional_message)
             conversation.last_message_at = utcnow()
             db.commit()

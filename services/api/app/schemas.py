@@ -203,6 +203,8 @@ class MessageDocumentOut(BaseModel):
 
 
 class MessageOut(APIModel):
+    voice_session_id: str | None = None
+    voice_fragments: list[dict] | None = None
     id: str
     account_id: str
     conversation_id: str

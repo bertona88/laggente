@@ -226,6 +226,9 @@ class TranscriptStore:
                                  "session_id": self.session_id, "message_id": message.id,
                                  "fragments": parts, "playback_confirmed": False,
                              }))
+            if conversation.title == "Nuova chat":
+                spoken = "".join(e["delta"] for e in fragments if e["type"] == "session.input_transcript.delta").strip()
+                if spoken: conversation.title = spoken[:100]
             conversation.last_message_at = utcnow()
             db.commit()
             del self.pending[:len(fragments)]
@@ -337,6 +340,8 @@ async def run_voice(websocket: WebSocket, ticket: VoiceTicket):
             elif kind in {"session.input_transcript.delta", "session.output_transcript.delta"}:
                 transcripts.append(event)
                 await websocket.send_json({"type": "transcript", "speaker": "user" if "input" in kind else "assistant",
+                                           "event_id": event["event_id"], "session_id": transcripts.session_id,
+                                           "created_at": (transcripts.started_at + timedelta(milliseconds=event["start_ms"])).isoformat(),
                                            "delta": event["delta"], "start_ms": event["start_ms"], "end_ms": event["end_ms"]})
             elif kind == "session.output_audio.delta" and not closing.is_set():
                 await websocket.send_bytes(base64.b64decode(event["delta"], validate=True))
