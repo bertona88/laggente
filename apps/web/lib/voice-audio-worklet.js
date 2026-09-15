@@ -14,6 +14,8 @@ class LiveVoiceAudio extends AudioWorkletProcessor {
     this.playing = false;
     this.playbackTail = 0;
     this.running = false;
+    this.levelSamples = 0;
+    this.levelEnergy = 0;
     this.port.onmessage = ({ data }) => {
       if (data.type === 'start') this.running = true;
       if (data.type === 'stop') {
@@ -58,6 +60,16 @@ class LiveVoiceAudio extends AudioWorkletProcessor {
         if (Math.abs(output[i]) > 0.0001) audible = true;
         this.readOffset = (this.readOffset + 1) % this.output.length;
         this.queued--;
+      }
+    }
+    for (let i = 0; i < output.length; i++) {
+      const capture = this.running ? input?.[i] || 0 : 0;
+      this.levelEnergy += Math.max(capture * capture, output[i] * output[i]);
+      this.levelSamples++;
+      if (this.levelSamples >= 1200) {
+        this.port.postMessage({ type: 'level', value: Math.min(1, Math.sqrt(this.levelEnergy / this.levelSamples) * 5) });
+        this.levelEnergy = 0;
+        this.levelSamples = 0;
       }
     }
     this.playbackTail = !this.running ? 0 : audible ? 7200 : Math.max(0, this.playbackTail - output.length);

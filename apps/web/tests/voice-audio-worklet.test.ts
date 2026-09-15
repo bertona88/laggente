@@ -34,6 +34,18 @@ describe('voice playback jitter buffer', () => {
     expect(events.filter(event => event.type === 'audio')).toHaveLength(100);
     expect(events.some(event => event.type === 'overflow')).toBe(false);
   });
+  it('reports real microphone and playback levels, then returns to silence', () => {
+    const { processor, events } = worklet();
+    processor.process([[new Float32Array(1200).fill(0.1)]], [[new Float32Array(1200)]]);
+    expect(events.find(event => event.type === 'level')).toMatchObject({ value: expect.closeTo(0.5) });
+    events.length = 0;
+    processor.port.onmessage({ data: { type: 'audio', buffer: new Int16Array(1200).fill(3277).buffer } });
+    processor.process([], [[new Float32Array(1200)]]);
+    expect(events.find(event => event.type === 'level')).toMatchObject({ value: expect.closeTo(0.5, 2) });
+    events.length = 0;
+    processor.process([], [[new Float32Array(1200)]]);
+    expect(events.find(event => event.type === 'level')).toMatchObject({ value: 0 });
+  });
   it('rejects sustained backlog and stops output immediately', () => {
     const { processor, events } = worklet();
     processor.port.onmessage({ data: { type: 'audio', buffer: new Int16Array(144000).buffer } });

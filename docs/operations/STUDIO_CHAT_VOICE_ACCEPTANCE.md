@@ -45,3 +45,15 @@ question, received the backend result, rendered nonzero PCM (peak 0.306640625), 
 and retained the conversation after reload. It reported no page errors, no horizontal overflow,
 and no duplicate transcript panel. Authenticated private chat switching was verified locally as
 described above; physical listening on the user's device remains unverified.
+
+## Focused voice interface — 2026-09-15
+
+Following user confirmation that voice works, the audio test and expandable voice information
+were removed. Starting voice now opens an opaque, full-screen native dialog with AI identity,
+one termination button, and an indicator driven by measured microphone/playback RMS. The native
+modal makes the underlying chat inert; ending restores it. No voice model or voice selection changed.
+
+Build, lint, and the 94 existing web tests passed; an additional worklet test checks microphone,
+playback, and silence levels. Desktop/mobile Chrome browser QA with synthetic audio and a mocked
+transport verified one control, changing audio-driven scale, no page errors, and restored chat.
+Screenshots were visually inspected at 1280×900 and 390×844.

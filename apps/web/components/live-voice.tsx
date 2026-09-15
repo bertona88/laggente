@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { MicIcon } from '@/components/icons';
 import { apiRequest } from '@/lib/api';
-import { LiveVoiceConnection, playVoiceTestTone, type VoiceEvent } from '@/lib/live-voice';
+import { LiveVoiceConnection, type VoiceEvent } from '@/lib/live-voice';
 
 interface Props {
   endpoint: () => Promise<string>;
@@ -16,11 +17,11 @@ interface Props {
 export function LiveVoice(props: Props) {
   const [available, setAvailable] = useState(false);
   const [state, setState] = useState<'idle' | 'connecting' | 'live' | 'stopping'>('idle');
-  const [muted, setMuted] = useState(false);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState('');
   const [playing, setPlaying] = useState(false);
-  const [audioHint, setAudioHint] = useState('');
+  const [level, setLevel] = useState(0);
+  const dialog = useRef<HTMLDialogElement>(null);
   const connection = useRef<LiveVoiceConnection | null>(null);
   const latest = useRef(props);
   useEffect(() => { latest.current = props; });
@@ -45,7 +46,7 @@ export function LiveVoice(props: Props) {
 
   function start() {
     if (connection.current || props.disabled || props.suspended) return;
-    setState('connecting'); setError(''); setMuted(false); setPlaying(false);
+    setState('connecting'); setError(''); setLevel(0); setPlaying(false);
     latest.current.onActiveChange(true);
     const voice = new LiveVoiceConnection(event => {
       if (connection.current !== voice) return;
@@ -56,6 +57,7 @@ export function LiveVoice(props: Props) {
         if (!event.active) latest.current.onSaved();
       }
       if (event.type === 'transcript') latest.current.onTranscript?.(event);
+      if (event.type === 'level') setLevel(event.value);
       if (event.type === 'playback') setPlaying(event.active);
       if (event.type === 'stopped') {
         connection.current = null;
@@ -68,28 +70,28 @@ export function LiveVoice(props: Props) {
     void voice.start(() => latest.current.endpoint());
   }
 
-  if (!available) return null;
   const active = state !== 'idle';
-  return <section className={`live-voice${active ? ' is-active' : ''}`} aria-label="Conversazione vocale con l’AI">
+  useEffect(() => {
+    if (active) dialog.current?.showModal();
+  }, [active]);
+  function stop() {
+    setState('stopping'); connection.current?.stop();
+  }
+  if (!available) return null;
+  return <section className="live-voice" aria-label="Conversazione vocale con l’AI">
     <div className="live-voice__controls">
-      {!active ? <button type="button" onClick={start} disabled={props.disabled || props.suspended}>
+      <button type="button" onClick={start} disabled={active || props.disabled || props.suspended}>
         <MicIcon /> Parla con l’assistente
-      </button> : <>
-        <span role="status">{state === 'connecting' ? 'Collego il microfono…' : state === 'stopping' ? 'Termino la voce…' : muted ? 'Microfono spento' : 'Ti ascolto, anche mentre parlo'}</span>
-        {state === 'live' && <button type="button" aria-pressed={muted} onClick={() => {
-          connection.current?.mute(!muted); setMuted(!muted);
-        }}>{muted ? 'Riattiva microfono' : 'Spegni microfono'}</button>}
-        <button type="button" disabled={state === 'stopping'} onClick={() => {
-          setState('stopping'); connection.current?.stop();
-        }}>Termina voce</button>
-      </>}
+      </button>
     </div>
-    {!active && <button type="button" className="live-voice__test" onClick={() => {
-      setAudioHint(''); void playVoiceTestTone().then(() => setAudioHint('Se non hai sentito il suono, controlla volume, uscita audio e silenziamento della scheda.')).catch(reason => setAudioHint(reason instanceof Error ? reason.message : 'Audio non disponibile.'));
-    }}>Prova audio</button>}
-    {active && <span className="live-voice__audio" role="status">{playing ? 'Audio in riproduzione' : working ? 'Elaboro la richiesta…' : 'Audio pronto'}</span>}
-    <details className="live-voice__privacy"><summary>Informazioni sulla voce AI</summary><p>Il microfono resta aperto durante la sessione. Le parole vengono inviate subito e salvate in questa chat; le trascrizioni possono contenere errori. LAGGENTE non conserva l’audio.</p></details>
-    {audioHint && <p role="status">{audioHint}</p>}
+    {active && createPortal(<dialog ref={dialog} className="voice-session" aria-label="Conversazione vocale con l’AI" onCancel={event => { event.preventDefault(); stop(); }}>
+      <p className="voice-session__identity">LAGGENTE · Voce AI</p>
+      <div className="voice-session__center">
+        <div className="voice-session__orb" aria-hidden="true" style={{ transform: `scale(${1 + level * .55})`, borderRadius: `${50 - level * 10}% ${50 + level * 10}% 50% 50%`, opacity: .65 + level * .35 }} />
+        <p role="status">{state === 'connecting' ? 'Mi collego…' : state === 'stopping' ? 'Termino la voce…' : playing ? 'Sto parlando' : working ? 'Ci sto lavorando…' : 'Ti ascolto'}</p>
+      </div>
+      <button className="voice-session__end" type="button" autoFocus disabled={state === 'stopping'} onClick={stop}>Termina voce</button>
+    </dialog>, document.body)}
     {error && <p role="alert">{error}</p>}
   </section>;
 }

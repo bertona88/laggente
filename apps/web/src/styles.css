@@ -1280,27 +1280,18 @@ html, body, #root { min-height: 100%; }
 
 .voice-composer-fieldset { display: contents; }
 .live-voice { margin: 0.65rem 0; padding: 0.85rem 1rem; border: 1px solid var(--border, #d9dedb); border-radius: 14px; background: var(--surface, #fafbf9); color: inherit; }
-.live-voice.is-active { border-color: #668577; }
 .live-voice__controls { display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem; }
 .live-voice__controls > span { flex: 1 1 180px; font-size: 0.9rem; }
 .live-voice button { display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem; min-height: 44px; padding: 0.55rem 0.85rem; border: 1px solid #cad5ce; border-radius: 24px; background: #edf3ee; color: #244b39; font: inherit; font-size: 0.86rem; cursor: pointer; }
 .live-voice button svg { width: 18px; height: 18px; }
 .live-voice button:disabled { opacity: 0.5; cursor: default; }
 .live-voice button:focus-visible, .live-voice summary:focus-visible { outline: 2px solid #527561; outline-offset: 3px; }
-.live-voice__notice { margin: 0.6rem 0 0; font-size: 0.75rem; line-height: 1.5; opacity: 0.78; }
-.live-voice__captions { margin-top: 0.65rem; font-size: 0.85rem; }
-.live-voice__captions summary { cursor: pointer; padding: 0.5rem 0; }
-.live-voice__captions p { max-height: 9rem; overflow-y: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
 .live-voice [role="alert"] { color: #963c36; font-size: 0.85rem; }
 
 /* One conversational surface; voice controls belong to its composer. */
 .studio-composer .live-voice { margin: 0 0 .6rem; padding: 0 0 .6rem; border: 0; border-bottom: 1px solid #d9dedb; border-radius: 0; background: transparent; }
 .live-voice { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
 .live-voice__controls { flex: 1 1 240px; }
-.live-voice__privacy { font-size: .75rem; opacity: .8; flex-basis: 100%; }
-.live-voice__privacy p { margin: .5rem 0; max-width: 65ch; }
-.live-voice__audio { font-size: .8rem; }
-.live-voice .live-voice__test { background: transparent; border: 0; }
 .live-voice > [role="status"], .live-voice > [role="alert"] { flex-basis: 100%; font-size: .8rem; }
 .voice-tool-result { margin: .6rem 0 1.1rem 3.5rem; font-size: .86rem; max-width: 65ch; }
 .voice-tool-result summary { cursor: pointer; color: #526658; padding: .35rem 0; }
@@ -1321,3 +1312,16 @@ html, body, #root { min-height: 100%; }
 .studio-conversation { display: flex; flex-direction: column; }
 .studio-conversation > .workspace-header, .studio-onboarding, .studio-starters, .studio-composer { flex-shrink: 0; }
 .studio-thread { flex: 1 1 0; }
+
+/* Voice takes the entire workspace; the native modal keeps background controls inert. */
+.voice-session[open] { position: fixed; inset: 0; width: 100%; max-width: none; height: 100dvh; max-height: none; margin: 0; border: 0; padding: max(2rem, env(safe-area-inset-top)) 1.5rem max(2rem, env(safe-area-inset-bottom)); background: #f8f7f1; color: #244b39; display: flex; flex-direction: column; align-items: center; justify-content: space-between; box-sizing: border-box; }
+.voice-session::backdrop { background: #f8f7f1; }
+.voice-session__identity { font-size: .75rem; letter-spacing: .18em; text-transform: uppercase; }
+.voice-session__center { display: flex; flex-direction: column; align-items: center; gap: 4rem; }
+.voice-session__orb { width: clamp(110px, 25vw, 180px); aspect-ratio: 1; background: #78916b; box-shadow: inset -15px -20px 35px #44684c33; transition: transform 100ms ease-out, border-radius 150ms ease-out, opacity 100ms linear; }
+.voice-session__center p { font-size: .95rem; min-height: 1.5em; }
+.voice-session__end { border: 1px solid #244b3940; border-radius: 999px; padding: 1rem 2rem; background: #244b39; color: #fff; font: inherit; cursor: pointer; min-height: 52px; transition: background 150ms; }
+.voice-session__end:hover { background: #183828; }
+.voice-session__end:focus-visible { outline: 2px solid #244b39; outline-offset: 5px; }
+.voice-session__end:disabled { opacity: .5; }
+@media (prefers-reduced-motion: reduce) { .voice-session__orb { transform: none !important; transition: none; } }

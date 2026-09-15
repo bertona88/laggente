@@ -429,6 +429,8 @@ Tool results stay inspectable as expandable details; they are not a second spoke
 The voice component supplies transport controls and events, not another transcript panel.
 
 Audio is resumed again after microphone/worklet initialization. Worklet playback state reflects
-nonzero rendered samples, not proof that a physical speaker was audible. A user-triggered local
-“Prova audio” tone tests browser output without recording or contacting a model. Physical-device
-hearing, selected output hardware, echo, and mobile interruptions still require device acceptance.
+nonzero rendered samples, not proof that a physical speaker was audible. An exclusive native modal replaces the visible chat during voice, with one termination control.
+A bounded 20 Hz RMS level signal combines microphone and rendered output energy to animate the
+voice indicator; silence produces no synthetic activity. Reduced-motion preferences suppress
+shape movement. Ending the session restores the persistent chat. Physical-device hearing,
+selected output hardware, echo, and mobile interruptions still require device acceptance.
