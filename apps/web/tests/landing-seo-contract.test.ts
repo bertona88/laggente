@@ -11,20 +11,10 @@ describe("brand landing and crawl contract", () => {
     const header = readWebFile("components/brand-header.tsx");
     const legalPages = readWebFile("src/legal-pages.tsx");
 
-    expect(landing).toContain("La gente incontra <em>l’agente.</em>");
-    expect(landing).toContain("nome</i>.laggente.com");
-    expect(landing).toContain("Modella il tuo stile");
-    expect(landing).toContain("decidi quando aprirlo");
-    expect(landing).toContain("La gente non compila");
-    expect(landing).toContain("Poi la gente incontra l’agente");
-    expect(`${header}\n${landing}`).toContain("Crea il tuo spazio");
-    expect(landing).toContain("Aperto ai professionisti");
-    expect(landing).not.toContain("Il backend seleziona");
-    expect(landing).toContain("Che lavoro fai?");
-    expect(landing).toContain("Agenti immobiliari");
     expect(landing).toContain("/product/positioning");
-    expect(`${header}\n${landing}\n${legalPages}`).not.toContain("Mauro");
-    expect(`${header}\n${landing}`).not.toContain('publicSpaceHref("mauro")');
+    expect(landing).toContain("positioning.homepage");
+    expect(landing).not.toContain("real_estate_it");
+    expect(`${header}\n${landing}\n${legalPages}`).not.toContain('publicSpaceHref("mauro")');
   });
 
   it("ships one indexable brand URL with valid crawler assets", () => {
@@ -32,7 +22,7 @@ describe("brand landing and crawl contract", () => {
     const robots = readWebFile("public/robots.txt");
     const sitemap = readWebFile("public/sitemap.xml");
 
-    expect(index).toContain("<title>Uno spazio AI per professionisti | LAGGENTE</title>");
+    expect(index).toContain("<title>Il tuo assistente AI per i clienti | LAGGENTE</title>");
     expect(index).toContain('<link rel="canonical" href="https://laggente.com/" />');
     expect(robots).toContain("Sitemap: https://laggente.com/sitemap.xml");
     expect(sitemap.match(/<loc>/g)).toHaveLength(1);

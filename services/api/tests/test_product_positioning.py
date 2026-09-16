@@ -116,3 +116,36 @@ def test_backend_positioning_rejects_duplicate_verticals():
 
     with pytest.raises(ValidationError, match="must be unique"):
         load_product_positioning(raw)
+
+
+def test_homepage_contract_supports_existing_overrides_without_changing_market():
+    from app.positioning import public_product_positioning
+
+    raw = json.dumps({
+        "audience": "Architetti",
+        "opening_question": "Di quali progetti ti occupi?",
+        "featured_verticals": [{
+            "id": "architecture_it", "label": "Architetti", "weight": 100,
+            "example_answer": "Progetto case.", "headline": "Architettura",
+            "description": "Consulenza per ristrutturazioni.",
+        }],
+    })
+    public = public_product_positioning(load_product_positioning(raw))
+    assert "assistente AI" in public.homepage.headline
+    assert public.featured_verticals[0].conversation_example is None
+    assert public.featured_verticals[0].id == "architecture_it"
+
+
+def test_homepage_copy_and_example_are_backend_owned():
+    from app.positioning import DEFAULT_PRODUCT_POSITIONING, public_product_positioning
+
+    payload = json.loads(json.dumps(DEFAULT_PRODUCT_POSITIONING))
+    payload["homepage"] = {"headline": "Il tuo assistente, preparato da te."}
+    payload["featured_verticals"][0]["conversation_example"] = {
+        "instruction": "Chiedi la zona.", "visitor": "Vorrei vendere.",
+        "assistant": "Dove si trova?", "professional": "Ti seguo io.",
+    }
+    public = public_product_positioning(load_product_positioning(json.dumps(payload)))
+    assert public.homepage.headline == payload["homepage"]["headline"]
+    assert public.featured_verticals[0].conversation_example.visitor == "Vorrei vendere."
+    assert "graph_sets" not in public.model_dump()["featured_verticals"][0]

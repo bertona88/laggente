@@ -12,11 +12,11 @@ export function BrandHeader({ inverse = false }: { inverse?: boolean }) {
       <Logo inverse={inverse} />
       <nav className="brand-nav" aria-label="Navigazione principale">
         <Link href="#come-funziona">Come funziona</Link>
-        <Link href="#spazio-pubblico">Lo spazio pubblico</Link>
-        <Link href="#due-lati">I due lati</Link>
+        <Link href="#due-lati">Cosa ottieni</Link>
+        <Link href="#inizia">Come iniziare</Link>
       </nav>
       <Link className="brand-header__cta" href={studioHref("/login")}>
-        Crea il tuo spazio <ArrowUpRightIcon />
+        Accedi a Studio <ArrowUpRightIcon />
       </Link>
       <button
         className="brand-header__menu"
@@ -39,9 +39,9 @@ export function BrandHeader({ inverse = false }: { inverse?: boolean }) {
             exit={{ opacity: 0, y: -12 }}
           >
             <Link href="#come-funziona" onClick={() => setOpen(false)}>Come funziona</Link>
-            <Link href="#spazio-pubblico" onClick={() => setOpen(false)}>Lo spazio pubblico</Link>
-            <Link href="#due-lati" onClick={() => setOpen(false)}>I due lati</Link>
-            <Link href={studioHref("/login")} onClick={() => setOpen(false)}>Crea il tuo spazio</Link>
+            <Link href="#due-lati" onClick={() => setOpen(false)}>Cosa ottieni</Link>
+            <Link href="#inizia" onClick={() => setOpen(false)}>Come iniziare</Link>
+            <Link href={studioHref("/login")} onClick={() => setOpen(false)}>Accedi a Studio</Link>
           </motion.nav>
         )}
       </AnimatePresence>

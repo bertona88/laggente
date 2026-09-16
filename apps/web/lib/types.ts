@@ -49,9 +49,16 @@ export interface FeaturedVertical {
   example_answer: string;
   headline: string;
   description: string;
+  conversation_example?: {
+    instruction: string;
+    visitor: string;
+    assistant: string;
+    professional: string;
+  } | null;
 }
 
 export interface ProductPositioning {
+  homepage?: { headline: string; description: string };
   audience: string;
   opening_question: string;
   featured_verticals: FeaturedVertical[];

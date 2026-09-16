@@ -21,7 +21,7 @@ export function useVisualViewportHeight() {
 
 export function useDocumentTitle(title: string) {
   useEffect(() => {
-    document.title = title ? `${title} — LAGGENTE` : "Uno spazio AI per professionisti | LAGGENTE";
+    document.title = title ? `${title} — LAGGENTE` : "Il tuo assistente AI per i clienti | LAGGENTE";
   }, [title]);
 }
 

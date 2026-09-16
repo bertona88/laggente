@@ -24,6 +24,26 @@ class GraphSetRule(BaseModel):
         return normalized
 
 
+class ConversationExample(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    instruction: str = Field(min_length=1, max_length=500)
+    visitor: str = Field(min_length=1, max_length=500)
+    assistant: str = Field(min_length=1, max_length=500)
+    professional: str = Field(min_length=1, max_length=500)
+
+
+class HomepageCopy(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    headline: str = "Un assistente AI che risponde ai tuoi clienti."
+    description: str = (
+        "LAGGENTE ti dà una pagina personale con un assistente AI. "
+        "Lo prepari raccontandogli come lavori in una chat privata. "
+        "I clienti gli scrivono; tu ritrovi le conversazioni e puoi rispondere di persona."
+    )
+
+
 class FeaturedVertical(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -35,6 +55,7 @@ class FeaturedVertical(BaseModel):
     example_answer: str = Field(min_length=1, max_length=240)
     headline: str = Field(min_length=1, max_length=240)
     description: str = Field(min_length=1, max_length=800)
+    conversation_example: ConversationExample | None = None
     graph_sets: list[GraphSetRule] = Field(default_factory=list, max_length=20)
 
 
@@ -44,6 +65,7 @@ class ProductPositioning(BaseModel):
     audience: str = Field(min_length=1, max_length=500)
     opening_question: str = Field(min_length=1, max_length=240)
     featured_verticals: list[FeaturedVertical] = Field(min_length=1, max_length=12)
+    homepage: HomepageCopy = Field(default_factory=HomepageCopy)
 
     @field_validator("audience", "opening_question")
     @classmethod
@@ -67,12 +89,14 @@ class PublicFeaturedVertical(BaseModel):
     example_answer: str
     headline: str
     description: str
+    conversation_example: ConversationExample | None = None
 
 
 class PublicProductPositioning(BaseModel):
     audience: str
     opening_question: str
     featured_verticals: list[PublicFeaturedVertical]
+    homepage: HomepageCopy
 
 
 def public_product_positioning(positioning: ProductPositioning) -> PublicProductPositioning:
@@ -99,10 +123,24 @@ DEFAULT_PRODUCT_POSITIONING = {
             ),
             "headline": "Partiamo dagli agenti immobiliari.",
             "description": (
-                "È il primo settore che stiamo rendendo concreto: un template italiano per "
-                "accogliere chi sta valutando di vendere, senza trasformare la conversazione "
-                "in un questionario o in una pipeline."
+                "Il primo progetto pilota è per agenti immobiliari: l’assistente accoglie "
+                "chi pensa di vendere casa e raccoglie il contesto prima che intervenga l’agente."
             ),
+            "conversation_example": {
+                "instruction": (
+                    "Lavoro a Roma Nord. Quando qualcuno vuole vendere casa, chiedi in che "
+                    "zona si trova e se ci abita. Poi lo seguo io per la valutazione."
+                ),
+                "visitor": "Ho ereditato una casa e vorrei venderla. Quanto potrebbe valere?",
+                "assistant": (
+                    "Sono l’assistente AI del professionista. Ti aiuto a preparare la richiesta "
+                    "di valutazione. In che zona si trova la casa?"
+                ),
+                "professional": (
+                    "Ho letto la conversazione. Posso occuparmi della valutazione: "
+                    "mi racconti qualcosa in più sulla casa?"
+                ),
+            },
             "graph_sets": [
                 {
                     "id": "selling_intent",
@@ -176,6 +214,8 @@ def load_product_positioning(raw: str | None) -> ProductPositioning:
             default = default_verticals.get(vertical.get("id"))
             if default and "graph_sets" not in vertical:
                 vertical["graph_sets"] = default.get("graph_sets", [])
+            if default and "conversation_example" not in vertical:
+                vertical["conversation_example"] = default.get("conversation_example")
     positioning = ProductPositioning.model_validate(payload)
     return positioning.model_copy(
         update={

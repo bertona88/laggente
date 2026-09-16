@@ -159,3 +159,18 @@ visible timeline in the selected chat. Starting a chat does not reset the profes
 configuration, drafts, or sources. Old conversations remain accessible. Voice controls sit in the
 composer; spoken fragments update grouped messages, while tool details and approval controls stay
 inspectable in the same workspace. An explicit audio test and playback status assist diagnosis.
+
+## Homepage explanation
+
+The brand homepage introduces a personal page with an AI assistant the professional prepares
+through Studio. An interactive example is visible in the first viewport; visitors can switch
+between the professional's instruction, the AI's reply to a client, and human participation.
+A scroll-driven demonstration then shows teaching, reviewing/activating, sharing the personal
+link, receiving a client message, and joining the conversation. Scrolling controls message
+reveal in both directions. Reduced-motion visitors and the explicit reading mode receive all
+five steps as ordinary content. Examples are illustrative, not live conversations.
+
+The public positioning contract owns the homepage headline/description and each vertical's
+optional conversation example. Existing positioning overrides retain their audience and order;
+a generic example is used when a vertical supplies no conversation. No production tenant or
+assistant is contacted by the homepage demonstration.
