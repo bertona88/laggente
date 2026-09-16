@@ -57,3 +57,20 @@ Build, lint, and the 94 existing web tests passed; an additional worklet test ch
 playback, and silence levels. Desktop/mobile Chrome browser QA with synthetic audio and a mocked
 transport verified one control, changing audio-driven scale, no page errors, and restored chat.
 Screenshots were visually inspected at 1280×900 and 390×844.
+
+## Personalized Studio opening — 2026-09-16
+
+Studio voice now requests a brief Italian opening without waiting for user speech. The server
+adds the authenticated member's display name as data (placeholder names are omitted), explains
+that Studio builds the professional profile and public assistant, and distinguishes an initial
+conversation, continued setup, and an already-published space. The initial question comes from
+backend product positioning. A new chat does not reset publication state. Public sessions do not
+receive this private welcome.
+
+After session startup, a single instructions append is sent. A matching acknowledgment gates the
+short commentary cue; neither command grants tool authority. Existing provider errors and shutdown
+handling apply. The prompt asks the assistant to yield if the user speaks, avoid repeating the
+product explanation, and preserve explicit activation requirements. Delivery is model-generated,
+not guaranteed verbatim audio. Automated checks cover the welcome states, authenticated name,
+public exclusion, client injection rejection, and the existing duplex lifecycle. Live acoustic
+acceptance and deployment of this opening remain outstanding.
