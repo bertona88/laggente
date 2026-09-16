@@ -101,7 +101,7 @@ export function LoginForm() {
   return (
     <main className="login-page">
       <section className="login-page__visual" aria-hidden="true">
-        <img src="/images/laggente-hero.webp" alt="" sizes="(max-width: 800px) 100vw, 52vw" fetchPriority="high" />
+        <img src="/media/laggente-hero.webp" alt="" sizes="(max-width: 800px) 100vw, 52vw" fetchPriority="high" />
         <div className="login-page__veil" />
         <div className="login-page__line">Il tuo spazio.<br />La tua voce.<br />Le tue relazioni.</div>
       </section>

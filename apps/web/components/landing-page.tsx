@@ -166,7 +166,7 @@ export function LandingPage() {
   const example = featured?.conversation_example ?? genericExample;
   return <main className="landing landing--explain">
     <section className="landing-hero" aria-labelledby="hero-title">
-      <div className="landing-hero__image"><img src="/images/laggente-hero.webp" alt="Una professionista nel proprio spazio di lavoro" fetchPriority="high" /></div>
+      <div className="landing-hero__image"><img src="/media/laggente-hero.webp" alt="Una professionista nel proprio spazio di lavoro" fetchPriority="high" /></div>
       <div className="landing-hero__veil" />
       <BrandHeader inverse />
       <div className="landing-hero__layout">

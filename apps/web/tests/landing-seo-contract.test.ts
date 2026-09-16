@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -23,6 +23,9 @@ describe("brand landing and crawl contract", () => {
     const sitemap = readWebFile("public/sitemap.xml");
 
     expect(index).toContain("<title>Il tuo assistente AI per i clienti | LAGGENTE</title>");
+    expect(index).toContain("https://laggente.com/media/laggente-hero.webp");
+    expect(readWebFile("components/landing-page.tsx")).toContain('src="/media/laggente-hero.webp"');
+    expect(existsSync(path.join(webRoot, "public/media/laggente-hero.webp"))).toBe(true);
     expect(index).toContain('<link rel="canonical" href="https://laggente.com/" />');
     expect(robots).toContain("Sitemap: https://laggente.com/sitemap.xml");
     expect(sitemap.match(/<loc>/g)).toHaveLength(1);

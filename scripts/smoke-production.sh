@@ -43,6 +43,12 @@ require_redirect() {
 }
 
 require_status "$base_url/" '^200$'
+require_status "$base_url/media/laggente-hero.webp" '^200$'
+hero_headers=$(curl --fail --silent --show-error --head --max-time 15 "$base_url/media/laggente-hero.webp")
+if ! grep -Eqi '^content-type:[[:space:]]*image/webp' <<<"$hero_headers"; then
+    printf 'smoke: homepage hero does not serve a WebP image\n' >&2
+    exit 1
+fi
 require_redirect "$app_url/?source=smoke" "${app_url%/}/studio?source=smoke"
 require_status "$pilot_url/" '^200$'
 if [[ -n "$secondary_url" ]]; then
