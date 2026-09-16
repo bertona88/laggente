@@ -30,7 +30,7 @@ The product foundation can specialize to different professions. The commercial p
 - `app.laggente.com` — the private Studio;
 - `<slug>.laggente.com` — the public personal space, beginning with `mauro.laggente.com`.
 
-Entry is email-first and open to professionals. LAGGENTE sends a single-use verification link and
+Entry is email-first and open to professionals. The login page offers only email-link access. LAGGENTE sends a single-use verification link and
 creates no tenant until that link is consumed. The verified professional then enters a separate,
 private Studio, introduces themselves in natural Italian, reserves an available slug, reviews the
 generated revision, and activates it. Existing members return through the same email form. Curated

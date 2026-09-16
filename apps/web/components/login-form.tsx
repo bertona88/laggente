@@ -24,11 +24,9 @@ export function LoginForm() {
   const navigate = useAppNavigate();
   const [mode, setMode] = useState<AuthMode | null>(null);
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [requestMessage, setRequestMessage] = useState("");
-  const [preferMagicLink, setPreferMagicLink] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -87,20 +85,12 @@ export function LoginForm() {
     setLoading(true);
     setError(null);
     try {
-      if (mode === "magic_link" || preferMagicLink) {
-        const result = await apiRequest<MagicLinkRequestResult>("/auth/magic-link/request", {
-          method: "POST",
-          body: JSON.stringify({ email }),
-        });
-        setRequestMessage(result.message);
-        setSent(true);
-      } else {
-        await apiRequest("/auth/pilot-login", {
-          method: "POST",
-          body: JSON.stringify({ email, password }),
-        });
-        navigate(studioHref("/studio"), { replace: true });
-      }
+      const result = await apiRequest<MagicLinkRequestResult>("/auth/magic-link/request", {
+        method: "POST",
+        body: JSON.stringify({ email }),
+      });
+      setRequestMessage(result.message);
+      setSent(true);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Non è stato possibile accedere.");
     } finally {
@@ -151,36 +141,12 @@ export function LoginForm() {
                   required
                 />
               </label>
-              {mode === "pilot_password" && !preferMagicLink && (
-                <label>
-                  <span>Password</span>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                    autoComplete="current-password"
-                    placeholder="La tua password"
-                    required
-                  />
-                </label>
-              )}
               {error && <InlineError message={error} />}
               <button className="button button--ink button--wide" type="submit" disabled={loading}>
-                {loading ? "Accesso in corso…" : mode === "magic_link" || preferMagicLink ? "Entra o crea il tuo spazio" : "Entra nello Studio"}
+                {loading ? "Accesso in corso…" : "Entra o crea il tuo spazio"}
                 {!loading && <ArrowRightIcon />}
               </button>
-              {mode === "pilot_password" && (
-                <button
-                  className="login-method-toggle"
-                  type="button"
-                  onClick={() => {
-                    setPreferMagicLink((current) => !current);
-                    setError(null);
-                  }}
-                >
-                  {preferMagicLink ? "Usa la password del pilot" : "Entra o crea uno spazio con l’email"}
-                </button>
-              )}
+
             </form>
           )}
           <div className="login-form__security"><LockIcon /><span>Il tuo Studio resta privato finché non scegli tu di attivare lo spazio pubblico.</span></div>
