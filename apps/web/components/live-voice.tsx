@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { MicIcon } from '@/components/icons';
 import { apiRequest } from '@/lib/api';
 import { LiveVoiceConnection, type VoiceEvent } from '@/lib/live-voice';
@@ -21,7 +20,6 @@ export function LiveVoice(props: Props) {
   const [error, setError] = useState('');
   const [playing, setPlaying] = useState(false);
   const [level, setLevel] = useState(0);
-  const dialog = useRef<HTMLDialogElement>(null);
   const connection = useRef<LiveVoiceConnection | null>(null);
   const latest = useRef(props);
   useEffect(() => { latest.current = props; });
@@ -71,27 +69,25 @@ export function LiveVoice(props: Props) {
   }
 
   const active = state !== 'idle';
-  useEffect(() => {
-    if (active) dialog.current?.showModal();
-  }, [active]);
   function stop() {
     setState('stopping'); connection.current?.stop();
   }
   if (!available) return null;
-  return <section className="live-voice" aria-label="Conversazione vocale con l’AI">
-    <div className="live-voice__controls">
-      <button type="button" onClick={start} disabled={active || props.disabled || props.suspended}>
+  return <section className={`live-voice${active ? ' live-voice--active' : ''}`} aria-label="Conversazione vocale con l’AI">
+    {!active ? <div className="live-voice__controls">
+      <button type="button" onClick={start} disabled={props.disabled || props.suspended}>
         <MicIcon /> Parla con l’assistente
       </button>
-    </div>
-    {active && createPortal(<dialog ref={dialog} className="voice-session" aria-label="Conversazione vocale con l’AI" onCancel={event => { event.preventDefault(); stop(); }}>
-      <p className="voice-session__identity">LAGGENTE · Voce AI</p>
-      <div className="voice-session__center">
-        <div className="voice-session__orb" aria-hidden="true" style={{ transform: `scale(${1 + level * .55})`, borderRadius: `${50 - level * 10}% ${50 + level * 10}% 50% 50%`, opacity: .65 + level * .35 }} />
-        <p role="status">{state === 'connecting' ? 'Mi collego…' : state === 'stopping' ? 'Termino la voce…' : playing ? 'Sto parlando' : working ? 'Ci sto lavorando…' : 'Ti ascolto'}</p>
+    </div> : <div className="voice-bar">
+      <div className="voice-bar__signal">
+        <div className="voice-bar__wave" aria-hidden="true">
+          {[.25, .45, .7, .4, .85, 1, .6, .9, .5, .75, .4, .25].map((weight, index) =>
+            <i key={index} style={{ height: `${4 + level * weight * 32}px`, opacity: .45 + level * .55 }} />)}
+        </div>
+        <span role="status">{state === 'connecting' ? 'Mi collego…' : state === 'stopping' ? 'Termino la voce…' : playing ? 'Sto parlando' : working ? 'Ci sto lavorando…' : 'Ti ascolto'}</span>
       </div>
-      <button className="voice-session__end" type="button" autoFocus disabled={state === 'stopping'} onClick={stop}>Termina voce</button>
-    </dialog>, document.body)}
+      <button className="voice-bar__end" type="button" autoFocus disabled={state === 'stopping'} onClick={stop}>Termina voce</button>
+    </div>}
     {error && <p role="alert">{error}</p>}
   </section>;
 }

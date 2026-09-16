@@ -501,7 +501,7 @@ export function StudioWorkspace() {
           onActiveChange={active => { activeVoiceRef.current = active; setVoiceActive(active); }} onAvailabilityChange={setVoiceAvailable}
           onTranscript={event => setLiveMessages(current => [...current, voiceMessage(event, true)])}
           onSaved={() => { void load(true); }} />
-          <fieldset className="voice-composer-fieldset" disabled={voiceActive}>
+          <fieldset className="voice-composer-fieldset" disabled={voiceActive} hidden={voiceActive}>
           {composerError && <InlineError message={composerError} />}
           <textarea
             ref={composerRef}

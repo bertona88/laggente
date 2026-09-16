@@ -686,7 +686,7 @@ export function PublicSpace({ slug }: { slug: string }) {
             onTranscript={event => setLiveMessages(current => [...current, voiceMessage(event, false)])} onAvailabilityChange={setVoiceAvailable}
             onSaved={() => { const id = conversationIdRef.current; if (id) void refreshConversation(id).then(() => { if (!activeVoiceRef.current) setLiveMessages([]); }).catch(() => undefined); }} />
           <form className="chat-composer" onSubmit={onSubmit}>
-            <fieldset className="voice-composer-fieldset" disabled={voiceActive}>
+            <fieldset className="voice-composer-fieldset" disabled={voiceActive} hidden={voiceActive}>
             <input
               ref={imageInputRef}
               type="file"

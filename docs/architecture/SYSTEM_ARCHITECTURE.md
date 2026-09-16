@@ -429,8 +429,9 @@ Tool results stay inspectable as expandable details; they are not a second spoke
 The voice component supplies transport controls and events, not another transcript panel.
 
 Audio is resumed again after microphone/worklet initialization. Worklet playback state reflects
-nonzero rendered samples, not proof that a physical speaker was audible. An exclusive native modal replaces the visible chat during voice, with one termination control.
+nonzero rendered samples, not proof that a physical speaker was audible. During voice, a compact audio bar replaces only the typing field, with one termination control.
+The chat, live transcription, and space inspector remain visible and usable.
 A bounded 20 Hz RMS level signal combines microphone and rendered output energy to animate the
-voice indicator; silence produces no synthetic activity. Reduced-motion preferences suppress
-shape movement. Ending the session restores the persistent chat. Physical-device hearing,
+waveform; silence produces no synthetic activity. Reduced-motion preferences suppress
+bar movement. Ending the session restores the typing field and preserves any unsent draft. Physical-device hearing,
 selected output hardware, echo, and mobile interruptions still require device acceptance.

@@ -74,3 +74,13 @@ product explanation, and preserve explicit activation requirements. Delivery is 
 not guaranteed verbatim audio. Automated checks cover the welcome states, authenticated name,
 public exclusion, client injection rejection, and the existing duplex lifecycle. Live acoustic
 acceptance and deployment of this opening remain outstanding.
+
+## Composer-only voice correction — 2026-09-16
+
+Supersedes the full-screen voice interface above: the user wants to see the conversation and
+space changes while speaking. Voice now replaces only the typing controls with a compact
+audio-level waveform, status, and Termina voce. Chat and transcript stay visible. The disabled,
+hidden text field retains any unsent draft and returns after termination. The shared component
+applies to Studio and public chat; there is no portal, modal, or screen-covering surface.
+
+Web build, lint, and all 95 web tests passed.
