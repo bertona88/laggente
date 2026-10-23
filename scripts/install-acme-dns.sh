@@ -3,10 +3,6 @@ set -Eeuo pipefail
 
 script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 repo_root=$(cd -- "$script_dir/.." && pwd)
-acme_dns_version=2.0.2
-acme_dns_archive="acme-dns_${acme_dns_version}_linux_amd64.tar.gz"
-acme_dns_url="https://github.com/acme-dns/acme-dns/releases/download/v${acme_dns_version}/${acme_dns_archive}"
-acme_dns_sha256=ff7aa309fb916012fc08dc7bd992c329b3930705ecb04161e57a5d910e80e9f0
 credentials_path=/etc/letsencrypt/laggente-acme-dns.json
 config_path=/etc/acme-dns/config.cfg
 registration_backup=/var/backups/laggente-acme-dns/registration.db
@@ -48,10 +44,7 @@ wait_for_health() {
     return 1
 }
 
-curl --fail --silent --show-error --location \
-    --output "$install_tmp/$acme_dns_archive" "$acme_dns_url"
-printf '%s  %s\n' "$acme_dns_sha256" "$install_tmp/$acme_dns_archive" | sha256sum --check --status
-tar -xzf "$install_tmp/$acme_dns_archive" -C "$install_tmp" acme-dns LICENSE
+bash "$script_dir/build-acme-dns-security.sh" "$install_tmp"
 
 if ! id acme_dns >/dev/null 2>&1; then
     useradd --system --home-dir /var/lib/acme-dns --shell /usr/sbin/nologin acme_dns

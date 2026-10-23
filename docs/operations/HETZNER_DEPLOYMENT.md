@@ -245,6 +245,14 @@ these inbound authoritative-DNS rules in addition to the established SSH and web
 | TCP | `53` | `0.0.0.0/0`, `::/0` |
 | UDP | `53` | `0.0.0.0/0`, `::/0` |
 
+The installer builds upstream acme-dns 2.0.2 source commit
+`4e5a69e5fb742dde4f755b7f56aee2aea76e19bf` with Go 1.27.3 rather than using
+its older precompiled binary. `scripts/build-acme-dns-security.sh` verifies
+both source and compiler archive digests. Set `ACME_DNS_GO_BIN` only to a trusted
+local Go 1.27.3 compiler when reproducing the Linux/amd64 binary elsewhere.
+This includes the October 2026 Go trust-store security update without changing
+DNS registrations or the upstream application source.
+
 Do not expose the acme-dns update API on port `5399`; it remains bound to loopback. After attaching
 or replacing a Cloud Firewall, verify both DNS transports from a machine outside the VPS:
 

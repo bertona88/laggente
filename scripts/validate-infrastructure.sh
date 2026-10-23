@@ -59,9 +59,12 @@ if [[ $(grep -Fc '/etc/letsencrypt/live/laggente-wildcard/' \
     printf 'host nginx is not consistently pinned to the wildcard certificate lineage\n' >&2
     exit 1
 fi
-if ! grep -Fq "acme_dns_sha256=ff7aa309fb916012fc08dc7bd992c329b3930705ecb04161e57a5d910e80e9f0" \
-    "$repo_root/scripts/install-acme-dns.sh"; then
-    printf 'acme-dns installer is missing the pinned artifact digest\n' >&2
+if ! grep -Fq 'build-acme-dns-security.sh' "$repo_root/scripts/install-acme-dns.sh" ||
+    ! grep -Fq 'source_sha256=9d90a0f7ffe8127cdfebe59b33fa3e71050fd05aab40fc37af55d1f3e5a10377' \
+        "$repo_root/scripts/build-acme-dns-security.sh" ||
+    ! grep -Fq 'go_linux_sha256=65efbc80fdc1fa2cd2631cad5b481777a68e8725f34e89f50fc6ac714e379b40' \
+        "$repo_root/scripts/build-acme-dns-security.sh"; then
+    printf 'acme-dns installer is missing the pinned security build\n' >&2
     exit 1
 fi
 if ! grep -Fq -- '--domains '\''*.laggente.com'\''' \
