@@ -1,5 +1,5 @@
-ARG NODE_IMAGE=node:22-alpine
-ARG NGINX_IMAGE=nginx:1.28-alpine
+ARG NODE_IMAGE=node:22.23.4-alpine
+ARG NGINX_IMAGE=nginx:1.30.6-alpine
 
 FROM ${NODE_IMAGE} AS web-dependencies
 WORKDIR /build
