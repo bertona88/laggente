@@ -366,6 +366,19 @@ Rollback takes a fresh logical backup, activates the selected images, checks loo
 
 ## Shared-host safety
 
+### October 2026 security baseline
+
+The API lockfile includes certifi 2026.10.23, pypdf 6.21.2, PyJWT 2.15.1 and
+urllib3 2.8.0. Dependency floors prevent a fresh resolve from reintroducing the
+affected CA bundle, PDF parser and JWT/TLS implementations. Rebuild the API image
+to activate these updates; changing a source lockfile does not patch a running
+container. The gateway defaults to nginx 1.30.6 and builds assets with Node
+22.23.4. Keep API/gateway updates inside the normal release and rollback flow.
+
+Host Node is separately pinned to 24.22.1, and Docker/containerd updates require
+activation of the rootless daemon. Verify running process versions after host
+maintenance; package versions alone do not prove activation.
+
 - Never publish Compose ports `5432` or `8000`, and never bind the gateway anywhere except the
   documented loopback address.
 - Never change the existing host PostgreSQL, WOFI database, or WOFI systemd units.
