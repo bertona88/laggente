@@ -161,3 +161,9 @@ trap - ERR HUP INT TERM
 
 note "release $release_id is active"
 compose_with_release "$candidate_env" ps
+
+# Health passed and pointers are committed. Retention shares the deployment lock;
+# a maintenance failure must not undo an otherwise healthy application release.
+if ! "$script_dir/retain-production-images.sh" --lock-fd 9 --apply --activate "$release_id"; then
+    printf 'warning: image retention failed; inspect and rerun retain-production-images.sh --apply\n' >&2
+fi

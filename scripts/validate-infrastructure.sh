@@ -6,6 +6,7 @@ repo_root=$(cd -- "$script_dir/.." && pwd)
 
 bash -n "$repo_root"/scripts/*.sh
 sh -n "$repo_root"/infra/backup/*.sh
+python3 -m unittest discover -s "$repo_root/scripts/tests" -p 'test_*.py' -q
 (
     cd "$repo_root/infra/email-relay"
     python3 -m unittest -q
