@@ -25,6 +25,9 @@ old_current=$(readlink -f "$current_env")
 exec 9>"$laggente_root/deploy.lock"
 flock -n 9 || die "another LAGGENTE deployment is running"
 
+# Refuse pruned or missing image sets before taking a backup or touching services.
+"$script_dir/retain-production-images.sh" --lock-fd 9 --verify-release "$target_release"
+
 note "taking a logical backup before application rollback"
 compose_with_release "$old_current" exec -T backup /opt/backup/backup.sh once
 
@@ -51,3 +54,6 @@ ln -sfn "$(basename "$old_current")" "$laggente_releases_dir/previous.env"
 ln -sfn "$(basename "$target_env")" "$current_env"
 trap - ERR HUP INT TERM
 note "application rollback completed"
+if ! "$script_dir/retain-production-images.sh" --lock-fd 9 --apply --activate "$target_release"; then
+    printf 'warning: image retention failed; inspect and rerun retain-production-images.sh --apply\n' >&2
+fi

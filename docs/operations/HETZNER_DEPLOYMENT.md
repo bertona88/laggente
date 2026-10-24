@@ -362,6 +362,35 @@ Browser acceptance and taste remain separate from container health.
 
 ## Rollback
 
+Successful deployments and rollbacks retain the current application image set and
+two successful rollback versions. The activation order is recorded in
+`/opt/laggente/releases/image-retention.json`, under the same `deploy.lock` as
+deployment. Old release metadata remains as an audit record; it does not imply
+that its images are still locally available. Rollback checks image availability
+before taking a backup or changing containers.
+
+For an existing installation, explicitly initialize the two verified rollback
+sets once, as the `laggente` user. The default is a dry run:
+
+```bash
+./scripts/retain-production-images.sh --initialize \
+  --rollback PREVIOUS_RELEASE_ID --rollback SECOND_ROLLBACK_RELEASE_ID
+./scripts/retain-production-images.sh --initialize \
+  --rollback PREVIOUS_RELEASE_ID --rollback SECOND_ROLLBACK_RELEASE_ID --apply
+```
+
+The first-ever deployment initializes its own history. An existing installation
+with missing history refuses automatic deletion until initialized explicitly.
+For an initialized installation, preview with `retain-production-images.sh` and
+apply with `retain-production-images.sh --apply`. A failed post-deployment cleanup
+emits a warning without undoing a healthy release; investigate and rerun it.
+
+Cleanup verifies all retained image references and the healthy current containers
+before removal. It removes exact old application image references without force.
+Images referenced by any container and images outside the recorded application
+repositories are protected. It never prunes the daemon, removes containers or
+volumes, or touches databases, uploads, backups, other sites or build caches.
+
 List recorded releases and roll back application images:
 
 ```bash
